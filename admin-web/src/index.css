@@ -1,0 +1,302 @@
+:root {
+  color-scheme: dark;
+  --accent: #6e56cf;
+  --border: rgba(255, 255, 255, 0.09);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv05', 'ss01';
+  color: #ededef;
+  background-color: #0a0a0b;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---- Global animated backdrop (Aceternity-style) ---- */
+.sr-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background: #0a0a0b;
+}
+/* perspective grid, masked to a top spotlight, slowly panning */
+.sr-bg__grid {
+  position: absolute;
+  inset: -2px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 25%, transparent 78%);
+  animation: sr-grid-pan 24s linear infinite;
+}
+@keyframes sr-grid-pan {
+  to {
+    background-position: 0 46px, 46px 0;
+  }
+}
+/* slow-drifting violet glows */
+.sr-bg__glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+}
+.sr-bg__glow--a {
+  width: 46vmax;
+  height: 46vmax;
+  top: -16vmax;
+  left: -10vmax;
+  background: radial-gradient(circle, rgba(110, 86, 207, 0.28), transparent 65%);
+  animation: sr-drift-a 34s ease-in-out infinite alternate;
+}
+.sr-bg__glow--b {
+  width: 40vmax;
+  height: 40vmax;
+  top: -12vmax;
+  right: -8vmax;
+  background: radial-gradient(circle, rgba(86, 130, 207, 0.18), transparent 65%);
+  animation: sr-drift-b 40s ease-in-out infinite alternate;
+}
+@keyframes sr-drift-a {
+  to {
+    transform: translate3d(8vmax, 6vmax, 0) scale(1.12);
+  }
+}
+@keyframes sr-drift-b {
+  to {
+    transform: translate3d(-7vmax, 9vmax, 0) scale(1.08);
+  }
+}
+/* faint diagonal beams sweeping across */
+.sr-bg__beams {
+  position: absolute;
+  inset: -40%;
+  background: repeating-linear-gradient(
+    115deg,
+    transparent 0 120px,
+    rgba(110, 86, 207, 0.05) 120px 121px,
+    transparent 121px 360px
+  );
+  animation: sr-beams 50s linear infinite;
+  opacity: 0.6;
+}
+@keyframes sr-beams {
+  to {
+    transform: translateX(360px);
+  }
+}
+.sr-bg__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Numbers: tabular figures everywhere they matter */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline card with a 1px lift on hover — no glow */
+.sr-card {
+  border: 1px solid var(--border) !important;
+  background: #141416;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease;
+}
+.sr-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Aceternity-style spotlight card: accent glow follows the cursor */
+.sr-spotlight {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #141416;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.sr-spotlight:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.sr-spotlight__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(110, 86, 207, 0.14),
+    transparent 62%
+  );
+}
+.sr-spotlight:hover .sr-spotlight__glow {
+  opacity: 1;
+}
+
+/* Aceternity-style moving gradient border */
+.sr-gborder {
+  position: relative;
+  border-radius: 16px;
+  padding: 1px;
+  overflow: hidden;
+  background: #141416;
+}
+.sr-gborder::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(110, 86, 207, 0.9) 40deg,
+    transparent 120deg
+  );
+  animation: sr-spin 7s linear infinite;
+}
+.sr-gborder > .sr-gborder__inner {
+  position: relative;
+  border-radius: 15px;
+  background: #141416;
+}
+@keyframes sr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Entrance */
+@keyframes sr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sr-rise {
+  animation: sr-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Shimmer for skeletons */
+@keyframes sr-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.sr-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+.sr-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: sr-shimmer 1.4s infinite;
+}
+
+/* Accessible focus ring on the canonical accent */
+:focus-visible {
+  outline: 2px solid rgba(110, 86, 207, 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a30 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #26262c;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #34343c;
+  background-clip: content-box;
+}
+
+/* uiverse-style sheen that sweeps across primary buttons */
+.ant-btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.ant-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  transform: skewX(-18deg);
+  transition: left 0.6s ease;
+}
+.ant-btn-primary:hover::after {
+  left: 130%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-rise,
+  .sr-skeleton::after,
+  .sr-gborder::before,
+  .sr-bg__grid,
+  .sr-bg__glow,
+  .sr-bg__beams,
+  .sr-card {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ant-btn-primary::after {
+    display: none;
+  }
+}

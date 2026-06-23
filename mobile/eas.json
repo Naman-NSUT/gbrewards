@@ -1,0 +1,28 @@
+{
+  "cli": { "version": ">= 5.0.0" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "API_BASE_URL": "http://localhost:8000" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "API_BASE_URL": "https://your-backend.onrender.com",
+        "SENTRY_DSN": ""
+      }
+    },
+    "production": {
+      "android": { "buildType": "app-bundle" },
+      "env": {
+        "API_BASE_URL": "https://your-backend.onrender.com",
+        "SENTRY_DSN": ""
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
