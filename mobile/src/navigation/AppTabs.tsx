@@ -3,25 +3,22 @@ import React from 'react';
 import { Text } from 'react-native';
 
 import { useI18n } from '../i18n/I18nProvider';
-import { HistoryScreen } from '../screens/HistoryScreen';
+import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { RedeemScreen } from '../screens/RedeemScreen';
-import { ScanScreen } from '../screens/ScanScreen';
 import { colors } from '../theme';
 import type { AppTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
 const ICONS: Record<keyof AppTabParamList, string> = {
-  Scan: '📷',
-  History: '📊',
+  Home: '🏠',
   Redeem: '🎁',
   Profile: '👤',
 };
 
 const LABEL_KEY: Record<keyof AppTabParamList, string> = {
-  Scan: 'tab.scan',
-  History: 'tab.history',
+  Home: 'tab.home',
   Redeem: 'tab.redeem',
   Profile: 'tab.profile',
 };
@@ -30,7 +27,7 @@ export function AppTabs() {
   const { t } = useI18n();
   return (
     <Tab.Navigator
-      initialRouteName="Scan"
+      initialRouteName="Home"
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
@@ -43,8 +40,7 @@ export function AppTabs() {
         ),
       })}
     >
-      <Tab.Screen name="Scan" component={ScanScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Redeem" component={RedeemScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

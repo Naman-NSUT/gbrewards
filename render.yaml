@@ -1,6 +1,7 @@
 # Render blueprint — backend API + managed Postgres + Key Value (Redis).
 # Deploy: Render Dashboard → New → Blueprint → pick this repo.
-# Then set the sync:false secrets (CORS_ORIGINS, MSG91_*, SENTRY_DSN) in the dashboard.
+# Then set the sync:false secrets (CORS_ORIGINS, SENTRY_DSN) in the dashboard.
+# Sized for <= 300 users: starter web + free Redis + basic Postgres.
 services:
   - type: web
     name: gbrewards-api
@@ -24,18 +25,10 @@ services:
           type: keyvalue
           name: gbrewards-redis
           property: connectionString
-      - key: OTP_PROVIDER
-        value: msg91
       - key: CORS_ORIGINS
-        sync: false # e.g. https://admin.yourdomain.com
-      - key: MSG91_AUTH_KEY
-        sync: false
-      - key: MSG91_SENDER_ID
-        sync: false
-      - key: MSG91_TEMPLATE_ID
-        sync: false
+        sync: false # your Vercel admin URL, e.g. https://gbrewards-admin.vercel.app
       - key: SENTRY_DSN
-        sync: false
+        sync: false # optional; leave blank to disable
 
   - type: keyvalue
     name: gbrewards-redis

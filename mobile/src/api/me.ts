@@ -6,8 +6,13 @@ export async function getMe(): Promise<Me> {
   return resp.data;
 }
 
-export async function updateName(name: string): Promise<Me> {
-  const resp = await api.patch<Me>('/me', { name });
+export interface ProfileUpdate {
+  name?: string;
+  address?: string;
+}
+
+export async function updateProfile(payload: ProfileUpdate): Promise<Me> {
+  const resp = await api.patch<Me>('/me', payload);
   return resp.data;
 }
 

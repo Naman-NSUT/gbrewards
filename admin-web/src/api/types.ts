@@ -17,6 +17,7 @@ export interface Product {
   id: string;
   name: string;
   description: string | null;
+  terms: string | null;
   points_value: number;
   is_active: boolean;
   created_at: string;
@@ -86,6 +87,9 @@ export interface LedgerPage {
 }
 
 export interface UnitDetail extends Unit {
+  product_name: string | null;
+  claimed_by_name: string | null;
+  claimed_by_phone: string | null;
   history: LedgerEntry[];
 }
 

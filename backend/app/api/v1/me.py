@@ -12,13 +12,17 @@ router = APIRouter(tags=["me"])
 
 
 def _me_out(db: Session, user: User) -> MeOut:
+    # Compute the ledger sum once; available = balance - pending holds.
+    bal = ledger.balance(db, user.id)
+    pend = ledger.pending(db, user.id)
     return MeOut(
         id=user.id,
         phone=user.phone,
         name=user.name,
+        address=user.address,
         is_verified=user.is_verified,
-        balance=ledger.balance(db, user.id),
-        available=ledger.available(db, user.id),
+        balance=bal,
+        available=bal - pend,
         last_active_at=user.last_active_at,
     )
 
@@ -37,7 +41,14 @@ def update_me(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MeOut:
-    user.name = body.name
+    # PATCH semantics: only touch fields the client actually sent, and never
+    # blank out name/address with an empty value (avoids wiping a stored address
+    # when the client submits an empty field).
+    data = body.model_dump(exclude_unset=True)
+    if data.get("name"):
+        user.name = data["name"]
+    if data.get("address"):
+        user.address = data["address"]
     db.commit()
     db.refresh(user)
     return _me_out(db, user)

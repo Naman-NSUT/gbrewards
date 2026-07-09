@@ -14,13 +14,14 @@ import {
   useProducts,
   useUpdateProduct,
 } from '../hooks/useProducts';
-import { downloadBlob, formatDateTime } from '../lib/format';
+import { downloadBlob, formatDateTime, printBlob } from '../lib/format';
 import { OrderDrawer } from './OrderDrawer';
 import { ProductDetailDrawer } from './ProductDetailDrawer';
 
 interface ProductForm {
   name: string;
   description?: string;
+  terms?: string;
   points_value: number;
   is_active: boolean;
 }
@@ -65,6 +66,7 @@ export function ProductsPage() {
     form.setFieldsValue({
       name: p.name,
       description: p.description ?? undefined,
+      terms: p.terms ?? undefined,
       points_value: p.points_value,
       is_active: p.is_active,
     });
@@ -87,7 +89,7 @@ export function ProductsPage() {
     }
   };
 
-  const submitBatch = async () => {
+  const submitBatch = async (mode: 'print' | 'download') => {
     if (!batchFor) return;
     const values = await batchForm.validateFields();
     try {
@@ -96,9 +98,14 @@ export function ProductsPage() {
         quantity: values.quantity,
         label: values.label,
       });
-      message.success(`Generated ${values.quantity} codes — downloading sheet…`);
       const blob = await downloadBatchPdf(batch.id);
-      downloadBlob(blob, `batch-${batch.id}.pdf`);
+      if (mode === 'print') {
+        message.success(`Generated ${values.quantity} codes — opening print dialog…`);
+        printBlob(blob);
+      } else {
+        message.success(`Generated ${values.quantity} codes — downloading sheet…`);
+        downloadBlob(blob, `batch-${batch.id}.pdf`);
+      }
       setBatchFor(null);
       batchForm.resetFields();
     } catch (e) {
@@ -177,6 +184,16 @@ export function ProductsPage() {
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={3} />
           </Form.Item>
+          <Form.Item
+            name="terms"
+            label="Terms & conditions (one per line)"
+            tooltip="Printed at the bottom of each QR tag. Leave blank to use the default terms."
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder={'This code can be scanned only once.\nMultiple scans are an offense.'}
+            />
+          </Form.Item>
           <Form.Item name="points_value" label="Points value" rules={[{ required: true }]}>
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -190,9 +207,26 @@ export function ProductsPage() {
         title={`Generate batch — ${batchFor?.name ?? ''}`}
         open={batchFor !== null}
         onCancel={() => setBatchFor(null)}
-        onOk={submitBatch}
-        confirmLoading={createBatch.isPending}
-        okText="Generate & download PDF"
+        footer={[
+          <Button key="cancel" onClick={() => setBatchFor(null)}>
+            Cancel
+          </Button>,
+          <Button
+            key="download"
+            loading={createBatch.isPending}
+            onClick={() => void submitBatch('download')}
+          >
+            Download PDF
+          </Button>,
+          <Button
+            key="print"
+            type="primary"
+            loading={createBatch.isPending}
+            onClick={() => void submitBatch('print')}
+          >
+            Generate & print
+          </Button>,
+        ]}
       >
         <Form form={batchForm} layout="vertical">
           <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>

@@ -29,6 +29,7 @@ const NAV = [
   { key: '/users', icon: <TeamOutlined />, label: 'Users', group: 'Operations' },
   { key: '/redemptions', icon: <GiftOutlined />, label: 'Redemptions', group: 'Operations' },
   { key: '/returns', icon: <UndoOutlined />, label: 'Returns', group: 'Operations' },
+  { key: '/units', icon: <SearchOutlined />, label: 'QR Lookup', group: 'Operations' },
   { key: '/scans', icon: <QrcodeOutlined />, label: 'Scans', group: 'Insights' },
   { key: '/audit', icon: <AuditOutlined />, label: 'Audit', group: 'Insights' },
 ];

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from redis import Redis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,15 +9,11 @@ from app.core.errors import AppError
 from app.core.security import create_access_token, create_refresh_token, decode_token
 from app.models.user import User
 from app.schemas.auth import (
-    OtpRequestIn,
-    OtpRequestOut,
-    OtpVerifyIn,
+    LoginIn,
     RefreshIn,
     TokenPair,
     UserOut,
 )
-from app.services.otp import issue_otp, verify_otp
-from app.services.otp_provider import OtpProvider, get_otp_provider
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,40 +33,26 @@ def _issue_pair(redis: Redis, user: User) -> TokenPair:
     )
 
 
-@router.post("/otp/request", response_model=OtpRequestOut)
-def otp_request(
-    body: OtpRequestIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    redis: Redis = Depends(get_redis),
-    provider: OtpProvider = Depends(get_otp_provider),
-) -> OtpRequestOut:
-    user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
-    if user is None:
-        if not body.name:
-            raise AppError("validation_error", 400, "Name is required for first-time signup")
-        user = User(phone=body.phone, name=body.name)
-        db.add(user)
-    elif body.name:
-        user.name = body.name
-    db.commit()
-
-    ip = request.client.host if request.client else "unknown"
-    issue_otp(redis, body.phone, ip, provider)
-    return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
-
-
-@router.post("/otp/verify", response_model=TokenPair)
-def otp_verify(
-    body: OtpVerifyIn,
+@router.post("/login", response_model=TokenPair)
+def login(
+    body: LoginIn,
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ) -> TokenPair:
+    """Direct credential login: upsert the broker by phone and issue tokens.
+
+    No OTP — the phone number itself is the identity. Name and address are
+    captured/refreshed on every login.
+    """
     user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
     if user is None:
-        raise AppError("otp_expired", 400, "Code expired or not requested")
-
-    verify_otp(redis, body.phone, body.code)
+        user = User(phone=body.phone, name=body.name, address=body.address)
+        db.add(user)
+    else:
+        if not user.is_active:
+            raise AppError("account_disabled", 403, "This account has been disabled")
+        user.name = body.name
+        user.address = body.address
 
     user.is_verified = True
     db.commit()

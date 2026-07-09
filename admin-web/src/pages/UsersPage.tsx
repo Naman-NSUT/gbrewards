@@ -49,7 +49,7 @@ export function UsersPage() {
         loading={users.isLoading}
         dataSource={users.data?.items ?? []}
         emptyText="No users yet"
-        emptyHint="Brokers appear here after their first OTP sign-in."
+        emptyHint="Brokers appear here after their first sign-in."
         columns={[
           {
             title: 'Name',

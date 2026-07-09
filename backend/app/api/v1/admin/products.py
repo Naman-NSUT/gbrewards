@@ -53,6 +53,7 @@ def create_product(
     product = Product(
         name=body.name,
         description=body.description,
+        terms=body.terms,
         points_value=body.points_value,
         is_active=body.is_active,
     )

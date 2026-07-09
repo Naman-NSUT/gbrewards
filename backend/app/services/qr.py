@@ -1,11 +1,17 @@
-"""QR batch generation and printable PDF export (FR-P2, FR-P3)."""
+"""QR batch generation and printable PDF export (FR-P2, FR-P3).
+
+Tags print on a 75x125mm label roll (GoodBed dieline): a brand header band, then
+product name/description/points, the QR code, and per-product terms & conditions.
+One label per PDF page.
+"""
 
 import io
 import uuid
 
 import qrcode
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfgen import canvas
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,6 +21,42 @@ from app.models.product import Product
 from app.models.product_unit import ProductUnit
 from app.models.qr_batch import QrBatch
 from app.services.audit import record_audit
+
+# --- Label geometry (from the GoodBed 75x125mm dieline) ---------------------
+LABEL_W = 75 * mm
+LABEL_H = 125 * mm
+PAGE_SIZE = (LABEL_W, LABEL_H)
+EDGE = 2 * mm  # keyline inset → 71x121mm border
+BORDER_W = LABEL_W - 2 * EDGE  # 71mm
+BORDER_H = LABEL_H - 2 * EDGE  # 121mm
+CONTENT_W = 64 * mm  # printable text width
+CONTENT_LEFT = (LABEL_W - CONTENT_W) / 2
+CX = LABEL_W / 2
+
+# Zone heights (top → bottom), summing to BORDER_H (121mm).
+HEADER_H = 20 * mm
+BOX_A_H = 30 * mm  # name + description + points
+BOX_B_H = 41 * mm  # QR code
+BOX_C_H = 30 * mm  # terms & conditions
+
+# Zone y-boundaries (reportlab origin is bottom-left).
+TOP = LABEL_H - EDGE  # 123mm
+Y_HEADER = TOP - HEADER_H  # 103mm — header/Box A divider
+Y_A = Y_HEADER - BOX_A_H  # 73mm  — Box A/Box B divider
+Y_B = Y_A - BOX_B_H  # 32mm  — Box B/Box C divider
+
+# --- Branding (Pantone 7694 C; confirm exact CMYK before mass print) ---------
+BRAND_NAME = "GOODBED"
+BRAND_TAGLINE = "PRECISION ORTHOPAEDIC SLEEP"
+BRAND_COLOR = HexColor("#2C5D78")
+
+# Fallback terms when a product has no `terms` set.
+DEFAULT_TERMS = [
+    "This code can be scanned only once.",
+    "Multiple or duplicate scans will be treated as an offense.",
+    "Valid only on a genuine, unopened product.",
+    "Tampered or copied codes are void.",
+]
 
 
 def generate_batch(
@@ -67,8 +109,98 @@ def _qr_image(data: str) -> io.BytesIO:
     return buf
 
 
+def _draw_lines(
+    pdf: canvas.Canvas,
+    lines: list[str],
+    *,
+    x: float,
+    y: float,
+    leading: float,
+    centered: bool = False,
+) -> float:
+    """Draw pre-wrapped lines top-to-bottom, returning the next y."""
+    for line in lines:
+        if centered:
+            pdf.drawCentredString(x, y, line)
+        else:
+            pdf.drawString(x, y, line)
+        y -= leading
+    return y
+
+
+def _product_terms(product: Product) -> list[str]:
+    if product.terms and product.terms.strip():
+        return [ln.strip() for ln in product.terms.splitlines() if ln.strip()]
+    return DEFAULT_TERMS
+
+
+def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None:
+    """Render one 75x125mm tag onto the current page."""
+    # Keyline + zone dividers in brand colour.
+    pdf.setStrokeColor(BRAND_COLOR)
+    pdf.setLineWidth(1)
+    pdf.roundRect(EDGE, EDGE, BORDER_W, BORDER_H, 3 * mm, stroke=1, fill=0)
+    pdf.setLineWidth(0.5)
+    for yy in (Y_HEADER, Y_A, Y_B):
+        pdf.line(EDGE, yy, EDGE + BORDER_W, yy)
+
+    # --- Header band: brand + tagline -------------------------------------
+    pdf.setFillColor(BRAND_COLOR)
+    pdf.setFont("Helvetica-Bold", 26)
+    pdf.drawCentredString(CX, Y_HEADER + 7 * mm, BRAND_NAME)
+    pdf.setFont("Helvetica-Bold", 7)
+    pdf.drawCentredString(CX, Y_HEADER + 3 * mm, BRAND_TAGLINE)
+
+    # --- Box A: product name + description + points -----------------------
+    y = Y_HEADER - 6 * mm
+    pdf.setFillGray(0)
+    name_lines = simpleSplit(product.name, "Helvetica-Bold", 12, CONTENT_W)[:2]
+    pdf.setFont("Helvetica-Bold", 12)
+    y = _draw_lines(pdf, name_lines, x=CX, y=y, leading=5 * mm, centered=True)
+    if product.description and product.description.strip():
+        desc_lines = simpleSplit(product.description.strip(), "Helvetica", 7.5, CONTENT_W)[:3]
+        pdf.setFont("Helvetica", 7.5)
+        pdf.setFillGray(0.3)
+        y = _draw_lines(pdf, desc_lines, x=CX, y=y - 1 * mm, leading=3.6 * mm, centered=True)
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.setFillColor(BRAND_COLOR)
+    pdf.drawCentredString(CX, Y_A + 3.5 * mm, f"Earn {product.points_value} points")
+
+    # --- Box B: QR code + human-readable token below it -------------------
+    qr_size = 31 * mm
+    qr_y = Y_A - 2.5 * mm - qr_size
+    pdf.drawImage(
+        ImageReader(_qr_image(unit.token)),
+        CX - qr_size / 2,
+        qr_y,
+        width=qr_size,
+        height=qr_size,
+    )
+    # the token printed below the QR so a non-scanning tag is still reconcilable
+    pdf.setFillGray(0.1)
+    pdf.setFont("Courier", 6)
+    pdf.drawCentredString(CX, qr_y - 4 * mm, unit.token)
+
+    # --- Box C: terms & conditions ----------------------------------------
+    pdf.setFillColor(BRAND_COLOR)
+    pdf.setFont("Helvetica-Bold", 6.5)
+    pdf.drawString(CONTENT_LEFT, Y_B - 4 * mm, "TERMS & CONDITIONS")
+    pdf.setFillGray(0.15)
+    pdf.setFont("Helvetica", 6)
+    y = Y_B - 7.5 * mm
+    for i, term in enumerate(_product_terms(product), start=1):
+        lines = simpleSplit(f"{i}. {term}", "Helvetica", 6, CONTENT_W)
+        # stop before drawing anything that would spill past the bottom keyline
+        if y - len(lines) * 2.9 * mm < EDGE + 1.5 * mm:
+            break
+        y = _draw_lines(pdf, lines, x=CONTENT_LEFT, y=y, leading=2.9 * mm)
+
+    # reset for next page
+    pdf.setFillGray(0)
+
+
 def render_batch_pdf(session: Session, batch_id: uuid.UUID) -> bytes:
-    """A4 grid of QR codes, each labeled with product + batch + short token."""
+    """One 75x125mm label per unit in the batch."""
     batch = session.get(QrBatch, batch_id)
     if batch is None:
         raise AppError("invalid_code", 404, "Unknown batch")
@@ -84,44 +216,12 @@ def render_batch_pdf(session: Session, batch_id: uuid.UUID) -> bytes:
     )
 
     buf = io.BytesIO()
-    pdf = canvas.Canvas(buf, pagesize=A4)
-    page_w, page_h = A4
-
-    cols, rows = 3, 4
-    margin = 15 * mm
-    cell_w = (page_w - 2 * margin) / cols
-    cell_h = (page_h - 2 * margin) / rows
-    qr_size = min(cell_w, cell_h) - 14 * mm
-
-    for i, unit in enumerate(units):
-        slot = i % (cols * rows)
-        if i > 0 and slot == 0:
-            pdf.showPage()
-        col = slot % cols
-        row = slot // cols
-        x = margin + col * cell_w
-        # reportlab origin is bottom-left; lay rows top-to-bottom
-        y_top = page_h - margin - row * cell_h
-
-        from reportlab.lib.utils import ImageReader
-
-        qr = ImageReader(_qr_image(unit.token))
-        qr_x = x + (cell_w - qr_size) / 2
-        qr_y = y_top - qr_size - 4 * mm
-        pdf.drawImage(qr, qr_x, qr_y, width=qr_size, height=qr_size)
-
-        pdf.setFont("Helvetica", 7)
-        label_lines = [
-            product.name,
-            batch.label or f"batch {str(batch.id)[:8]}",
-            unit.token[:18],
-        ]
-        text_y = qr_y - 4 * mm
-        for line in label_lines:
-            pdf.drawCentredString(x + cell_w / 2, text_y, line)
-            text_y -= 3.2 * mm
-
-    pdf.showPage()
+    pdf = canvas.Canvas(buf, pagesize=PAGE_SIZE)
+    for unit in units:
+        _draw_label(pdf, product, unit)
+        pdf.showPage()
+    if not units:
+        pdf.showPage()  # keep a valid single-page PDF for an empty batch
     pdf.save()
     return buf.getvalue()
 
@@ -150,24 +250,11 @@ def generate_order(
 
 
 def render_order_pdf(session: Session, batch_ids: list[uuid.UUID]) -> bytes:
-    """Combined printable sheet for a QR order — one section per product/batch,
-    each starting on a fresh page with a header."""
-    from reportlab.lib.utils import ImageReader
-
+    """Combined label sheet for a QR order — one 75x125mm label per unit across
+    all batches, each label carrying its own product's name/terms."""
     buf = io.BytesIO()
-    pdf = canvas.Canvas(buf, pagesize=A4)
-    page_w, page_h = A4
-
-    cols, rows = 3, 4
-    margin = 15 * mm
-    header_h = 16 * mm
-    grid_top = page_h - margin - header_h
-    cell_w = (page_w - 2 * margin) / cols
-    cell_h = (grid_top - margin) / rows
-    qr_size = min(cell_w, cell_h) - 14 * mm
-    per_page = cols * rows
-
-    first_section = True
+    pdf = canvas.Canvas(buf, pagesize=PAGE_SIZE)
+    drew = False
     for batch_id in batch_ids:
         batch = session.get(QrBatch, batch_id)
         if batch is None:
@@ -181,45 +268,11 @@ def render_order_pdf(session: Session, batch_ids: list[uuid.UUID]) -> bytes:
                 .order_by(ProductUnit.created_at)
             ).scalars()
         )
-
-        header = f"{product.name} · {len(units)} units · {batch.label or str(batch.id)[:8]}"
-        subhead = f"{product.points_value} pts each"
-
-        for i, unit in enumerate(units):
-            slot = i % per_page
-            if slot == 0:
-                if not (first_section and i == 0):
-                    pdf.showPage()
-                first_section = False
-                _order_header(pdf, page_h, margin, header, subhead)
-            col = slot % cols
-            row = slot // cols
-            x = margin + col * cell_w
-            y_top = grid_top - row * cell_h
-            qr = ImageReader(_qr_image(unit.token))
-            qr_x = x + (cell_w - qr_size) / 2
-            qr_y = y_top - qr_size - 3 * mm
-            pdf.drawImage(qr, qr_x, qr_y, width=qr_size, height=qr_size)
-            pdf.setFont("Helvetica", 7)
-            pdf.drawCentredString(x + cell_w / 2, qr_y - 4 * mm, unit.token[:18])
-
-        if not units:
-            if not first_section:
-                pdf.showPage()
-            first_section = False
-            _order_header(pdf, page_h, margin, header, subhead)
-
-    pdf.showPage()
+        for unit in units:
+            _draw_label(pdf, product, unit)
+            pdf.showPage()
+            drew = True
+    if not drew:
+        pdf.showPage()
     pdf.save()
     return buf.getvalue()
-
-
-def _order_header(
-    pdf: canvas.Canvas, page_h: float, margin: float, header: str, subhead: str
-) -> None:
-    pdf.setFont("Helvetica-Bold", 13)
-    pdf.drawString(margin, page_h - margin - 6 * mm, header)
-    pdf.setFont("Helvetica", 8)
-    pdf.setFillGray(0.45)
-    pdf.drawString(margin, page_h - margin - 10 * mm, subhead)
-    pdf.setFillGray(0)

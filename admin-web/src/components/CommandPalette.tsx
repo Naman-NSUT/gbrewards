@@ -6,6 +6,7 @@ import {
   LogoutOutlined,
   PlusOutlined,
   QrcodeOutlined,
+  SearchOutlined,
   TeamOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
@@ -42,6 +43,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       { id: 'users', label: 'Users', group: 'Navigate', icon: <TeamOutlined />, run: go('/users') },
       { id: 'redemptions', label: 'Redemptions', group: 'Navigate', icon: <GiftOutlined />, run: go('/redemptions') },
       { id: 'returns', label: 'Returns', group: 'Navigate', icon: <UndoOutlined />, run: go('/returns') },
+      { id: 'units', label: 'QR Lookup', group: 'Navigate', icon: <SearchOutlined />, run: go('/units') },
       { id: 'scans', label: 'Scans', group: 'Navigate', icon: <QrcodeOutlined />, run: go('/scans') },
       { id: 'audit', label: 'Audit trail', group: 'Navigate', icon: <AuditOutlined />, run: go('/audit') },
       {

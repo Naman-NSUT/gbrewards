@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
-import { useMe, useUpdateName } from '../hooks/useMe';
+import { useMe, useUpdateProfile } from '../hooks/useMe';
 import { useI18n } from '../i18n/I18nProvider';
 import { LANG_LABEL, type Lang } from '../i18n/strings';
 import { colors, spacing } from '../theme';
@@ -13,16 +13,32 @@ const LANGS: Lang[] = ['en', 'hi'];
 export function ProfileScreen() {
   const { t, lang, setLang } = useI18n();
   const me = useMe();
-  const updateName = useUpdateName();
+  const updateProfile = useUpdateProfile();
   const { signOut } = useAuth();
-  const [draft, setDraft] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [addressDraft, setAddressDraft] = useState<string | null>(null);
 
   const serverName = me.data?.name ?? '';
-  const name = draft ?? serverName;
-  const dirty = draft !== null && name.trim() !== serverName && name.trim().length > 0;
+  const serverAddress = me.data?.address ?? '';
+  const name = nameDraft ?? serverName;
+  const address = addressDraft ?? serverAddress;
+
+  const nameValid = name.trim().length > 0;
+  const dirty =
+    (nameDraft !== null && name.trim() !== serverName) ||
+    (addressDraft !== null && address.trim() !== serverAddress);
 
   const onSave = () => {
-    updateName.mutate(name.trim(), { onSuccess: () => setDraft(null) });
+    if (!nameValid) return;
+    updateProfile.mutate(
+      { name: name.trim(), address: address.trim() },
+      {
+        onSuccess: () => {
+          setNameDraft(null);
+          setAddressDraft(null);
+        },
+      }
+    );
   };
 
   return (
@@ -31,13 +47,28 @@ export function ProfileScreen() {
       <Text style={styles.value}>{me.data?.phone ?? '—'}</Text>
 
       <Text style={styles.label}>{t('profile.name')}</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setDraft} autoCapitalize="words" />
+      <TextInput
+        style={styles.input}
+        value={name}
+        onChangeText={setNameDraft}
+        autoCapitalize="words"
+      />
+
+      <Text style={styles.label}>{t('profile.address')}</Text>
+      <TextInput
+        style={[styles.input, styles.addressInput]}
+        value={address}
+        onChangeText={setAddressDraft}
+        placeholder={t('phone.addressPlaceholder')}
+        placeholderTextColor={colors.faint}
+        multiline
+      />
 
       <Button
         title={t('profile.save')}
         onPress={onSave}
-        loading={updateName.isPending}
-        disabled={!dirty}
+        loading={updateProfile.isPending}
+        disabled={!dirty || !nameValid}
         style={{ marginTop: spacing.md }}
       />
 
@@ -77,6 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  addressInput: { height: 80, paddingTop: spacing.sm, textAlignVertical: 'top' },
   langRow: { flexDirection: 'row', gap: spacing.sm },
   langBtn: {
     flex: 1,

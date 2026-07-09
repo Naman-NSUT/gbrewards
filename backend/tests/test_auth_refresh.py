@@ -1,15 +1,12 @@
 import fakeredis
 from fastapi.testclient import TestClient
 
-from app.services.otp_provider import FakeOtpProvider, get_otp_provider
-
 
 def _onboard(client: TestClient, phone: str) -> dict:
-    client.post("/api/v1/auth/otp/request", json={"phone": phone, "name": "Refresh User"})
-    provider = get_otp_provider()
-    assert isinstance(provider, FakeOtpProvider)
-    code = provider.last_codes[phone]
-    r = client.post("/api/v1/auth/otp/verify", json={"phone": phone, "code": code})
+    r = client.post(
+        "/api/v1/auth/login",
+        json={"phone": phone, "name": "Refresh User", "address": "Test address"},
+    )
     assert r.status_code == 200, r.text
     return r.json()
 

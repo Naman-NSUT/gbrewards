@@ -2,6 +2,7 @@ export interface UserOut {
   id: string;
   phone: string;
   name: string;
+  address: string | null;
   is_verified: boolean;
   last_active_at: string | null;
 }
@@ -18,6 +19,7 @@ export interface Me {
   id: string;
   phone: string;
   name: string;
+  address: string | null;
   is_verified: boolean;
   balance: number;
   available: number;

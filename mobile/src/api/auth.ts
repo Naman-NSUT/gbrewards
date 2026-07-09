@@ -1,11 +1,13 @@
 import { api } from './client';
 import type { TokenPair } from './types';
 
-export async function requestOtp(phone: string, name?: string): Promise<void> {
-  await api.post('/auth/otp/request', { phone, name });
-}
-
-export async function verifyOtp(phone: string, code: string): Promise<TokenPair> {
-  const resp = await api.post<TokenPair>('/auth/otp/verify', { phone, code });
+// Direct login: the phone number is the identity. Creates the broker on first
+// login, refreshes name + address on every login. No OTP.
+export async function login(
+  phone: string,
+  name: string,
+  address: string
+): Promise<TokenPair> {
+  const resp = await api.post<TokenPair>('/auth/login', { phone, name, address });
   return resp.data;
 }

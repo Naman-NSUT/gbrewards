@@ -12,6 +12,7 @@ class User(UUIDPkMixin, TimestampMixin, Base):
 
     phone: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    address: Mapped[str | None] = mapped_column(String, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

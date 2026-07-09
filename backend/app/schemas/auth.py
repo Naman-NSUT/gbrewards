@@ -6,19 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field
 PHONE_PATTERN = r"^\+[1-9]\d{7,14}$"
 
 
-class OtpRequestIn(BaseModel):
+class LoginIn(BaseModel):
+    """Direct login: upsert the broker by phone with name + address, no OTP."""
+
     phone: str = Field(pattern=PHONE_PATTERN)
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-
-
-class OtpRequestOut(BaseModel):
-    sent: bool = True
-    resend_in: int
-
-
-class OtpVerifyIn(BaseModel):
-    phone: str = Field(pattern=PHONE_PATTERN)
-    code: str = Field(min_length=4, max_length=8)
+    name: str = Field(min_length=1, max_length=120)
+    address: str = Field(min_length=1, max_length=500)
 
 
 class RefreshIn(BaseModel):
@@ -31,6 +24,7 @@ class UserOut(BaseModel):
     id: uuid.UUID
     phone: str
     name: str
+    address: str | None = None
     is_verified: bool
     last_active_at: datetime | None = None
 

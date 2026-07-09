@@ -14,7 +14,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'lang.label': 'Language',
 
     'tab.scan': 'Scan',
-    'tab.history': 'History',
+    'tab.home': 'Home',
     'tab.redeem': 'Redeem',
     'tab.profile': 'Profile',
 
@@ -23,18 +23,14 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'phone.name': 'Name',
     'phone.namePlaceholder': 'Your name',
     'phone.phone': 'Phone',
+    'phone.address': 'Address',
+    'phone.addressPlaceholder': 'Your delivery address',
     'phone.send': 'Send code',
+    'phone.continue': 'Continue',
     'phone.errPhone': 'Enter a valid phone number, e.g. +9199…',
     'phone.errName': 'Please enter your name.',
+    'phone.errAddress': 'Please enter your address.',
     'phone.errSend': 'Could not send code. Try again.',
-
-    'otp.title': 'Enter the code',
-    'otp.subtitle': 'We sent a 6-digit code to {phone}.',
-    'otp.verify': 'Verify',
-    'otp.resendIn': 'Resend in {s}s',
-    'otp.resend': 'Resend code',
-    'otp.errInvalid': 'Invalid code. Try again.',
-    'otp.errResend': 'Could not resend.',
 
     'scan.permTitle': 'Camera access needed',
     'scan.permBody': 'GB Rewards needs the camera to scan product QR codes and award points.',
@@ -55,6 +51,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'result.errBody': 'Check your connection and try again.',
     'result.scanAnother': 'Scan another',
 
+    'home.scan': 'Scan a code',
+    'home.history': 'Activity',
     'history.balance': 'Current balance',
     'history.available': '{n} available',
     'history.empty': 'No activity yet. Scan a code!',
@@ -80,7 +78,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     'profile.phone': 'Phone',
     'profile.name': 'Name',
-    'profile.save': 'Save name',
+    'profile.address': 'Address',
+    'profile.save': 'Save',
     'profile.logout': 'Log out',
   },
   hi: {
@@ -90,7 +89,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'lang.label': 'भाषा',
 
     'tab.scan': 'स्कैन',
-    'tab.history': 'इतिहास',
+    'tab.home': 'होम',
     'tab.redeem': 'रिडीम',
     'tab.profile': 'प्रोफ़ाइल',
 
@@ -99,18 +98,14 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'phone.name': 'नाम',
     'phone.namePlaceholder': 'आपका नाम',
     'phone.phone': 'फ़ोन',
+    'phone.address': 'पता',
+    'phone.addressPlaceholder': 'आपका डिलीवरी पता',
     'phone.send': 'कोड भेजें',
+    'phone.continue': 'आगे बढ़ें',
     'phone.errPhone': 'सही फ़ोन नंबर दर्ज करें, जैसे +9199…',
     'phone.errName': 'कृपया अपना नाम दर्ज करें।',
+    'phone.errAddress': 'कृपया अपना पता दर्ज करें।',
     'phone.errSend': 'कोड नहीं भेजा जा सका। फिर से प्रयास करें।',
-
-    'otp.title': 'कोड दर्ज करें',
-    'otp.subtitle': 'हमने {phone} पर 6 अंकों का कोड भेजा है।',
-    'otp.verify': 'सत्यापित करें',
-    'otp.resendIn': '{s} सेकंड में फिर भेजें',
-    'otp.resend': 'कोड फिर भेजें',
-    'otp.errInvalid': 'गलत कोड। फिर से प्रयास करें।',
-    'otp.errResend': 'फिर से नहीं भेजा जा सका।',
 
     'scan.permTitle': 'कैमरा एक्सेस चाहिए',
     'scan.permBody': 'पॉइंट्स पाने के लिए GB Rewards को QR कोड स्कैन करने हेतु कैमरे की ज़रूरत है।',
@@ -131,6 +126,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'result.errBody': 'अपना कनेक्शन जाँचें और फिर प्रयास करें।',
     'result.scanAnother': 'दूसरा स्कैन करें',
 
+    'home.scan': 'कोड स्कैन करें',
+    'home.history': 'गतिविधि',
     'history.balance': 'वर्तमान बैलेंस',
     'history.available': '{n} उपलब्ध',
     'history.empty': 'अभी कोई गतिविधि नहीं। एक कोड स्कैन करें!',
@@ -156,7 +153,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     'profile.phone': 'फ़ोन',
     'profile.name': 'नाम',
-    'profile.save': 'नाम सहेजें',
+    'profile.address': 'पता',
+    'profile.save': 'सहेजें',
     'profile.logout': 'लॉग आउट',
   },
 };

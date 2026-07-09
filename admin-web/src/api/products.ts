@@ -9,6 +9,7 @@ export interface OrderItem {
 export interface ProductInput {
   name: string;
   description?: string | null;
+  terms?: string | null;
   points_value: number;
   is_active?: boolean;
 }

@@ -7,7 +7,7 @@ import { apiErrorMessage } from '../api/client';
 import { createOrder, downloadOrderPdf } from '../api/products';
 import type { Product } from '../api/types';
 import { EmptyState } from '../components/EmptyState';
-import { downloadBlob } from '../lib/format';
+import { downloadBlob, printBlob } from '../lib/format';
 import { brand } from '../theme';
 
 interface Line {
@@ -42,7 +42,7 @@ export function OrderDrawer({
   const totalUnits = valid.reduce((s, l) => s + l.quantity, 0);
   const canGenerate = valid.length > 0 && valid.length === lines.length;
 
-  const generate = async () => {
+  const generate = async (mode: 'print' | 'download') => {
     setBusy(true);
     try {
       const result = await createOrder(
@@ -50,7 +50,11 @@ export function OrderDrawer({
         label || undefined,
       );
       const blob = await downloadOrderPdf(result.batches.map((b) => b.batch_id));
-      downloadBlob(blob, `qr-order-${Date.now()}.pdf`);
+      if (mode === 'print') {
+        printBlob(blob);
+      } else {
+        downloadBlob(blob, `qr-order-${Date.now()}.pdf`);
+      }
       message.success(`Generated ${result.total_units} QR codes`);
       void qc.invalidateQueries({ queryKey: ['products'] });
       setLines([newLine()]);
@@ -70,9 +74,19 @@ export function OrderDrawer({
       open={open}
       onClose={onClose}
       extra={
-        <Button type="primary" onClick={generate} loading={busy} disabled={!canGenerate}>
-          Generate & download
-        </Button>
+        <Space>
+          <Button onClick={() => void generate('download')} loading={busy} disabled={!canGenerate}>
+            Download
+          </Button>
+          <Button
+            type="primary"
+            onClick={() => void generate('print')}
+            loading={busy}
+            disabled={!canGenerate}
+          >
+            Generate & print
+          </Button>
+        </Space>
       }
     >
       <p style={{ color: brand.textDim, marginTop: 0, fontSize: 13.5 }}>

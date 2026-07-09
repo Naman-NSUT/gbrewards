@@ -8,7 +8,9 @@ from app.core.deps import get_current_admin, get_db
 from app.core.errors import AppError
 from app.models.admin import Admin
 from app.models.ledger_entry import LedgerEntry
+from app.models.product import Product
 from app.models.product_unit import ProductUnit
+from app.models.user import User
 from app.schemas.admin import ReactivateOut, UnitDetailOut, UnitOut
 from app.schemas.ledger import LedgerEntryOut
 from app.services.audit import record_audit
@@ -53,8 +55,14 @@ def get_unit(
             .order_by(LedgerEntry.created_at.desc())
         ).scalars()
     )
+
+    product = db.get(Product, unit.product_id)
+    claimer = db.get(User, unit.claimed_by_user_id) if unit.claimed_by_user_id else None
     return UnitDetailOut(
         **UnitOut.model_validate(unit).model_dump(),
+        product_name=product.name if product else None,
+        claimed_by_name=claimer.name if claimer else None,
+        claimed_by_phone=claimer.phone if claimer else None,
         history=[LedgerEntryOut.model_validate(h) for h in history],
     )
 

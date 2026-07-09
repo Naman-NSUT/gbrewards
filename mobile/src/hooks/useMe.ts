@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getMe, updateName } from '../api/me';
+import { getMe, updateProfile, type ProfileUpdate } from '../api/me';
 import type { Me } from '../api/types';
 
 export function useMe() {
   return useQuery<Me>({ queryKey: ['me'], queryFn: getMe });
 }
 
-export function useUpdateName() {
+export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => updateName(name),
+    mutationFn: (payload: ProfileUpdate) => updateProfile(payload),
     onSuccess: (me) => {
       qc.setQueryData(['me'], me);
     },

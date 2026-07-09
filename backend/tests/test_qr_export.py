@@ -2,7 +2,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.product import Product
-from app.services.qr import generate_batch, render_batch_pdf
+from app.services.qr import (
+    DEFAULT_TERMS,
+    _product_terms,
+    generate_batch,
+    render_batch_pdf,
+)
 from tests.factories import admin_headers, make_admin
 
 
@@ -36,8 +41,42 @@ def test_render_pdf_multipage(db: Session) -> None:
 
     pdf = render_batch_pdf(db, batch.id)
     assert pdf[:4] == b"%PDF"
-    # 15 units across a 12-per-page grid → at least 2 page markers
+    # one 75x125mm label per unit → at least 2 page markers
     assert pdf.count(b"/Type /Page") >= 2 or pdf.count(b"/Page") >= 2
+
+
+def test_product_terms_parsing() -> None:
+    # explicit per-product terms: split into non-empty lines
+    p = Product(
+        name="X",
+        terms="Scan once only.\n\nDuplicate scans are an offense.\n",
+        points_value=1,
+    )
+    assert _product_terms(p) == ["Scan once only.", "Duplicate scans are an offense."]
+    # blank / missing terms fall back to the defaults
+    assert _product_terms(Product(name="X", points_value=1)) == DEFAULT_TERMS
+    assert _product_terms(Product(name="X", terms="   ", points_value=1)) == DEFAULT_TERMS
+
+
+def test_one_label_page_per_unit(db: Session) -> None:
+    admin = make_admin(db)
+    db.flush()
+
+    product = Product(
+        name="OrthoPillow",
+        description="Memory-foam cervical pillow.",
+        terms="Scan once only.\nDuplicate scans are an offense.",
+        points_value=150,
+    )
+    db.add(product)
+    db.flush()
+    batch = generate_batch(db, product_id=product.id, quantity=3, label="b", admin_id=admin.id)
+    db.flush()
+
+    pdf = render_batch_pdf(db, batch.id)
+    assert pdf[:4] == b"%PDF"
+    # one label (page) per unit — subtract the single "/Type /Pages" tree root
+    assert pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages") == 3
 
 
 def test_qr_order_multi_product(client: TestClient, db: Session) -> None:

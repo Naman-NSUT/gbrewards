@@ -14,17 +14,6 @@ class Settings(BaseSettings):
     jwt_access_ttl_minutes: int = 60
     jwt_refresh_ttl_days: int = 30
 
-    otp_provider: Literal["fake", "msg91"] = "fake"
-    otp_ttl_seconds: int = 300
-    otp_max_attempts: int = 5
-    otp_resend_cooldown_seconds: int = 30
-    otp_daily_cap_per_phone: int = 5
-    otp_daily_cap_per_ip: int = 20
-
-    msg91_auth_key: str = ""
-    msg91_sender_id: str = ""
-    msg91_template_id: str = ""
-
     env: Literal["dev", "staging", "prod"] = "dev"
     log_level: str = "INFO"
 
@@ -47,9 +36,6 @@ class Settings(BaseSettings):
             problems.append("JWT_SECRET must be a strong, non-default value (>= 32 chars)")
         if not self.cors_origin_list:
             problems.append("CORS_ORIGINS must be set")
-        # Real SMS is required in prod; staging may keep the fake provider for smoke testing.
-        if self.env == "prod" and self.otp_provider == "fake":
-            problems.append("OTP_PROVIDER must not be 'fake' in production")
         if problems:
             raise RuntimeError("Invalid production config: " + "; ".join(problems))
 

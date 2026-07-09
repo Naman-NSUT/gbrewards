@@ -4,8 +4,8 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { useAuth } from '../auth/AuthContext';
 import { colors } from '../theme';
-import { AppTabs } from './AppTabs';
 import { AuthStack } from './AuthStack';
+import { MainStack } from './MainStack';
 
 export function RootNavigator() {
   const { isReady, isAuthenticated } = useAuth();
@@ -20,7 +20,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppTabs /> : <AuthStack />}
+      {isAuthenticated ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

@@ -19,6 +19,9 @@ const RedemptionsPage = lazy(() =>
 const ReturnsPage = lazy(() =>
   import('./pages/ReturnsPage').then((m) => ({ default: m.ReturnsPage })),
 );
+const UnitLookupPage = lazy(() =>
+  import('./pages/UnitLookupPage').then((m) => ({ default: m.UnitLookupPage })),
+);
 const ScansPage = lazy(() => import('./pages/ScansPage').then((m) => ({ default: m.ScansPage })));
 const AuditPage = lazy(() => import('./pages/AuditPage').then((m) => ({ default: m.AuditPage })));
 const AccountPage = lazy(() =>
@@ -51,6 +54,7 @@ export default function App() {
           <Route path="users" element={<UsersPage />} />
           <Route path="redemptions" element={<RedemptionsPage />} />
           <Route path="returns" element={<ReturnsPage />} />
+          <Route path="units" element={<UnitLookupPage />} />
           <Route path="scans" element={<ScansPage />} />
           <Route path="audit" element={<AuditPage />} />
           <Route path="account" element={<AccountPage />} />

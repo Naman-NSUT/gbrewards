@@ -10,6 +10,7 @@ class MeOut(BaseModel):
     id: uuid.UUID
     phone: str
     name: str
+    address: str | None = None
     is_verified: bool
     balance: int
     available: int
@@ -17,4 +18,5 @@ class MeOut(BaseModel):
 
 
 class MeUpdateIn(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    address: str | None = Field(default=None, max_length=500)

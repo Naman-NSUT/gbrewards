@@ -9,20 +9,23 @@ import {
 } from 'react-native';
 
 import { extractApiError } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
 import { useI18n } from '../i18n/I18nProvider';
-import { useRequestOtp } from '../hooks/useOtp';
+import { useLogin } from '../hooks/useLogin';
 import type { AuthStackScreenProps } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 
-export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
+export function PhoneScreen(_props: AuthStackScreenProps<'Phone'>) {
   const { t } = useI18n();
+  const { signIn } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+91');
+  const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const requestOtp = useRequestOtp();
+  const loginMutation = useLogin();
 
   const onSubmit = () => {
     setError(null);
@@ -34,13 +37,18 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
       setError(t('phone.errName'));
       return;
     }
-    requestOtp.mutate(
-      { phone, name: name.trim() },
+    if (address.trim().length === 0) {
+      setError(t('phone.errAddress'));
+      return;
+    }
+
+    loginMutation.mutate(
+      { phone, name: name.trim(), address: address.trim() },
       {
-        onSuccess: () => navigation.navigate('Otp', { phone, name: name.trim() }),
+        onSuccess: (tokens) =>
+          signIn({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token }),
         onError: (e) => {
-          const api = extractApiError(e);
-          setError(api?.message ?? t('phone.errSend'));
+          setError(extractApiError(e)?.message ?? t('phone.errSend'));
         },
       }
     );
@@ -76,12 +84,22 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
           autoCapitalize="none"
         />
 
+        <Text style={styles.label}>{t('phone.address')}</Text>
+        <TextInput
+          style={[styles.input, styles.addressInput]}
+          placeholder={t('phone.addressPlaceholder')}
+          placeholderTextColor={colors.faint}
+          value={address}
+          onChangeText={setAddress}
+          multiline
+        />
+
         {error && <Text style={styles.error}>{error}</Text>}
 
         <Button
-          title={t('phone.send')}
+          title={t('phone.continue')}
           onPress={onSubmit}
-          loading={requestOtp.isPending}
+          loading={loginMutation.isPending}
           style={{ marginTop: spacing.lg }}
         />
       </View>
@@ -104,5 +122,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  addressInput: { height: 80, paddingTop: spacing.sm, textAlignVertical: 'top' },
   error: { color: colors.danger, marginTop: spacing.md },
 });

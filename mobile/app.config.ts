@@ -7,9 +7,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'GB Rewards',
   slug: 'scanrewards',
   scheme: 'scanrewards',
+  owner: 'naman04',
+  android: {
+    ...config.android,
+    package: 'com.gbrewards.app',
+  },
   extra: {
-    apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:8000',
+    apiBaseUrl: process.env.API_BASE_URL ?? 'http://10.0.2.2:8088',
     sentryDsn: process.env.SENTRY_DSN ?? '',
+    eas: {
+      projectId: 'abdea07c-f940-4030-b5ed-a3b6e40a51f9',
+    },
   },
   plugins: [
     [
@@ -20,5 +28,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-secure-store',
     '@sentry/react-native',
+    [
+      'expo-build-properties',
+      {
+        // Allow plain http:// to the LAN/dev backend. Release APKs block
+        // cleartext by default (Android 9+); production should use https.
+        android: { usesCleartextTraffic: true },
+      },
+    ],
   ],
 });
