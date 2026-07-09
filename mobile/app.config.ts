@@ -10,7 +10,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: 'naman04',
   android: {
     ...config.android,
-    package: 'com.gbrewards.app',
+    package: 'in.gbrewards.gbrewards',
   },
   extra: {
     apiBaseUrl: process.env.API_BASE_URL ?? 'http://10.0.2.2:8088',

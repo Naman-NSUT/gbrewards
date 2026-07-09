@@ -25,7 +25,7 @@
     "production": {
       "android": { "buildType": "app-bundle" },
       "env": {
-        "API_BASE_URL": "https://gbrewards-api.onrender.com",
+        "API_BASE_URL": "https://gbrewards.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
