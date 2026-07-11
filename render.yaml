@@ -29,6 +29,10 @@ services:
         sync: false # your Vercel admin URL, e.g. https://gbrewards-admin.vercel.app
       - key: SENTRY_DSN
         sync: false # optional; leave blank to disable
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false # set to create the first admin on next deploy (no shell access needed)
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false # unset both vars again after the admin is created
 
   - type: keyvalue
     name: gbrewards-redis

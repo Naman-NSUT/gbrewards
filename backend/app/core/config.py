@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = 0.1
     scan_rate_per_min: int = 30
 
+    # Bootstrap the first admin account on startup if it doesn't exist yet.
+    # Set both to create it without needing shell/CLI access (e.g. on Render's free plan).
+    bootstrap_admin_email: str = ""
+    bootstrap_admin_password: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

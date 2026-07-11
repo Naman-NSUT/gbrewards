@@ -8,6 +8,7 @@ from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
+from app.db.bootstrap import ensure_bootstrap_admin
 
 logger = get_logger("request")
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     configure_logging()
     settings.assert_production_ready()
     _init_sentry()
+    ensure_bootstrap_admin()
 
     app = FastAPI(title="GB Rewards API", version="0.1.0")
 
