@@ -135,6 +135,56 @@ export interface Redemption {
   created_at: string;
   processed_at: string | null;
   user: { id: string; phone: string; name: string };
+  reward_id: string | null;
+  reward: { id: string; title: string } | null;
+}
+
+export interface Reward {
+  id: string;
+  title: string;
+  description: string | null;
+  points_cost: number;
+  image_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface RewardInput {
+  title: string;
+  description?: string | null;
+  points_cost: number;
+  image_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface Faq {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface FaqInput {
+  question: string;
+  answer: string;
+  sort_order?: number;
+  is_published?: boolean;
+}
+
+export interface ContentDoc {
+  key: string;
+  title: string;
+  body: string;
+  updated_at: string;
+}
+
+export interface ContentDocInput {
+  title: string;
+  body: string;
 }
 
 export interface Dashboard {

@@ -17,7 +17,9 @@ def ensure_bootstrap_admin() -> None:
     if not settings.bootstrap_admin_email or not settings.bootstrap_admin_password:
         return
     with SessionLocal() as db:
-        existing = db.query(Admin).filter(Admin.email == settings.bootstrap_admin_email).one_or_none()
+        existing = (
+            db.query(Admin).filter(Admin.email == settings.bootstrap_admin_email).one_or_none()
+        )
         if existing is not None:
             return
         db.add(

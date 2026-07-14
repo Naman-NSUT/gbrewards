@@ -12,6 +12,13 @@ const DashboardPage = lazy(() =>
 const ProductsPage = lazy(() =>
   import('./pages/ProductsPage').then((m) => ({ default: m.ProductsPage })),
 );
+const RewardsPage = lazy(() =>
+  import('./pages/RewardsPage').then((m) => ({ default: m.RewardsPage })),
+);
+const FaqsPage = lazy(() => import('./pages/FaqsPage').then((m) => ({ default: m.FaqsPage })));
+const ContentPage = lazy(() =>
+  import('./pages/ContentPage').then((m) => ({ default: m.ContentPage })),
+);
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RedemptionsPage = lazy(() =>
   import('./pages/RedemptionsPage').then((m) => ({ default: m.RedemptionsPage })),
@@ -51,6 +58,9 @@ export default function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="rewards" element={<RewardsPage />} />
+          <Route path="faqs" element={<FaqsPage />} />
+          <Route path="content" element={<ContentPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="redemptions" element={<RedemptionsPage />} />
           <Route path="returns" element={<ReturnsPage />} />

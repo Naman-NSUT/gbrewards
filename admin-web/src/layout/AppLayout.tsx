@@ -2,9 +2,11 @@ import {
   AppstoreOutlined,
   AuditOutlined,
   DashboardOutlined,
+  FileTextOutlined,
   GiftOutlined,
   LogoutOutlined,
   QrcodeOutlined,
+  QuestionCircleOutlined,
   SearchOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -26,6 +28,9 @@ const { Sider, Header, Content } = Layout;
 const NAV = [
   { key: '/', icon: <DashboardOutlined />, label: 'Dashboard', group: 'Overview' },
   { key: '/products', icon: <AppstoreOutlined />, label: 'Products & QR', group: 'Catalog' },
+  { key: '/rewards', icon: <GiftOutlined />, label: 'Rewards', group: 'Catalog' },
+  { key: '/faqs', icon: <QuestionCircleOutlined />, label: 'FAQs', group: 'Content' },
+  { key: '/content', icon: <FileTextOutlined />, label: 'Content', group: 'Content' },
   { key: '/users', icon: <TeamOutlined />, label: 'Users', group: 'Operations' },
   { key: '/redemptions', icon: <GiftOutlined />, label: 'Redemptions', group: 'Operations' },
   { key: '/returns', icon: <UndoOutlined />, label: 'Returns', group: 'Operations' },
@@ -34,7 +39,7 @@ const NAV = [
   { key: '/audit', icon: <AuditOutlined />, label: 'Audit', group: 'Insights' },
 ];
 
-const GROUPS = ['Overview', 'Catalog', 'Operations', 'Insights'];
+const GROUPS = ['Overview', 'Catalog', 'Content', 'Operations', 'Insights'];
 
 const isMac =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '');

@@ -60,6 +60,7 @@ export interface Redemption {
   points: number;
   status: RedemptionStatus;
   note: string | null;
+  reward_id: string | null;
   created_at: string;
   processed_at: string | null;
 }

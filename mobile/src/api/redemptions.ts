@@ -6,6 +6,11 @@ export async function createRedemption(points: number): Promise<Redemption> {
   return resp.data;
 }
 
+export async function redeemReward(rewardId: string): Promise<Redemption> {
+  const resp = await api.post<Redemption>('/redemptions', { reward_id: rewardId });
+  return resp.data;
+}
+
 export async function listRedemptions(): Promise<Redemption[]> {
   const resp = await api.get<Redemption[]>('/redemptions');
   return resp.data;

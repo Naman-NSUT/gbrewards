@@ -15,7 +15,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     'tab.scan': 'Scan',
     'tab.home': 'Home',
-    'tab.redeem': 'Redeem',
+    'tab.rewards': 'Rewards',
+    'tab.info': 'Info',
     'tab.profile': 'Profile',
 
     'phone.title': 'Welcome to GB Rewards',
@@ -85,6 +86,20 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'status.fulfilled': 'fulfilled',
     'status.cancelled': 'cancelled',
 
+    'rewards.title': 'Rewards',
+    'rewards.redeem': 'Redeem',
+    'rewards.cost': '{n} pts',
+    'rewards.insufficient': 'Not enough points',
+    'rewards.empty': 'No rewards available yet',
+    'rewards.confirm': 'Redeem this reward?',
+    'rewards.success': 'Redemption request submitted',
+
+    'info.products': 'Products & Points',
+    'info.faqs': 'FAQs',
+    'info.terms': 'Terms & Conditions',
+    'info.pointsSuffix': 'pts',
+    'info.empty': 'Nothing here yet',
+
     'profile.phone': 'Phone',
     'profile.name': 'Name',
     'profile.address': 'Address',
@@ -99,7 +114,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     'tab.scan': 'स्कैन',
     'tab.home': 'होम',
-    'tab.redeem': 'रिडीम',
+    'tab.rewards': 'इनाम',
+    'tab.info': 'जानकारी',
     'tab.profile': 'प्रोफ़ाइल',
 
     'phone.title': 'GB Rewards में आपका स्वागत है',
@@ -168,6 +184,20 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'status.rejected': 'अस्वीकृत',
     'status.fulfilled': 'पूर्ण',
     'status.cancelled': 'रद्द',
+
+    'rewards.title': 'इनाम',
+    'rewards.redeem': 'भुनाएं',
+    'rewards.cost': '{n} अंक',
+    'rewards.insufficient': 'पर्याप्त अंक नहीं',
+    'rewards.empty': 'अभी कोई इनाम उपलब्ध नहीं',
+    'rewards.confirm': 'यह इनाम भुनाएं?',
+    'rewards.success': 'भुनाने का अनुरोध भेज दिया गया',
+
+    'info.products': 'उत्पाद और अंक',
+    'info.faqs': 'अक्सर पूछे जाने वाले प्रश्न',
+    'info.terms': 'नियम और शर्तें',
+    'info.pointsSuffix': 'अंक',
+    'info.empty': 'अभी यहां कुछ नहीं',
 
     'profile.phone': 'फ़ोन',
     'profile.name': 'नाम',

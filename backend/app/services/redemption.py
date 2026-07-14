@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.models.admin import Admin
 from app.models.redemption_request import RedemptionRequest
+from app.models.reward import Reward
 from app.models.user import User
 from app.services import ledger
 from app.services.audit import record_audit
@@ -34,6 +35,35 @@ def create(db: Session, *, user: User, points: int) -> RedemptionRequest:
         raise AppError("insufficient_balance", 400, "Requested points exceed available balance")
 
     req = RedemptionRequest(user_id=user.id, points=points, status="pending")
+    db.add(req)
+    db.flush()
+    return req
+
+
+def create_for_reward(db: Session, *, user: User, reward_id: uuid.UUID) -> RedemptionRequest:
+    """Create a pending redemption priced from a reward's ``points_cost``.
+
+    Reuses the identical availability check and pending-as-hold model as
+    :func:`create`; ``points`` is frozen from the reward at create time so later
+    edits to the reward don't change already-pending/approved amounts.
+    """
+    reward = db.get(Reward, reward_id)
+    if reward is None:
+        raise AppError("reward_not_found", 404, "Unknown reward")
+    if reward.is_active is False:
+        raise AppError("reward_inactive", 409, "Reward not available")
+
+    # Serialize the user's redemption creates against the same row lock as the
+    # generic path so parallel reward redemptions can't over-commit available.
+    db.execute(select(User.id).where(User.id == user.id).with_for_update())
+
+    points = reward.points_cost
+    if points > ledger.available(db, user.id):
+        raise AppError("insufficient_balance", 400, "Requested points exceed available balance")
+
+    req = RedemptionRequest(
+        user_id=user.id, points=points, status="pending", reward_id=reward.id
+    )
     db.add(req)
     db.flush()
     return req

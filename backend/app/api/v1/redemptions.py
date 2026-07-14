@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
+from app.core.errors import AppError
 from app.models.redemption_request import RedemptionRequest
 from app.models.user import User
 from app.schemas.redemption import RedemptionCreateIn, RedemptionOut
@@ -19,7 +20,14 @@ def create_redemption(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RedemptionRequest:
-    req = redemption.create(db, user=user, points=body.points)
+    # Exactly one of points / reward_id must be supplied.
+    if (body.points is None) == (body.reward_id is None):
+        raise AppError("validation_error", 422, "Provide either points or reward_id")
+    if body.reward_id is not None:
+        req = redemption.create_for_reward(db, user=user, reward_id=body.reward_id)
+    else:
+        assert body.points is not None
+        req = redemption.create(db, user=user, points=body.points)
     db.commit()
     db.refresh(req)
     return req

@@ -4,8 +4,9 @@ import { Text } from 'react-native';
 
 import { useI18n } from '../i18n/I18nProvider';
 import { HomeScreen } from '../screens/HomeScreen';
+import { InfoScreen } from '../screens/InfoScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { RedeemScreen } from '../screens/RedeemScreen';
+import { RewardsScreen } from '../screens/RewardsScreen';
 import { colors } from '../theme';
 import type { AppTabParamList } from './types';
 
@@ -13,13 +14,15 @@ const Tab = createBottomTabNavigator<AppTabParamList>();
 
 const ICONS: Record<keyof AppTabParamList, string> = {
   Home: '🏠',
-  Redeem: '🎁',
+  Rewards: '🎁',
+  Info: 'ℹ️',
   Profile: '👤',
 };
 
 const LABEL_KEY: Record<keyof AppTabParamList, string> = {
   Home: 'tab.home',
-  Redeem: 'tab.redeem',
+  Rewards: 'tab.rewards',
+  Info: 'tab.info',
   Profile: 'tab.profile',
 };
 
@@ -41,7 +44,8 @@ export function AppTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Redeem" component={RedeemScreen} />
+      <Tab.Screen name="Rewards" component={RewardsScreen} />
+      <Tab.Screen name="Info" component={InfoScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

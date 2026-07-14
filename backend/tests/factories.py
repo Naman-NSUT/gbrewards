@@ -3,8 +3,11 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.models.admin import Admin
+from app.models.content_doc import ContentDoc
+from app.models.faq import Faq
 from app.models.product import Product
 from app.models.product_unit import ProductUnit
+from app.models.reward import Reward
 from app.models.user import User
 
 
@@ -39,6 +42,57 @@ def make_unit(
     db.add(unit)
     db.flush()
     return unit
+
+
+def make_reward(
+    db: Session,
+    *,
+    title: str = "Mug",
+    points_cost: int = 50,
+    is_active: bool = True,
+    sort_order: int = 0,
+) -> Reward:
+    reward = Reward(
+        title=title,
+        points_cost=points_cost,
+        is_active=is_active,
+        sort_order=sort_order,
+    )
+    db.add(reward)
+    db.flush()
+    return reward
+
+
+def make_faq(
+    db: Session,
+    *,
+    question: str = "How?",
+    answer: str = "Like this.",
+    is_published: bool = True,
+    sort_order: int = 0,
+) -> Faq:
+    faq = Faq(
+        question=question,
+        answer=answer,
+        is_published=is_published,
+        sort_order=sort_order,
+    )
+    db.add(faq)
+    db.flush()
+    return faq
+
+
+def make_content_doc(
+    db: Session,
+    *,
+    key: str = "terms",
+    title: str = "Terms",
+    body: str = "Body text.",
+) -> ContentDoc:
+    doc = ContentDoc(key=key, title=title, body=body)
+    db.add(doc)
+    db.flush()
+    return doc
 
 
 def auth_headers(user: User) -> dict[str, str]:

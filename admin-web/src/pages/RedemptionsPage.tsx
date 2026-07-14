@@ -67,6 +67,10 @@ export function RedemptionsPage() {
               </span>
             ),
           },
+          {
+            title: 'Reward',
+            render: (_v, r) => r.reward?.title ?? '—',
+          },
           { title: 'Points', dataIndex: 'points', render: (v: number) => <span className="tnum">{v}</span> },
           {
             title: 'Status',

@@ -5,7 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class RedemptionCreateIn(BaseModel):
-    points: int = Field(gt=0)
+    points: int | None = Field(default=None, gt=0)
+    reward_id: uuid.UUID | None = None
 
 
 class RedemptionActionIn(BaseModel):
@@ -21,6 +22,7 @@ class RedemptionOut(BaseModel):
     note: str | None = None
     created_at: datetime
     processed_at: datetime | None = None
+    reward_id: uuid.UUID | None = None
 
 
 class RedemptionUserBrief(BaseModel):
@@ -29,5 +31,11 @@ class RedemptionUserBrief(BaseModel):
     name: str
 
 
+class RedemptionRewardBrief(BaseModel):
+    id: uuid.UUID
+    title: str
+
+
 class RedemptionAdminOut(RedemptionOut):
     user: RedemptionUserBrief
+    reward: RedemptionRewardBrief | None = None
