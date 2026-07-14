@@ -27,7 +27,9 @@ export function setOnTokensChanged(cb: (tokens: StoredTokens | null) => void): v
 
 export const api = axios.create({
   baseURL: `${API_BASE_URL}${API_PREFIX}`,
-  timeout: 15000,
+  // Generous timeout so a cold-started backend (free-tier hosts spin down and
+  // take 30–60s to wake) doesn't abort a request the server actually completes.
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' },
 });
 
