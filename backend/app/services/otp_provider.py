@@ -53,19 +53,30 @@ class TwoFactorProvider(OtpProvider):
             resp = httpx.get(url, timeout=10.0)
         except httpx.HTTPError as exc:
             logger.error("twofactor_http_error phone=%s err=%s", number, exc)
-            raise AppError("otp_send_failed", 502, "Could not send verification code") from exc
+            raise AppError(
+                "otp_send_failed",
+                502,
+                "Could not send verification code",
+                {"provider": "2factor", "reason": f"network error: {exc}"},
+            ) from exc
 
         # 2Factor signals failure via either a non-2xx status or Status != "Success",
         # and puts the human-readable reason in "Details" — surface it either way.
         details = self._details(resp)
         if resp.is_error or details.get("status") != "success":
+            reason = details.get("message") or f"HTTP {resp.status_code}"
             logger.error(
                 "twofactor_send_failed phone=%s http=%s details=%s",
                 number,
                 resp.status_code,
-                details.get("message"),
+                reason,
             )
-            raise AppError("otp_send_failed", 502, "Could not send verification code")
+            raise AppError(
+                "otp_send_failed",
+                502,
+                "Could not send verification code",
+                {"provider": "2factor", "reason": reason},
+            )
 
     @staticmethod
     def _details(resp: httpx.Response) -> dict[str, str]:
