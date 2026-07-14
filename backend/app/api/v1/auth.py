@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from redis import Redis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,11 +9,15 @@ from app.core.errors import AppError
 from app.core.security import create_access_token, create_refresh_token, decode_token
 from app.models.user import User
 from app.schemas.auth import (
-    LoginIn,
+    OtpRequestIn,
+    OtpRequestOut,
+    OtpVerifyIn,
     RefreshIn,
     TokenPair,
     UserOut,
 )
+from app.services.otp import issue_otp, verify_otp
+from app.services.otp_provider import OtpProvider, get_otp_provider
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,16 +37,18 @@ def _issue_pair(redis: Redis, user: User) -> TokenPair:
     )
 
 
-@router.post("/login", response_model=TokenPair)
-def login(
-    body: LoginIn,
+@router.post("/otp/request", response_model=OtpRequestOut)
+def otp_request(
+    body: OtpRequestIn,
+    request: Request,
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
-) -> TokenPair:
-    """Direct credential login: upsert the broker by phone and issue tokens.
+    provider: OtpProvider = Depends(get_otp_provider),
+) -> OtpRequestOut:
+    """Step 1: upsert the broker by phone, capture name + address, send an OTP.
 
-    No OTP — the phone number itself is the identity. Name and address are
-    captured/refreshed on every login.
+    The phone is the identity. Name and address are refreshed on every request.
+    The account is only marked verified once the code is confirmed (step 2).
     """
     user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
     if user is None:
@@ -53,6 +59,27 @@ def login(
             raise AppError("account_disabled", 403, "This account has been disabled")
         user.name = body.name
         user.address = body.address
+    db.commit()
+
+    ip = request.client.host if request.client else "unknown"
+    issue_otp(redis, body.phone, ip, provider)
+    return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
+
+
+@router.post("/otp/verify", response_model=TokenPair)
+def otp_verify(
+    body: OtpVerifyIn,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+) -> TokenPair:
+    """Step 2: verify the SMS code, mark the broker verified, and issue tokens."""
+    user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
+    if user is None:
+        raise AppError("otp_expired", 400, "Code expired or not requested")
+    if not user.is_active:
+        raise AppError("account_disabled", 403, "This account has been disabled")
+
+    verify_otp(redis, body.phone, body.code)
 
     user.is_verified = True
     db.commit()

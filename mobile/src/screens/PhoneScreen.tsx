@@ -9,23 +9,21 @@ import {
 } from 'react-native';
 
 import { extractApiError } from '../api/client';
-import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
 import { useI18n } from '../i18n/I18nProvider';
-import { useLogin } from '../hooks/useLogin';
+import { useRequestOtp } from '../hooks/useLogin';
 import type { AuthStackScreenProps } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 
-export function PhoneScreen(_props: AuthStackScreenProps<'Phone'>) {
+export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
   const { t } = useI18n();
-  const { signIn } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+91');
   const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const loginMutation = useLogin();
+  const requestOtpMutation = useRequestOtp();
 
   const onSubmit = () => {
     setError(null);
@@ -42,11 +40,18 @@ export function PhoneScreen(_props: AuthStackScreenProps<'Phone'>) {
       return;
     }
 
-    loginMutation.mutate(
-      { phone, name: name.trim(), address: address.trim() },
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    requestOtpMutation.mutate(
+      { phone, name: trimmedName, address: trimmedAddress },
       {
-        onSuccess: (tokens) =>
-          signIn({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token }),
+        onSuccess: (res) =>
+          navigation.navigate('Otp', {
+            phone,
+            name: trimmedName,
+            address: trimmedAddress,
+            resendIn: res.resend_in,
+          }),
         onError: (e) => {
           setError(extractApiError(e)?.message ?? t('phone.errSend'));
         },
@@ -97,9 +102,9 @@ export function PhoneScreen(_props: AuthStackScreenProps<'Phone'>) {
         {error && <Text style={styles.error}>{error}</Text>}
 
         <Button
-          title={t('phone.continue')}
+          title={t('phone.send')}
           onPress={onSubmit}
-          loading={loginMutation.isPending}
+          loading={requestOtpMutation.isPending}
           style={{ marginTop: spacing.lg }}
         />
       </View>

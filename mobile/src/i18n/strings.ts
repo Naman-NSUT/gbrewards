@@ -32,6 +32,15 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'phone.errAddress': 'Please enter your address.',
     'phone.errSend': 'Could not send code. Try again.',
 
+    'otp.title': 'Enter the code',
+    'otp.subtitle': 'We sent a 6-digit code to {phone}.',
+    'otp.code': 'Verification code',
+    'otp.verify': 'Verify',
+    'otp.resend': 'Resend code',
+    'otp.resendIn': 'Resend code in {s}s',
+    'otp.errCode': 'Enter the code from the SMS.',
+    'otp.errVerify': 'Could not verify the code. Try again.',
+
     'scan.permTitle': 'Camera access needed',
     'scan.permBody': 'GB Rewards needs the camera to scan product QR codes and award points.',
     'scan.grant': 'Grant access',
@@ -106,6 +115,15 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'phone.errName': 'कृपया अपना नाम दर्ज करें।',
     'phone.errAddress': 'कृपया अपना पता दर्ज करें।',
     'phone.errSend': 'कोड नहीं भेजा जा सका। फिर से प्रयास करें।',
+
+    'otp.title': 'कोड दर्ज करें',
+    'otp.subtitle': 'हमने {phone} पर 6 अंकों का कोड भेजा है।',
+    'otp.code': 'सत्यापन कोड',
+    'otp.verify': 'सत्यापित करें',
+    'otp.resend': 'कोड फिर से भेजें',
+    'otp.resendIn': '{s} सेकंड में कोड फिर से भेजें',
+    'otp.errCode': 'SMS में मिला कोड दर्ज करें।',
+    'otp.errVerify': 'कोड सत्यापित नहीं हो सका। फिर से प्रयास करें।',
 
     'scan.permTitle': 'कैमरा एक्सेस चाहिए',
     'scan.permBody': 'पॉइंट्स पाने के लिए GB Rewards को QR कोड स्कैन करने हेतु कैमरे की ज़रूरत है।',

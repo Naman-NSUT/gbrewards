@@ -9,8 +9,9 @@ are set — fail-fast by design.
 
 ## 0. Prerequisites (operator)
 - Render, Vercel, and Expo (EAS) accounts; this repo connected to each.
-- **MSG91** account with **DLT-registered** sender ID + OTP template (TRAI requirement, India).
-  This has lead time — start early. Until approved, run **staging** with `OTP_PROVIDER=fake`.
+- **2Factor.in** account with a **DLT-registered** sender ID + OTP template (`OTP1`) approved on the
+  operator's DLT portal (TRAI requirement, India). This has lead time — start early. Until approved,
+  run **staging** with `OTP_PROVIDER=fake`. Grab the **API key** from the 2Factor dashboard.
 - (Optional) Sentry project(s) → DSNs. A custom domain for the admin web.
 
 ## 1. Backend → Render
@@ -18,7 +19,8 @@ are set — fail-fast by design.
    (Docker, from `backend/Dockerfile`), **Postgres 16**, and a **Key Value (Redis)** instance.
 2. Set the `sync:false` secrets on the `gbrewards-api` service:
    - `CORS_ORIGINS` = your admin web origin, e.g. `https://admin.yourdomain.com`
-   - `MSG91_AUTH_KEY`, `MSG91_SENDER_ID`, `MSG91_TEMPLATE_ID`
+   - `OTP_PROVIDER=twofactor`, `TWOFACTOR_API_KEY` (from the 2Factor dashboard),
+     `TWOFACTOR_TEMPLATE_NAME=OTP1`
    - `SENTRY_DSN` (optional)
    `JWT_SECRET` is auto-generated; `DATABASE_URL`/`REDIS_URL` are wired from the managed resources.
 3. Deploy. Migrations run automatically (`alembic upgrade head` in the Docker entrypoint).
@@ -28,8 +30,8 @@ are set — fail-fast by design.
 6. Smoke: `GET https://<api>/api/v1/healthz` → `{"status":"ok"}`, and `/api/v1/readyz` → DB+Redis ok.
 
 > Staging: a second Render env/service with `ENV=staging` and `OTP_PROVIDER=fake` lets you test the
-> full flow (read codes via the `dev`-only endpoint is off in staging — use a real MSG91 test number
-> or keep staging on fake and read from logs). Prod must use `msg91`.
+> full flow by reading the code from the service logs (`fake_otp_send phone=... code=...`). Prod must
+> use `twofactor`. Validate the key without spending a credit: `GET https://2factor.in/API/V1/<key>/BAL/SMS`.
 
 ## 2. Admin web → Vercel
 1. Import the repo, root directory `admin-web` (`vercel.json` sets framework=vite, SPA rewrites).
@@ -51,8 +53,9 @@ are set — fail-fast by design.
 | `REDIS_URL` | yes | OTP + rate limiting |
 | `JWT_SECRET` | yes (prod) | ≥32 chars, non-default |
 | `CORS_ORIGINS` | yes (non-dev) | comma-separated admin origins |
-| `OTP_PROVIDER` | yes | `msg91` in prod; `fake` only dev/staging |
-| `MSG91_*` | prod | DLT-registered |
+| `OTP_PROVIDER` | yes | `twofactor` in prod; `fake` only dev/staging |
+| `TWOFACTOR_API_KEY` | prod | from 2Factor dashboard (`twofactor` provider) |
+| `TWOFACTOR_TEMPLATE_NAME` | no | DLT-approved template, default `OTP1` |
 | `SCAN_RATE_PER_MIN` | no | default 30 |
 | `SENTRY_DSN` | no | enables error monitoring |
 

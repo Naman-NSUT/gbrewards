@@ -14,6 +14,19 @@ class Settings(BaseSettings):
     jwt_access_ttl_minutes: int = 60
     jwt_refresh_ttl_days: int = 30
 
+    # OTP / SMS auth. `fake` logs the code (dev/test); `twofactor` sends real SMS.
+    otp_provider: Literal["fake", "twofactor"] = "fake"
+    otp_ttl_seconds: int = 300
+    otp_max_attempts: int = 5
+    otp_resend_cooldown_seconds: int = 30
+    otp_daily_cap_per_phone: int = 5
+    otp_daily_cap_per_ip: int = 20
+
+    # 2Factor.in (India, DLT-registered transactional SMS). The backend generates
+    # the code; 2Factor delivers it via the approved template (default "OTP1").
+    twofactor_api_key: str = ""
+    twofactor_template_name: str = "OTP1"
+
     env: Literal["dev", "staging", "prod"] = "dev"
     log_level: str = "INFO"
 
@@ -41,6 +54,11 @@ class Settings(BaseSettings):
             problems.append("JWT_SECRET must be a strong, non-default value (>= 32 chars)")
         if not self.cors_origin_list:
             problems.append("CORS_ORIGINS must be set")
+        # Real SMS is required in prod; staging may keep the fake provider for smoke testing.
+        if self.env == "prod" and self.otp_provider == "fake":
+            problems.append("OTP_PROVIDER must not be 'fake' in production")
+        if self.otp_provider == "twofactor" and not self.twofactor_api_key:
+            problems.append("TWOFACTOR_API_KEY must be set when OTP_PROVIDER=twofactor")
         if problems:
             raise RuntimeError("Invalid production config: " + "; ".join(problems))
 

@@ -28,11 +28,14 @@ uv run python -m app.scripts.seed_dev 5   # prints an admin + active unit tokens
 
 ### Exercise the broker flow (fake OTP)
 
+With `OTP_PROVIDER=fake` (dev default) no SMS is sent — the code is written to the
+server log as `fake_otp_send phone=... code=NNNNNN`. Real SMS uses 2Factor (see below).
+
 ```bash
 BASE=http://localhost:8000/api/v1
 curl -X POST $BASE/auth/otp/request -H 'content-type: application/json' \
-  -d '{"phone":"+919900000001","name":"Broker"}'
-curl $BASE/_dev/otp/+919900000001                 # dev-only: read the fake code
+  -d '{"phone":"+919900000001","name":"Broker","address":"1 Test St"}'
+# read the 6-digit code from the uvicorn log line: fake_otp_send phone=... code=NNNNNN
 curl -X POST $BASE/auth/otp/verify -H 'content-type: application/json' \
   -d '{"phone":"+919900000001","code":"<code>"}'   # -> access_token
 curl -X POST $BASE/scan/claim -H "authorization: Bearer <token>" \
@@ -40,6 +43,11 @@ curl -X POST $BASE/scan/claim -H "authorization: Bearer <token>" \
 curl $BASE/me        -H "authorization: Bearer <token>"
 curl $BASE/me/ledger -H "authorization: Bearer <token>"
 ```
+
+> **Real SMS (2Factor.in):** set `OTP_PROVIDER=twofactor`, `TWOFACTOR_API_KEY=<key>`, and
+> `TWOFACTOR_TEMPLATE_NAME=OTP1` (DLT-approved). The backend generates the code; 2Factor delivers it
+> via `GET /API/V1/{key}/SMS/{phone}/{code}/OTP1`. Validate the key without spending a credit:
+> `curl https://2factor.in/API/V1/<key>/BAL/SMS` → `{"Status":"Success","Details":"<credits>"}`.
 
 ## Quality gates
 

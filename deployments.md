@@ -11,7 +11,10 @@ This is the practical "what accounts do I need, where do I put my card, and how 
 Plus one optional external dependency:
 - **Sentry** — error monitoring for backend + mobile (optional but wired in).
 
-> **Login is direct (no OTP/SMS).** Brokers sign in with phone number + name + address; the phone number is the identity, and the account is created on first login. There is **no SMS provider to set up** — MSG91 has been removed from the codebase.
+Plus one SMS dependency for login:
+- **2Factor.in** — sends the login OTP over SMS (India, DLT-registered).
+
+> **Login is OTP-based.** Brokers enter phone + name + address, receive a 6-digit code over SMS (via 2Factor), and verify it to sign in. The phone number is the identity; the account is created/refreshed on the request step and marked verified once the code is confirmed. The backend generates and stores the code; 2Factor only delivers it.
 
 > The repo already assumes some of these. `mobile/eas.json` points the production build at `https://your-backend.onrender.com`, so **Render is the path of least resistance for the backend** — change that URL once you have your real backend domain.
 
@@ -28,7 +31,7 @@ Plus one optional external dependency:
 | **Sentry** | Error tracking | Free tier is enough to start; card only to scale | **$0** to start |
 | **Domain registrar** (optional) | Custom domain (e.g. `admin.gbrewards.in`) | **Yes** for the domain purchase | ~₹800–1500/yr |
 
-**Minimum to go live:** Render (card) + Google Play ($25). Vercel/Netlify and Sentry can stay free. No SMS provider is needed — login is direct (phone + name + address).
+**Minimum to go live:** Render (card) + Google Play ($25) + a **2Factor.in** account with SMS credits and a DLT-approved `OTP1` template (for login OTP). Vercel/Netlify and Sentry can stay free.
 
 ---
 
@@ -59,11 +62,14 @@ DATABASE_URL=postgresql+psycopg://<user>:<pass>@<host>/<db>   # note the +psycop
 REDIS_URL=redis://<host>:6379/0
 JWT_SECRET=<generate a strong random string, >= 32 chars>     # e.g. `openssl rand -hex 32`
 CORS_ORIGINS=https://admin.yourdomain.com                     # admin-web's URL, comma-separated
+OTP_PROVIDER=twofactor                                        # `fake` (logs the code) only in dev/staging
+TWOFACTOR_API_KEY=<from the 2Factor.in dashboard>
+TWOFACTOR_TEMPLATE_NAME=OTP1                                   # DLT-approved template
 SENTRY_DSN=<from Sentry, optional>
 LOG_LEVEL=INFO
 ```
 
-> The app **refuses to boot in prod** (`assert_production_ready()`) if `JWT_SECRET` is default/weak or `CORS_ORIGINS` is empty. So set those correctly or it will crash-loop. (There is no SMS/OTP config — login is direct.)
+> The app **refuses to boot in prod** (`assert_production_ready()`) if `JWT_SECRET` is default/weak, `CORS_ORIGINS` is empty, `OTP_PROVIDER=fake`, or `twofactor` is selected without `TWOFACTOR_API_KEY`. Set those correctly or it will crash-loop.
 
 ### First-run: seed an admin
 Migrations run automatically, but you need at least one admin login. Use the Render **Shell** tab (or a one-off job) to run the repo's admin-seed command (any `seed`/CLI script under `backend/`). Do this once.
@@ -132,9 +138,19 @@ For `eas submit` you'll create a **Google Play service-account JSON key** (Play 
 
 ---
 
-## 4. Login — no SMS provider needed
+## 4. Login — OTP via 2Factor.in
 
-Broker login is **direct**: the app posts phone + name + address to `POST /api/v1/auth/login`, the backend creates the user on first login (phone number = identity) and returns JWT access/refresh tokens. There is **no OTP, no MSG91, and nothing to provision or pay for** here. Skip straight to Sentry/domains.
+Broker login is **OTP-based**:
+1. The app posts phone + name + address to `POST /api/v1/auth/otp/request`. The backend creates/refreshes the user (phone number = identity), generates a 6-digit code (hashed in Redis), and sends it via 2Factor's DLT-approved `OTP1` template.
+2. The app posts phone + code to `POST /api/v1/auth/otp/verify`; on success the user is marked verified and receives JWT access/refresh tokens.
+
+**Provision:** create a [2Factor.in](https://2factor.in) account, complete **DLT registration** (sender ID + `OTP1` template) with your telecom operator, buy SMS credits, and copy the **API key** into `TWOFACTOR_API_KEY`. Validate the key without spending a credit:
+
+```bash
+curl https://2factor.in/API/V1/<key>/BAL/SMS      # -> {"Status":"Success","Details":"<credits>"}
+```
+
+In dev/staging keep `OTP_PROVIDER=fake` (no SMS; the code is written to the server log as `fake_otp_send phone=... code=...`).
 
 ---
 

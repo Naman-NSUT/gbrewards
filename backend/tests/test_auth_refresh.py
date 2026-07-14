@@ -1,18 +1,26 @@
 import fakeredis
 from fastapi.testclient import TestClient
 
+from app.services.otp_provider import FakeOtpProvider
 
-def _onboard(client: TestClient, phone: str) -> dict:
-    r = client.post(
-        "/api/v1/auth/login",
+
+def _onboard(client: TestClient, fake_otp: FakeOtpProvider, phone: str) -> dict:
+    req = client.post(
+        "/api/v1/auth/otp/request",
         json={"phone": phone, "name": "Refresh User", "address": "Test address"},
+    )
+    assert req.status_code == 200, req.text
+    r = client.post(
+        "/api/v1/auth/otp/verify", json={"phone": phone, "code": fake_otp.last_codes[phone]}
     )
     assert r.status_code == 200, r.text
     return r.json()
 
 
-def test_refresh_rotates_and_revokes_old(client: TestClient, redis: fakeredis.FakeRedis) -> None:
-    tokens = _onboard(client, "+919900500001")
+def test_refresh_rotates_and_revokes_old(
+    client: TestClient, redis: fakeredis.FakeRedis, fake_otp: FakeOtpProvider
+) -> None:
+    tokens = _onboard(client, fake_otp, "+919900500001")
     old_refresh = tokens["refresh_token"]
 
     r = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
@@ -30,8 +38,8 @@ def test_refresh_rotates_and_revokes_old(client: TestClient, redis: fakeredis.Fa
     assert r3.status_code == 200
 
 
-def test_logout_revokes_refresh(client: TestClient) -> None:
-    tokens = _onboard(client, "+919900500002")
+def test_logout_revokes_refresh(client: TestClient, fake_otp: FakeOtpProvider) -> None:
+    tokens = _onboard(client, fake_otp, "+919900500002")
     refresh = tokens["refresh_token"]
 
     assert client.post("/api/v1/auth/logout", json={"refresh_token": refresh}).status_code == 204
@@ -40,8 +48,10 @@ def test_logout_revokes_refresh(client: TestClient) -> None:
     assert r.json()["error"]["code"] == "invalid_token"
 
 
-def test_access_token_cannot_be_used_to_refresh(client: TestClient) -> None:
-    tokens = _onboard(client, "+919900500003")
+def test_access_token_cannot_be_used_to_refresh(
+    client: TestClient, fake_otp: FakeOtpProvider
+) -> None:
+    tokens = _onboard(client, fake_otp, "+919900500003")
     r = client.post("/api/v1/auth/refresh", json={"refresh_token": tokens["access_token"]})
     assert r.status_code == 401
     assert r.json()["error"]["code"] == "invalid_token"

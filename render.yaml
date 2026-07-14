@@ -27,6 +27,12 @@ services:
           property: connectionString
       - key: CORS_ORIGINS
         sync: false # your Vercel admin URL, e.g. https://gbrewards-admin.vercel.app
+      - key: OTP_PROVIDER
+        value: twofactor # must not be 'fake' in prod
+      - key: TWOFACTOR_API_KEY
+        sync: false # from the 2Factor.in dashboard
+      - key: TWOFACTOR_TEMPLATE_NAME
+        value: OTP1
       - key: SENTRY_DSN
         sync: false # optional; leave blank to disable
       - key: BOOTSTRAP_ADMIN_EMAIL

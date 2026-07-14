@@ -187,7 +187,7 @@ IDs are referenced by the tech spec and build plan.
 | **D2** | On return, reverse the awarded points? | **Yes**, auto-reverse (creates a debit) |
 | **D3** | If reversal pushes a balance negative (points already redeemed), allow negative or block? | **Allow negative**, flag to admin for reconciliation |
 | **D4** | Do brokers self-register, or must admin pre-approve/whitelist phone numbers? | **Self-register**; optional whitelist toggle later |
-| **D5** | OTP/SMS provider | **MSG91** (India-first, DLT support) — Firebase Phone Auth as lower-effort alternative |
+| **D5** | OTP/SMS provider | **2Factor.in** (India, DLT-registered; backend generates the code, 2Factor delivers via the approved `OTP1` template) — MSG91/Firebase as alternatives |
 | **D6** | Per-unit point override, or always product-level? | **Product-level only** in v1 |
 | **D7** | Can users edit their name later? | Yes, name editable in Profile |
 | **D8** | Push notifications on redemption status? | Optional v1; nice-to-have |

@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import fakeredis
 import pytest
@@ -9,6 +10,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.services.otp_provider import FakeOtpProvider
 
 # Derive a dedicated test database URL from the configured one.
 _base_url = make_url(settings.database_url)
@@ -78,12 +82,23 @@ def redis() -> fakeredis.FakeRedis:
 
 
 @pytest.fixture
-def client(db: Session, redis: fakeredis.FakeRedis) -> Iterator[TestClient]:
+def fake_otp() -> "FakeOtpProvider":
+    from app.services.otp_provider import FakeOtpProvider
+
+    return FakeOtpProvider()
+
+
+@pytest.fixture
+def client(
+    db: Session, redis: fakeredis.FakeRedis, fake_otp: "FakeOtpProvider"
+) -> Iterator[TestClient]:
     from app.core.deps import get_db, get_redis
     from app.main import app
+    from app.services.otp_provider import get_otp_provider
 
     app.dependency_overrides[get_db] = lambda: db
     app.dependency_overrides[get_redis] = lambda: redis
+    app.dependency_overrides[get_otp_provider] = lambda: fake_otp
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

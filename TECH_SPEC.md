@@ -28,7 +28,7 @@ flowchart LR
 
   API --> DB
   API --> R
-  API -- send OTP SMS --> SMS[(SMS provider\nMSG91 / Twilio\nDLT-registered)]
+  API -- send OTP SMS --> SMS[(SMS provider\n2Factor.in\nDLT-registered)]
 ```
 
 **Why this shape:** the workload is CRUD + a few integrity-critical transactions (claim, redeem, reverse), not compute- or AI-heavy. A single stateless FastAPI service backed by Postgres is the correct, low-ops design for ~200 users. Redis is optional but recommended for OTP + rate limiting (Postgres can substitute at this scale).
@@ -45,7 +45,7 @@ flowchart LR
 | **DB** | **PostgreSQL 16** | Relational integrity, row locking, JSONB for audit metadata. |
 | **OTP/rate-limit store** | **Redis 7** (optional) | Fast TTL keys for OTP + counters. Postgres fallback at this scale. |
 | **QR generation** | `qrcode[pil]` (Python) + `reportlab` for PDF sheets | Server-side batch generation + printable export. |
-| **SMS / OTP delivery** | **MSG91** (India, DLT-ready). Alt: Twilio, or **Firebase Phone Auth** (offloads OTP entirely) | See §7.1. |
+| **SMS / OTP delivery** | **2Factor.in** (India, DLT-registered; `OTP1` template). Alt: MSG91, Twilio, or **Firebase Phone Auth** (offloads OTP entirely) | See §7.1. |
 | **Mobile** | **React Native via Expo (managed)** | Cross-platform, fast distribution via EAS. |
 | → scanning | **`expo-camera`** `CameraView` (`onBarcodeScanned`, `barcodeScannerSettings={{ barcodeTypes: ['qr'] }}`) | `expo-barcode-scanner` is **deprecated** (since SDK 51) — do **not** use it. Heavy-duty alt: `react-native-vision-camera`. |
 | → storage / nav / data | `expo-secure-store`, React Navigation, **TanStack Query** | Secure token, navigation, server-state caching. |
@@ -294,10 +294,14 @@ Base: `/api/v1`. JSON. Auth via `Authorization: Bearer <jwt>`. Two token audienc
 ## 7. Auth & security
 
 ### 7.1 Broker OTP
-- **Provider options:**
-  - **MSG91 (recommended, India):** send OTP via MSG91; backend generates+stores the code (hashed) in Redis and verifies. Requires **DLT registration** of sender ID + message template per TRAI rules — set this up with the client before go-live. Cheap at 200-user volume.
-  - **Twilio Verify:** simplest verify API, higher per-SMS cost in India, still needs DLT for Indian traffic.
-  - **Firebase Phone Auth:** offloads OTP send+verify entirely; backend trusts a verified Firebase ID token and mints its own JWT. Least backend OTP code, adds Firebase dependency + a different user-linking flow.
+- **Provider (implemented): 2Factor.in (India, DLT-registered).** The backend generates + stores the
+  code (hashed) in Redis and verifies it; 2Factor is transport only, delivering via the DLT-approved
+  template `OTP1`: `GET https://2factor.in/API/V1/{api_key}/SMS/{phone}/{code}/OTP1`. Requires **DLT
+  registration** of sender ID + template per TRAI rules — set up with the client before go-live.
+  Providers sit behind an `OtpProvider` interface (`TwoFactorProvider` for prod, `FakeOtpProvider`
+  for dev/test); env `OTP_PROVIDER`, `TWOFACTOR_API_KEY`, `TWOFACTOR_TEMPLATE_NAME`.
+- **Alternatives (not wired):** MSG91 (similar transactional model), Twilio Verify (higher India cost),
+  Firebase Phone Auth (offloads send+verify; different user-linking flow).
 - **OTP rules:** 6-digit, 5-min TTL, ≤5 verify attempts, resend cooldown 30–60s, per-phone & per-IP daily caps. Always store **hashed** codes; constant-time compare.
 
 ### 7.2 Tokens
@@ -333,7 +337,7 @@ While `pending`, the `points` count against availability so they can't be re-req
 
 ## 9. Deployment & ops
 
-- **Backend:** containerized FastAPI on Railway/Render/Fly. Env: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `MSG91_*` (or `FIREBASE_*`), `QR_HMAC_SECRET` (if used). Run Alembic migrations on deploy.
+- **Backend:** containerized FastAPI on Railway/Render/Fly. Env: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `OTP_PROVIDER`, `TWOFACTOR_API_KEY`, `TWOFACTOR_TEMPLATE_NAME`, `QR_HMAC_SECRET` (if used). Run Alembic migrations on deploy.
 - **DB:** managed Postgres with **nightly backups** + PITR if available (balances are money-adjacent).
 - **Admin web:** static build to Vercel/Netlify; `VITE_API_BASE_URL` env.
 - **Mobile:** **EAS Build** → Android APK/AAB + iOS; distribute via stores or internal APK link. `app.config` carries `API_BASE_URL` per env (dev/staging/prod).
