@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useFaqs, useProductPoints, useTerms } from '../hooks/useContent';
+import { useRewards } from '../hooks/useRewards';
 import { useI18n } from '../i18n/I18nProvider';
 import type { AppTabScreenProps } from '../navigation/types';
 import { colors, spacing } from '../theme';
@@ -9,6 +10,7 @@ import { colors, spacing } from '../theme';
 export function InfoScreen(_props: AppTabScreenProps<'Info'>) {
   const { t } = useI18n();
   const products = useProductPoints();
+  const rewards = useRewards();
   const faqs = useFaqs();
   const terms = useTerms();
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -23,6 +25,7 @@ export function InfoScreen(_props: AppTabScreenProps<'Info'>) {
   };
 
   const productRows = products.data ?? [];
+  const rewardRows = rewards.data ?? [];
   const faqRows = faqs.data ?? [];
 
   return (
@@ -36,6 +39,23 @@ export function InfoScreen(_props: AppTabScreenProps<'Info'>) {
             <Text style={styles.rowLabel}>{p.name}</Text>
             <Text style={styles.rowValue}>
               {p.points_value} {t('info.pointsSuffix')}
+            </Text>
+          </View>
+        ))
+      )}
+
+      <Text style={styles.sectionTitle}>{t('info.rewards')}</Text>
+      {rewardRows.length === 0 && !rewards.isLoading ? (
+        <Text style={styles.empty}>{t('info.empty')}</Text>
+      ) : (
+        rewardRows.map((r) => (
+          <View key={r.id} style={styles.row}>
+            <View style={styles.rewardInfo}>
+              <Text style={styles.rowLabel}>{r.title}</Text>
+              {r.description ? <Text style={styles.rewardDesc}>{r.description}</Text> : null}
+            </View>
+            <Text style={styles.rowValue}>
+              {r.points_cost} {t('info.pointsSuffix')}
             </Text>
           </View>
         ))
@@ -93,6 +113,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
   rowValue: { fontSize: 15, fontWeight: '700', color: colors.primary, marginLeft: spacing.md },
+  rewardInfo: { flex: 1 },
+  rewardDesc: { fontSize: 13, color: colors.muted, marginTop: 2 },
   faqItem: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,

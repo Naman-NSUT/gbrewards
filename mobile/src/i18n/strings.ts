@@ -95,6 +95,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'rewards.success': 'Redemption request submitted',
 
     'info.products': 'Products & Points',
+    'info.rewards': 'Redeem your points for',
     'info.faqs': 'FAQs',
     'info.terms': 'Terms & Conditions',
     'info.pointsSuffix': 'pts',
@@ -194,6 +195,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     'rewards.success': 'भुनाने का अनुरोध भेज दिया गया',
 
     'info.products': 'उत्पाद और अंक',
+    'info.rewards': 'अपने अंक इनके लिए रिडीम करें',
     'info.faqs': 'अक्सर पूछे जाने वाले प्रश्न',
     'info.terms': 'नियम और शर्तें',
     'info.pointsSuffix': 'अंक',
