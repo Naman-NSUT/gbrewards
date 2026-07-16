@@ -1,8 +1,11 @@
 """QR batch generation and printable PDF export (FR-P2, FR-P3).
 
-Tags print on a 75x125mm label roll (GoodBed dieline): a brand header band, then
-product name/description/points, the QR code, and per-product terms & conditions.
-One label per PDF page.
+Tags print onto a *pre-printed* 75x125mm GoodBed label roll: the physical stock
+already carries the GOODBED header band, the keyline border and the zone
+dividers, so we overprint only the variable "fill" content — product
+name/description (Box A), the QR code + token (Box B) and per-product terms &
+conditions (Box C). We deliberately do **not** draw any branding/lines or print
+the points value on the sticker. One label per PDF page.
 """
 
 import io
@@ -45,9 +48,8 @@ Y_HEADER = TOP - HEADER_H  # 103mm — header/Box A divider
 Y_A = Y_HEADER - BOX_A_H  # 73mm  — Box A/Box B divider
 Y_B = Y_A - BOX_B_H  # 32mm  — Box B/Box C divider
 
-# --- Branding (Pantone 7694 C; confirm exact CMYK before mass print) ---------
-BRAND_NAME = "GOODBED"
-BRAND_TAGLINE = "PRECISION ORTHOPAEDIC SLEEP"
+# Ink colour for the T&C heading we overprint (Pantone 7694 C match). The GOODBED
+# header/tagline itself is pre-printed on the stock, so we no longer draw it.
 BRAND_COLOR = HexColor("#2C5D78")
 
 # Fallback terms when a product has no `terms` set.
@@ -135,23 +137,14 @@ def _product_terms(product: Product) -> list[str]:
 
 
 def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None:
-    """Render one 75x125mm tag onto the current page."""
-    # Keyline + zone dividers in brand colour.
-    pdf.setStrokeColor(BRAND_COLOR)
-    pdf.setLineWidth(1)
-    pdf.roundRect(EDGE, EDGE, BORDER_W, BORDER_H, 3 * mm, stroke=1, fill=0)
-    pdf.setLineWidth(0.5)
-    for yy in (Y_HEADER, Y_A, Y_B):
-        pdf.line(EDGE, yy, EDGE + BORDER_W, yy)
+    """Overprint one *pre-printed* 75x125mm GoodBed label with fill content only.
 
-    # --- Header band: brand + tagline -------------------------------------
-    pdf.setFillColor(BRAND_COLOR)
-    pdf.setFont("Helvetica-Bold", 26)
-    pdf.drawCentredString(CX, Y_HEADER + 7 * mm, BRAND_NAME)
-    pdf.setFont("Helvetica-Bold", 7)
-    pdf.drawCentredString(CX, Y_HEADER + 3 * mm, BRAND_TAGLINE)
-
-    # --- Box A: product name + description + points -----------------------
+    The stock already carries the GOODBED header, keyline border and zone
+    dividers, so we draw nothing decorative here — only the variable content that
+    has to land inside the empty boxes. The points value is intentionally omitted
+    from the sticker. Zone geometry is retained purely to position the fill.
+    """
+    # --- Box A: product name + description (no branding, no points) --------
     y = Y_HEADER - 6 * mm
     pdf.setFillGray(0)
     name_lines = simpleSplit(product.name, "Helvetica-Bold", 12, CONTENT_W)[:2]
@@ -162,9 +155,6 @@ def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None
         pdf.setFont("Helvetica", 7.5)
         pdf.setFillGray(0.3)
         y = _draw_lines(pdf, desc_lines, x=CX, y=y - 1 * mm, leading=3.6 * mm, centered=True)
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.setFillColor(BRAND_COLOR)
-    pdf.drawCentredString(CX, Y_A + 3.5 * mm, f"Earn {product.points_value} points")
 
     # --- Box B: QR code + human-readable token below it -------------------
     qr_size = 31 * mm
