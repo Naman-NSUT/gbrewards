@@ -31,6 +31,7 @@ class ScanFeedItem(BaseModel):
     user: ScanUserBrief
     product: ScanProductBrief
     product_unit_id: uuid.UUID | None
+    token: str | None = None  # the QR token that was scanned
     points: int
     scanned_at: datetime
 

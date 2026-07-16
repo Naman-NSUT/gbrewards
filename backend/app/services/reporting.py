@@ -160,6 +160,7 @@ def scan_feed(
             user=ScanUserBrief(id=user.id, phone=user.phone, name=user.name),
             product=ScanProductBrief(id=product.id, name=product.name),
             product_unit_id=unit.id,
+            token=unit.token,
             points=entry.amount,
             scanned_at=entry.created_at,
         )

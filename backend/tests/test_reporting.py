@@ -71,9 +71,11 @@ def test_scans_feed_filters_and_pagination(client: TestClient, db: Session) -> N
     assert len(items) == 3
     assert all(i["product"]["id"] == str(pa.id) for i in items)
 
-    # filter by user
+    # filter by user — and the scanned QR token is surfaced
     r = client.get(f"/api/v1/admin/scans?user_id={u2.id}", headers=h)
-    assert len(r.json()["items"]) == 1
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["token"] == unit_b.token
 
     # pagination
     r = client.get("/api/v1/admin/scans?limit=2", headers=h)

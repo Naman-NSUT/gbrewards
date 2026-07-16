@@ -1,4 +1,4 @@
-import { DatePicker, Select, Space } from 'antd';
+import { DatePicker, Select, Space, Typography } from 'antd';
 import { useState } from 'react';
 
 import type { ScanFeedItem } from '../api/types';
@@ -61,6 +61,21 @@ export function ScansPage() {
             ),
           },
           { title: 'Product', render: (_v, s) => s.product.name },
+          {
+            title: 'QR code',
+            render: (_v, s) =>
+              s.token ? (
+                <Typography.Text
+                  className="mono"
+                  style={{ fontSize: 12 }}
+                  copyable={{ text: s.token }}
+                >
+                  {s.token}
+                </Typography.Text>
+              ) : (
+                <span className="tnum">—</span>
+              ),
+          },
           { title: 'Points', dataIndex: 'points', render: (v: number) => <span className="tnum">+{v}</span> },
         ]}
       />

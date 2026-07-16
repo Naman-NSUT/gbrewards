@@ -229,6 +229,7 @@ export interface ScanFeedItem {
   user: { id: string; phone: string; name: string };
   product: { id: string; name: string };
   product_unit_id: string | null;
+  token: string | null;
   points: number;
   scanned_at: string;
 }
