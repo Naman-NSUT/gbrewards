@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { extractApiError } from '../api/client';
 import { Button } from '../components/Button';
 import { ScanResultSheet, type ScanOutcome } from '../components/ScanResultSheet';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useClaim } from '../hooks/useClaim';
 import { useI18n } from '../i18n/I18nProvider';
 import { colors, spacing } from '../theme';
@@ -51,16 +52,22 @@ export function ScanScreen() {
   };
 
   if (!permission) {
-    return <View style={styles.center} />;
+    return (
+      <ScreenBackground>
+        <View style={styles.center} />
+      </ScreenBackground>
+    );
   }
 
   if (!permission.granted) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.permTitle}>{t('scan.permTitle')}</Text>
-        <Text style={styles.permBody}>{t('scan.permBody')}</Text>
-        <Button title={t('scan.grant')} onPress={requestPermission} style={{ marginTop: spacing.lg }} />
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <Text style={styles.permTitle}>{t('scan.permTitle')}</Text>
+          <Text style={styles.permBody}>{t('scan.permBody')}</Text>
+          <Button title={t('scan.grant')} onPress={requestPermission} style={{ marginTop: spacing.lg }} />
+        </View>
+      </ScreenBackground>
     );
   }
 
@@ -87,7 +94,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   center: {
     flex: 1,
-    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,

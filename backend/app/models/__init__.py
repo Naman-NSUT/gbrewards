@@ -1,5 +1,6 @@
 from app.models.admin import Admin
 from app.models.audit_log import AuditLog
+from app.models.banner import Banner
 from app.models.content_doc import ContentDoc
 from app.models.faq import Faq
 from app.models.ledger_entry import LedgerEntry
@@ -13,6 +14,7 @@ from app.models.user import User
 __all__ = [
     "Admin",
     "AuditLog",
+    "Banner",
     "ContentDoc",
     "Faq",
     "LedgerEntry",

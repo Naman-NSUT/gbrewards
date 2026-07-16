@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.models.admin import Admin
+from app.models.banner import Banner
 from app.models.content_doc import ContentDoc
 from app.models.faq import Faq
 from app.models.product import Product
@@ -61,6 +62,27 @@ def make_reward(
     db.add(reward)
     db.flush()
     return reward
+
+
+def make_banner(
+    db: Session,
+    *,
+    image_url: str = "/static/banners/goodbed-poster.jpg",
+    caption: str | None = "Poster",
+    link_url: str | None = None,
+    is_active: bool = True,
+    sort_order: int = 0,
+) -> Banner:
+    banner = Banner(
+        image_url=image_url,
+        caption=caption,
+        link_url=link_url,
+        is_active=is_active,
+        sort_order=sort_order,
+    )
+    db.add(banner)
+    db.flush()
+    return banner
 
 
 def make_faq(

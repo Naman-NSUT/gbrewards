@@ -12,6 +12,7 @@ import {
 import { extractApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useI18n } from '../i18n/I18nProvider';
 import { useRequestOtp, useVerifyOtp } from '../hooks/useLogin';
 import type { AuthStackScreenProps } from '../navigation/types';
@@ -64,11 +65,12 @@ export function OtpScreen({ route }: AuthStackScreenProps<'Otp'>) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      <View style={styles.inner}>
+    <ScreenBackground>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <View style={styles.inner}>
         <Text style={styles.title}>{t('otp.title')}</Text>
         <Text style={styles.subtitle}>{t('otp.subtitle', { phone })}</Text>
 
@@ -99,13 +101,14 @@ export function OtpScreen({ route }: AuthStackScreenProps<'Otp'>) {
             {cooldown > 0 ? t('otp.resendIn', { s: String(cooldown) }) : t('otp.resend')}
           </Text>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: 'transparent' },
   inner: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 16, color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.xl },
@@ -119,6 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     letterSpacing: 8,
     color: colors.text,
+    backgroundColor: colors.surface,
   },
   error: { color: colors.danger, marginTop: spacing.md },
   resend: { marginTop: spacing.lg, alignItems: 'center' },

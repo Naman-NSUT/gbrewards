@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useFaqs, useProductPoints, useTerms } from '../hooks/useContent';
 import { useRewards } from '../hooks/useRewards';
 import { useI18n } from '../i18n/I18nProvider';
@@ -29,7 +30,8 @@ export function InfoScreen(_props: AppTabScreenProps<'Info'>) {
   const faqRows = faqs.data ?? [];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScreenBackground>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.sectionTitle}>{t('info.products')}</Text>
       {productRows.length === 0 && !products.isLoading ? (
         <Text style={styles.empty}>{t('info.empty')}</Text>
@@ -88,12 +90,13 @@ export function InfoScreen(_props: AppTabScreenProps<'Info'>) {
       ) : !terms.isLoading ? (
         <Text style={styles.empty}>{t('info.empty')}</Text>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.md },
   sectionTitle: {
     color: colors.muted,

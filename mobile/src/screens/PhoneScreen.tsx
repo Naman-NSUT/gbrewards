@@ -10,6 +10,7 @@ import {
 
 import { extractApiError } from '../api/client';
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useI18n } from '../i18n/I18nProvider';
 import { useRequestOtp } from '../hooks/useLogin';
 import type { AuthStackScreenProps } from '../navigation/types';
@@ -60,11 +61,12 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      <View style={styles.inner}>
+    <ScreenBackground>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <View style={styles.inner}>
         <Text style={styles.title}>{t('phone.title')}</Text>
         <Text style={styles.subtitle}>{t('phone.subtitle')}</Text>
 
@@ -107,13 +109,14 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
           loading={requestOtpMutation.isPending}
           style={{ marginTop: spacing.lg }}
         />
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: 'transparent' },
   inner: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 16, color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.xl },
@@ -126,6 +129,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     fontSize: 16,
     color: colors.text,
+    backgroundColor: colors.surface,
   },
   addressInput: { height: 80, paddingTop: spacing.sm, textAlignVertical: 'top' },
   error: { color: colors.danger, marginTop: spacing.md },

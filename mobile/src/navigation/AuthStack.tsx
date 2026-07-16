@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
+import { AppLogo } from '../components/AppLogo';
 import { OtpScreen } from '../screens/OtpScreen';
 import { PhoneScreen } from '../screens/PhoneScreen';
 import { colors } from '../theme';
@@ -14,6 +15,9 @@ export function AuthStack() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
+        headerTitleAlign: 'center',
+        headerTitle: () => <AppLogo />,
+        headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -21,7 +25,7 @@ export function AuthStack() {
       <Stack.Screen
         name="Otp"
         component={OtpScreen}
-        options={{ headerShown: true, title: '', headerBackTitle: '' }}
+        options={{ headerShown: true, headerBackTitle: '' }}
       />
     </Stack.Navigator>
   );

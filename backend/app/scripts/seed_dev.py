@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.security import hash_secret
 from app.db.session import SessionLocal
 from app.models.admin import Admin
+from app.models.banner import Banner
 from app.models.product import Product
 from app.models.product_unit import ProductUnit
 from app.models.qr_batch import QrBatch
@@ -30,6 +31,19 @@ def main(quantity: int = 5) -> None:
                 role="owner",
             )
             db.add(admin)
+            db.flush()
+
+        # Ensure the default ad-carousel poster exists (idempotent).
+        has_banner = db.query(Banner).first()
+        if has_banner is None:
+            db.add(
+                Banner(
+                    image_url="/static/banners/goodbed-poster.jpg",
+                    caption="GoodBed HR Foam — 25 Year Warranty",
+                    sort_order=0,
+                    is_active=True,
+                )
+            )
             db.flush()
 
         product = Product(name="Seed Widget", description="Dev seed", points_value=100)

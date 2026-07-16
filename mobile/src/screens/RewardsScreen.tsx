@@ -4,6 +4,7 @@ import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import type { Reward } from '../api/rewards';
 import type { Redemption } from '../api/types';
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { StatusPill } from '../components/StatusPill';
 import { useMe } from '../hooks/useMe';
 import { useCancelRedemption, useRedemptions } from '../hooks/useRedemptions';
@@ -98,9 +99,10 @@ export function RewardsScreen(_props: AppTabScreenProps<'Rewards'>) {
   );
 
   return (
-    <FlatList
-      style={styles.container}
-      data={rewards.data ?? []}
+    <ScreenBackground>
+      <FlatList
+        style={styles.container}
+        data={rewards.data ?? []}
       keyExtractor={(r) => r.id}
       renderItem={({ item }) => (
         <RewardCard
@@ -122,12 +124,13 @@ export function RewardsScreen(_props: AppTabScreenProps<'Rewards'>) {
         void rewards.refetch();
         void redemptions.refetch();
       }}
-    />
+      />
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.md },
   balanceCard: {
     backgroundColor: colors.primary,

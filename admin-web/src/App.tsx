@@ -15,6 +15,9 @@ const ProductsPage = lazy(() =>
 const RewardsPage = lazy(() =>
   import('./pages/RewardsPage').then((m) => ({ default: m.RewardsPage })),
 );
+const BannersPage = lazy(() =>
+  import('./pages/BannersPage').then((m) => ({ default: m.BannersPage })),
+);
 const FaqsPage = lazy(() => import('./pages/FaqsPage').then((m) => ({ default: m.FaqsPage })));
 const ContentPage = lazy(() =>
   import('./pages/ContentPage').then((m) => ({ default: m.ContentPage })),
@@ -59,6 +62,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="rewards" element={<RewardsPage />} />
+          <Route path="banners" element={<BannersPage />} />
           <Route path="faqs" element={<FaqsPage />} />
           <Route path="content" element={<ContentPage />} />
           <Route path="users" element={<UsersPage />} />

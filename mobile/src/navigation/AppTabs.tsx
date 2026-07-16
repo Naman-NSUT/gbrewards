@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { Text } from 'react-native';
 
+import { AppLogo } from '../components/AppLogo';
 import { useI18n } from '../i18n/I18nProvider';
 import { HomeScreen } from '../screens/HomeScreen';
 import { InfoScreen } from '../screens/InfoScreen';
@@ -35,8 +36,15 @@ export function AppTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.border,
+          shadowColor: 'transparent',
+          elevation: 0,
+        },
         headerTintColor: colors.text,
+        headerTitleAlign: 'center',
+        headerTitle: () => <AppLogo />,
         title: t(LABEL_KEY[route.name]),
         tabBarIcon: ({ focused }) => (
           <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{ICONS[route.name]}</Text>

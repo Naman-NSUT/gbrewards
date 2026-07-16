@@ -159,6 +159,23 @@ export interface RewardInput {
   sort_order?: number;
 }
 
+export interface Banner {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  link_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface BannerInput {
+  image_url: string;
+  caption?: string | null;
+  link_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
 export interface Faq {
   id: string;
   question: string;

@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
+import { AppLogo } from '../components/AppLogo';
 import { useI18n } from '../i18n/I18nProvider';
 import { ScanScreen } from '../screens/ScanScreen';
 import { colors } from '../theme';
@@ -16,6 +17,9 @@ export function MainStack() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
+        headerTitleAlign: 'center',
+        headerTitle: () => <AppLogo />,
+        headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

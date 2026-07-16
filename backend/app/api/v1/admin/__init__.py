@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import (
     account,
     auth,
+    banners,
     content,
     faqs,
     products,
@@ -22,5 +23,6 @@ admin_router.include_router(users.router)
 admin_router.include_router(redemptions.router)
 admin_router.include_router(reporting.router)
 admin_router.include_router(rewards.router)
+admin_router.include_router(banners.router)
 admin_router.include_router(faqs.router)
 admin_router.include_router(content.router)

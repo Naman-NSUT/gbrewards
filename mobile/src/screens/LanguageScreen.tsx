@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useI18n } from '../i18n/I18nProvider';
 import { LANG_LABEL, type Lang } from '../i18n/strings';
 import { colors, spacing } from '../theme';
@@ -16,8 +17,9 @@ export function LanguageScreen() {
   const [selected, setSelected] = useState<Lang>('en');
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.brand}>GB Rewards</Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <Text style={styles.brand}>GB Rewards</Text>
       <Text style={styles.title}>{t('lang.title')}</Text>
       <Text style={styles.subtitle}>अपनी भाषा चुनें · Choose your language</Text>
 
@@ -47,12 +49,13 @@ export function LanguageScreen() {
         onPress={() => setLang(selected)}
         style={{ marginTop: spacing.xl }}
       />
-    </View>
+      </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: spacing.xl, justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: 'transparent', padding: spacing.xl, justifyContent: 'center' },
   brand: { color: colors.primary, fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
   title: { color: colors.text, fontSize: 28, fontWeight: '800', marginTop: spacing.sm },
   subtitle: { color: colors.muted, fontSize: 14, marginTop: spacing.xs },
@@ -67,7 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     marginBottom: spacing.md,
   },
-  optionActive: { borderColor: colors.primary, backgroundColor: 'rgba(110,86,207,0.12)' },
+  optionActive: { borderColor: colors.primary, backgroundColor: 'rgba(0,144,216,0.10)' },
   optionNative: { color: colors.text, fontSize: 18, fontWeight: '700' },
   optionSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
   radio: {

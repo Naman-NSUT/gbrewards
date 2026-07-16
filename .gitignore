@@ -44,3 +44,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+.vercel
+
+# Large design source files (optimized versions are committed under app assets)
+/GOODBED -POSTER.png
+/GOODBED MATTRESS - LOGO.png
+/c.png
+/GoodBed 75x125mm Update 1.pdf
+*.orig

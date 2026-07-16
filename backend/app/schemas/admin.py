@@ -205,6 +205,33 @@ class RewardOut(BaseModel):
     created_at: datetime
 
 
+class BannerIn(BaseModel):
+    image_url: str = Field(min_length=1, max_length=1000)
+    caption: str | None = None
+    link_url: str | None = Field(default=None, max_length=1000)
+    is_active: bool = True
+    sort_order: int = 0
+
+
+class BannerUpdateIn(BaseModel):
+    image_url: str | None = Field(default=None, min_length=1, max_length=1000)
+    caption: str | None = None
+    link_url: str | None = Field(default=None, max_length=1000)
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+
+class BannerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    image_url: str
+    caption: str | None = None
+    link_url: str | None = None
+    is_active: bool
+    sort_order: int
+
+
 class FaqIn(BaseModel):
     question: str = Field(min_length=1)
     answer: str = Field(min_length=1)

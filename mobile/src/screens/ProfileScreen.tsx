@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useMe, useUpdateProfile } from '../hooks/useMe';
 import { useI18n } from '../i18n/I18nProvider';
 import { LANG_LABEL, type Lang } from '../i18n/strings';
@@ -42,8 +43,9 @@ export function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{t('profile.phone')}</Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <Text style={styles.label}>{t('profile.phone')}</Text>
       <Text style={styles.value}>{me.data?.phone ?? '—'}</Text>
 
       <Text style={styles.label}>{t('profile.name')}</Text>
@@ -90,13 +92,14 @@ export function ProfileScreen() {
 
       <View style={{ flex: 1 }} />
 
-      <Button title={t('profile.logout')} variant="secondary" onPress={() => void signOut()} />
-    </View>
+        <Button title={t('profile.logout')} variant="secondary" onPress={() => void signOut()} />
+      </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: spacing.xl },
+  container: { flex: 1, backgroundColor: 'transparent', padding: spacing.xl },
   label: { fontSize: 13, color: colors.muted, marginTop: spacing.md, marginBottom: spacing.xs },
   value: { fontSize: 17, color: colors.text },
   input: {
@@ -107,6 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     fontSize: 16,
     color: colors.text,
+    backgroundColor: colors.surface,
   },
   addressInput: { height: 80, paddingTop: spacing.sm, textAlignVertical: 'top' },
   langRow: { flexDirection: 'row', gap: spacing.sm },
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  langBtnActive: { borderColor: colors.primary, backgroundColor: 'rgba(110,86,207,0.12)' },
+  langBtnActive: { borderColor: colors.primary, backgroundColor: 'rgba(0,144,216,0.10)' },
   langText: { color: colors.muted, fontSize: 15, fontWeight: '600' },
   langTextActive: { color: colors.text },
 });

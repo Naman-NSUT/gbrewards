@@ -2,7 +2,9 @@ import React from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import type { LedgerEntry } from '../api/types';
+import { BannerCarousel } from '../components/BannerCarousel';
 import { Button } from '../components/Button';
+import { ScreenBackground } from '../components/ScreenBackground';
 import { useLedger } from '../hooks/useLedger';
 import { useMe } from '../hooks/useMe';
 import { useI18n } from '../i18n/I18nProvider';
@@ -35,6 +37,8 @@ export function HomeScreen({ navigation }: AppTabScreenProps<'Home'>) {
 
   const header = (
     <View>
+      <BannerCarousel />
+
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>{t('history.balance')}</Text>
         <Text style={styles.balanceValue}>{me.data?.balance ?? '—'} pts</Text>
@@ -54,35 +58,37 @@ export function HomeScreen({ navigation }: AppTabScreenProps<'Home'>) {
   );
 
   return (
-    <FlatList
-      style={styles.container}
-      data={entries}
-      keyExtractor={(e) => e.id}
-      renderItem={({ item }) => <LedgerRow entry={item} />}
-      ListHeaderComponent={header}
-      contentContainerStyle={entries.length === 0 && styles.emptyWrap}
-      ListEmptyComponent={
-        !ledger.isLoading ? <Text style={styles.empty}>{t('history.empty')}</Text> : null
-      }
-      onEndReached={() => {
-        if (ledger.hasNextPage && !ledger.isFetchingNextPage) void ledger.fetchNextPage();
-      }}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        <RefreshControl
-          refreshing={ledger.isRefetching || me.isRefetching}
-          onRefresh={() => {
-            void me.refetch();
-            void ledger.refetch();
-          }}
-        />
-      }
-    />
+    <ScreenBackground>
+      <FlatList
+        style={styles.container}
+        data={entries}
+        keyExtractor={(e) => e.id}
+        renderItem={({ item }) => <LedgerRow entry={item} />}
+        ListHeaderComponent={header}
+        contentContainerStyle={entries.length === 0 && styles.emptyWrap}
+        ListEmptyComponent={
+          !ledger.isLoading ? <Text style={styles.empty}>{t('history.empty')}</Text> : null
+        }
+        onEndReached={() => {
+          if (ledger.hasNextPage && !ledger.isFetchingNextPage) void ledger.fetchNextPage();
+        }}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={ledger.isRefetching || me.isRefetching}
+            onRefresh={() => {
+              void me.refetch();
+              void ledger.refetch();
+            }}
+          />
+        }
+      />
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: 'transparent' },
   balanceCard: {
     backgroundColor: colors.primary,
     margin: spacing.md,
@@ -90,7 +96,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
-  balanceValue: { color: '#fff', fontSize: 40, fontWeight: '800', marginTop: spacing.xs },
+  balanceValue: { color: colors.onPrimary, fontSize: 40, fontWeight: '800', marginTop: spacing.xs },
   available: { color: 'rgba(255,255,255,0.9)', fontSize: 14, marginTop: spacing.xs },
   scanButton: { marginHorizontal: spacing.md },
   sectionTitle: {

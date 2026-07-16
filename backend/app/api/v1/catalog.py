@@ -3,12 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
+from app.models.banner import Banner
 from app.models.content_doc import ContentDoc
 from app.models.faq import Faq
 from app.models.product import Product
 from app.models.reward import Reward
 from app.models.user import User
 from app.schemas.catalog import (
+    BannerOut,
     ContentDocOut,
     FaqPublicOut,
     ProductPointsOut,
@@ -41,6 +43,20 @@ def list_rewards(
             select(Reward)
             .where(Reward.is_active.is_(True))
             .order_by(Reward.sort_order, Reward.title)
+        ).scalars()
+    )
+
+
+@router.get("/catalog/banners", response_model=list[BannerOut])
+def list_banners(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Banner]:
+    return list(
+        db.execute(
+            select(Banner)
+            .where(Banner.is_active.is_(True))
+            .order_by(Banner.sort_order, Banner.created_at)
         ).scalars()
     )
 
