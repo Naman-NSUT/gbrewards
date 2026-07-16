@@ -1,0 +1,17 @@
+# Vercel builds only admin-web/ (project Root Directory = admin-web).
+# Exclude everything else so uploads stay small and the 100MB/file limit
+# (large design sources) is never hit.
+
+# Large design source files at repo root (keep admin-web/src/assets/*.png!)
+GOODBED -POSTER.png
+GOODBED MATTRESS - LOGO.png
+c.png
+*.pdf
+
+# Other deployables — not part of the admin-web build
+backend
+mobile
+
+# Local/dev noise
+.git
+docs
