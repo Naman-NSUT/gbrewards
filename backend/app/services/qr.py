@@ -167,8 +167,8 @@ def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None
         height=qr_size,
     )
     # the token printed below the QR so a non-scanning tag is still reconcilable
-    pdf.setFillGray(0.1)
-    pdf.setFont("Courier", 6)
+    pdf.setFillGray(0)
+    pdf.setFont("Courier-Bold", 7)
     pdf.drawCentredString(CX, qr_y - 4 * mm, unit.token)
 
     # --- Box C: terms & conditions ----------------------------------------
