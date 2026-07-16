@@ -6,7 +6,7 @@ import {
   listBanners,
   updateBanner,
 } from '../api/banners';
-import type { BannerInput } from '../api/types';
+import type { BannerCreateInput, BannerUpdateInput } from '../api/types';
 
 export function useBanners() {
   return useQuery({ queryKey: ['banners'], queryFn: listBanners });
@@ -15,7 +15,7 @@ export function useBanners() {
 export function useCreateBanner() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: BannerInput) => createBanner(input),
+    mutationFn: (input: BannerCreateInput) => createBanner(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['banners'] }),
   });
 }
@@ -23,7 +23,7 @@ export function useCreateBanner() {
 export function useUpdateBanner() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<BannerInput> }) =>
+    mutationFn: ({ id, input }: { id: string; input: BannerUpdateInput }) =>
       updateBanner(id, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['banners'] }),
   });

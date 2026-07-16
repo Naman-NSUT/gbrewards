@@ -1,4 +1,18 @@
-import { App, Button, Drawer, Form, Input, InputNumber, Popconfirm, Space, Switch, Typography } from 'antd';
+import { InboxOutlined } from '@ant-design/icons';
+import {
+  App,
+  Button,
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Space,
+  Switch,
+  Typography,
+  Upload,
+} from 'antd';
+import type { UploadFile } from 'antd';
 import { useState } from 'react';
 
 import { apiErrorMessage } from '../api/client';
@@ -15,7 +29,6 @@ import {
 } from '../hooks/useBanners';
 
 interface BannerForm {
-  image_url: string;
   caption?: string;
   link_url?: string;
   sort_order: number;
@@ -42,6 +55,7 @@ export function BannersPage() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Banner | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [form] = Form.useForm<BannerForm>();
 
   const onDelete = async (b: Banner) => {
@@ -55,6 +69,7 @@ export function BannersPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setFile(null);
     form.resetFields();
     form.setFieldsValue({ is_active: true, sort_order: 0 });
     setEditorOpen(true);
@@ -62,8 +77,8 @@ export function BannersPage() {
 
   const openEdit = (b: Banner) => {
     setEditing(b);
+    setFile(null);
     form.setFieldsValue({
-      image_url: b.image_url,
       caption: b.caption ?? undefined,
       link_url: b.link_url ?? undefined,
       sort_order: b.sort_order,
@@ -74,12 +89,19 @@ export function BannersPage() {
 
   const submitEditor = async () => {
     const values = await form.validateFields();
+    if (!editing && !file) {
+      message.error('Please choose an image to upload');
+      return;
+    }
     try {
       if (editing) {
-        await updateBanner.mutateAsync({ id: editing.id, input: values });
+        await updateBanner.mutateAsync({
+          id: editing.id,
+          input: { ...values, ...(file ? { image: file } : {}) },
+        });
         message.success('Banner updated');
       } else {
-        await createBanner.mutateAsync(values);
+        await createBanner.mutateAsync({ image: file!, ...values });
         message.success('Banner created');
       }
       setEditorOpen(false);
@@ -87,6 +109,10 @@ export function BannersPage() {
       message.error(apiErrorMessage(e, 'Could not save banner'));
     }
   };
+
+  const fileList: UploadFile[] = file
+    ? [{ uid: '-1', name: file.name, status: 'done' }]
+    : [];
 
   return (
     <>
@@ -105,7 +131,7 @@ export function BannersPage() {
         loading={banners.isLoading}
         dataSource={banners.data ?? []}
         emptyText="No banners yet"
-        emptyHint="Create a banner to show it in the mobile ad carousel."
+        emptyHint="Upload a banner image to show it in the mobile ad carousel."
         columns={[
           {
             title: 'Preview',
@@ -178,18 +204,45 @@ export function BannersPage() {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="image_url"
-            label="Image URL"
-            rules={[{ required: true, message: 'An image URL is required' }]}
+            label={editing ? 'Replace image' : 'Banner image'}
+            required={!editing}
             extra={
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                A full https URL to any hosted image (e.g. https://…/poster.jpg), or a backend
-                static path starting with “/” (e.g. /static/banners/goodbed-poster.jpg), which is
-                resolved against the backend origin.
+                Just upload any image — it&apos;s resized and optimised automatically for the app.
               </Typography.Text>
             }
           >
-            <Input placeholder="https://… or /static/banners/…" />
+            {editing && !file && (
+              <img
+                src={resolveImageUrl(editing.image_url)}
+                alt="current banner"
+                style={{
+                  width: '100%',
+                  maxHeight: 120,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  marginBottom: 12,
+                  background: 'rgba(255,255,255,0.04)',
+                }}
+              />
+            )}
+            <Upload.Dragger
+              accept="image/*"
+              maxCount={1}
+              multiple={false}
+              fileList={fileList}
+              beforeUpload={(f) => {
+                setFile(f);
+                return false; // keep the file locally; we upload on Save
+              }}
+              onRemove={() => setFile(null)}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag an image here</p>
+              <p className="ant-upload-hint">PNG or JPG. Landscape looks best.</p>
+            </Upload.Dragger>
           </Form.Item>
           <Form.Item name="caption" label="Caption">
             <Input placeholder="GoodBed HR Foam — 25 Year Warranty" />

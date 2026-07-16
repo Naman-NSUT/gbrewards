@@ -168,10 +168,20 @@ export interface Banner {
   sort_order: number;
 }
 
-export interface BannerInput {
-  image_url: string;
-  caption?: string | null;
-  link_url?: string | null;
+// Banners are uploaded as image files (multipart). The backend processes and
+// stores the image and returns a served `image_url`.
+export interface BannerCreateInput {
+  image: File;
+  caption?: string;
+  link_url?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface BannerUpdateInput {
+  image?: File; // optional: replace the image
+  caption?: string;
+  link_url?: string;
   is_active?: boolean;
   sort_order?: number;
 }
