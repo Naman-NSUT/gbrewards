@@ -44,6 +44,12 @@ def _detail(db: Session, user: User) -> AdminUserDetail:
         available=ledger.available(db, user.id),
         last_active_at=user.last_active_at,
         created_at=user.created_at,
+        address=user.address,
+        city=user.city,
+        state=user.state,
+        pincode=user.pincode,
+        dob=user.dob,
+        gender=user.gender,
     )
 
 

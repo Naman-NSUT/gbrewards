@@ -2,6 +2,8 @@
 
 **App:** GB Rewards · `in.gbrewards.gbrewards`
 **Audited:** 31 July 2026, against the `release` variant on branch `main`
+**Revised:** 31 July 2026 — sign-in now also collects city, state, pincode, date of birth and gender.
+That added the **Personal info → Other info** row below; nothing else in the declaration changed.
 **Companion document:** [`docs/index.html`](./index.html) — the privacy policy. The two are written to
 say the same thing in the same order. If you change one, change the other.
 
@@ -69,15 +71,43 @@ party for its own purposes. Disclosed as a recipient in the policy, section 4. *
 |---|---|
 | Collected | **Yes** |
 | Shared | **No** |
-| Processed ephemerally | **No** — persisted in `users.address` (`backend/app/models/user.py:15`) |
+| Processed ephemerally | **No** — persisted in `users.address/city/state/pincode` (`backend/app/models/user.py:20-24`) |
 | Required or optional | **Required** |
 | Purposes | App functionality |
 
-**Evidence.** Entered at `PhoneScreen.tsx:94-102`, transmitted at `src/api/auth.ts:15`, stored at
-`backend/app/api/v1/auth.py:55`. Used to fulfil redemptions.
-**Why "required":** submit is blocked when the address is empty — `PhoneScreen.tsx:39-42`. Note this is
-unusual for a signup flow and a reviewer may query it; the answer is that redemption fulfilment needs the
-outlet address. If you ever make it skippable, this flips to **Optional**.
+**Evidence.** The address is collected as four fields — street, city, state and 6-digit pincode — entered
+at `mobile/src/screens/PhoneScreen.tsx:100-146`, transmitted at `mobile/src/api/auth.ts:24`, stored at
+`backend/app/api/v1/auth.py:55,65-68`. Used to fulfil redemptions.
+**Why "required":** submit is blocked when any of the four is empty or the pincode is not six digits —
+`PhoneScreen.tsx:41-45`. Note this is unusual for a signup flow and a reviewer may query it; the answer is
+that redemption fulfilment needs the outlet address. If you ever make it skippable, this flips to
+**Optional**.
+
+### Personal info → Other info (date of birth and gender)
+
+| Field | Answer |
+|---|---|
+| Collected | **Yes** |
+| Shared | **No** |
+| Processed ephemerally | **No** — persisted in `users.dob` and `users.gender` (`backend/app/models/user.py:25-26`) |
+| Required or optional | **Required** |
+| Purposes | App functionality; Fraud prevention, security, and compliance (DOB only) |
+
+**Why this category.** Play's Personal info list has no "Gender" or "Date of birth" entry. Google's
+definition of **Other info** is "any other personal information such as date of birth, gender identity,
+veteran status" — these two are its canonical examples, so both belong here rather than in a category of
+their own. Declare one "Other info" row covering both, and say so in the free-text description if Play
+offers one.
+
+**Evidence.** DOB entered at `PhoneScreen.tsx:148-158` and gender at `:160-177`; transmitted at
+`mobile/src/api/auth.ts:24`; stored at `backend/app/api/v1/auth.py:65-68`. Both are editable later at
+`mobile/src/screens/ProfileScreen.tsx` via `PATCH /me` (`backend/app/api/v1/me.py:52-57`).
+**Why "required":** submit is blocked without a valid DOB or a gender selection — `PhoneScreen.tsx:47-52`.
+**Why DOB also carries the security purpose:** it enforces the 18+ floor that the Target audience
+declaration asserts. The check runs server-side in `backend/app/schemas/profile.py:26-33`
+(`MIN_AGE_YEARS = 18`), not only in the app, so it holds even against a modified client.
+**Gender is restricted to `male` / `female`** by both the app (`mobile/src/utils/profile.ts:5`) and a
+database check constraint (`backend/app/models/user.py:12-14`).
 
 ### Personal info → User IDs
 
@@ -149,7 +179,7 @@ Each of these is a positive finding, not an omission.
 | **Advertising ID — does your app use one?** | **No** | No `com.google.android.gms.permission.AD_ID` in the app manifest or any dependency manifest; no Play Services dependency at all |
 | **Data collected or shared for advertising or marketing** | **No** | Follows from the two rows above |
 | **App access — is any functionality restricted?** | **Yes — all functionality is behind a login.** You must provide reviewer instructions | Nothing is reachable signed-out: `RootNavigator` gates the whole tree on auth state, and every data route requires a bearer token (`backend/app/core/deps.py:43-56`). ⚠️ **Login is SMS-OTP only and there is no bypass** — `assert_production_ready()` forbids the fake OTP provider in production (`backend/app/core/config.py:58-59`). A Google reviewer cannot receive your SMS. See UNRESOLVED #3 — this will block review if unaddressed |
-| **Target audience** | **18 and over only** | The app is for authorised dealers and channel partners; nothing in it is directed at or appealing to children. Consistent with policy section 9. Selecting 18+ keeps you out of the Families policy programme entirely |
+| **Target audience** | **18 and over only** | The app is for authorised dealers and channel partners; nothing in it is directed at or appealing to children. **Enforced, not just asserted:** sign-up requires a date of birth and the server rejects anyone under 18 (`backend/app/schemas/profile.py:26-33`). Consistent with policy section 9. Selecting 18+ keeps you out of the Families policy programme entirely |
 | **Appeal to children** | **No** | Business utility app: scan, balance, redeem, info |
 | **Financial features** | **None** | No payment, lending, or crypto functionality; no financial data field exists (see Section 3). ⚠️ Your store listing draft says points redeem for "vouchers, cash, or goodies" — if any cash payout happens, it happens off-app and outside this build, but consider rewording to avoid a reviewer query |
 | **Health apps** | **No** | No health functionality or data |

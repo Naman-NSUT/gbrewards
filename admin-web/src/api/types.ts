@@ -113,6 +113,14 @@ export interface AdminUser {
 
 export interface AdminUserDetail extends AdminUser {
   available: number;
+  // Profile fields — returned on the detail endpoint only, and null for accounts
+  // created before the expanded sign-in form shipped.
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  dob: string | null; // ISO yyyy-mm-dd
+  gender: 'male' | 'female' | null;
 }
 
 export interface UserListPage {

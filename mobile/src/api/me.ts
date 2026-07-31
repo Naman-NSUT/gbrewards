@@ -1,3 +1,4 @@
+import type { Gender } from '../utils/profile';
 import { api } from './client';
 import type { LedgerPage, Me } from './types';
 
@@ -9,6 +10,11 @@ export async function getMe(): Promise<Me> {
 export interface ProfileUpdate {
   name?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  dob?: string; // ISO yyyy-mm-dd
+  gender?: Gender;
 }
 
 export async function updateProfile(payload: ProfileUpdate): Promise<Me> {

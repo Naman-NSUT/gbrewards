@@ -2,6 +2,7 @@
 
 **Subject:** GB Rewards Android app, `in.gbrewards.gbrewards`, `release` variant
 **Date:** 31 July 2026 · **Repo state:** branch `main` at `5786677`, working tree clean apart from `.gitignore`
+**Revision, same day:** re-audited after the sign-in form was extended — see §9.
 **Outputs:** [`docs/index.html`](./index.html) (privacy policy) · [`docs/PLAY_DATA_SAFETY.md`](./PLAY_DATA_SAFETY.md) (Play Console answers)
 **Constraint honoured:** read-only. No application code, manifest, or config was modified. The only files
 written are these three docs.
@@ -190,7 +191,9 @@ privacy change to whoever makes it.
 | Setting `SENTRY_DSN` as an EAS secret, or in Render's dashboard (`render.yaml:41` leaves it `sync:false` and inviting) | "Crash logs / Diagnostics: not collected" flips to collected **and shared with a third party**. No code change required — a dashboard toggle alone does it. The backend case is worse: unhandled-exception payloads can carry request bodies containing phone, name, and address |
 | Pointing any reward or banner `image_url` at an external host | Every user's IP and user-agent reach that host on app open. Adds a third-party recipient not named in the policy. With cleartext still permitted, an `http://` URL would also transmit unencrypted, breaking "encrypted in transit" |
 | Adding any HTTP endpoint, or an SDK that phones home over HTTP | "Encrypted in transit: Yes" becomes false, silently — the manifest currently permits it (see §6.1) |
-| Making name or address optional at signup (`PhoneScreen.tsx:35-42`) | "Required" flips to "Optional" for those elements |
+| Making any sign-in field optional (`PhoneScreen.tsx:39-52`) | "Required" flips to "Optional" for that element |
+| Relaxing or removing the 18+ check (`backend/app/schemas/profile.py:26-33`) | Undercuts the "Target audience: 18 and over" declaration and policy section 9, which both now say the floor is enforced |
+| Widening `gender` beyond `male`/`female` | Needs a migration (DB check constraint) and a policy edit — the constraint is deliberate, not incidental |
 | Adding push notifications, Firebase, or any analytics SDK | Introduces Device IDs, likely an `AD_ID` permission, and a genuine third-party sharing relationship — the largest single jump in declaration scope available from here |
 | Adding a payout, voucher-code, or bank-detail field to redemptions | Selects **Financial info** and triggers the Play financial-features declaration, which carries its own documentation requirements |
 | Storing anything in `AsyncStorage`, plain SharedPreferences, or external files | Policy section 6's "no personal details are cached on the device" becomes false |
@@ -214,3 +217,53 @@ Server-side behaviour was read from source, not observed in production. Retentio
 practice rather than code — the database has no retention job, so rows persist until someone deletes
 them. That is why the policy states retention in terms of account life plus a `{{RETENTION_PERIOD}}`
 placeholder rather than asserting a specific window the code does not enforce.
+
+## 9. Revision — expanded sign-in form (31 July 2026)
+
+The sign-in screen now collects **city, state, pincode, date of birth and gender** in addition to name,
+phone and street address, and the home screen greets the user by first name. Re-audited rather than
+assumed; what changed:
+
+**One new declaration: Personal info → Other info.** Play's Personal info list has no Gender or Date of
+birth entry, and Google's definition of *Other info* — "any other personal information such as date of
+birth, gender identity, veteran status" — names both as its examples. So both go in one Other info row,
+not in invented categories. City/state/pincode need no new row: they are part of the postal address
+already declared under **Address**, now stored as four columns instead of one free-text field.
+
+**Nothing else moved.** No new SDK, permission, network destination, or on-device storage. The new fields
+travel on the existing `POST /auth/otp/request` call to the same first-party origin
+(`mobile/src/api/auth.ts:24`), and are stored in the same `users` row. Nothing new is shared, and the
+"not collected" list in §3 of PLAY_DATA_SAFETY is unchanged. The full negative sweep in §2 above was
+re-run and still returns nothing.
+
+**The 18+ target-audience declaration got stronger.** It used to rest on design intent alone. Sign-up now
+requires a DOB and rejects under-18s in `backend/app/schemas/profile.py:26-33`, server-side, so a modified
+client cannot bypass it. The privacy policy's children section says this explicitly.
+Judgement call worth surfacing: **an age floor was not asked for.** It was added because the Play target
+audience is 18+ and a DOB field that is collected but unchecked is a declaration you cannot defend. If you
+would rather accept under-18 registrations, change `MIN_AGE_YEARS` in that file and
+`mobile/src/utils/profile.ts:12`, and soften policy section 9 to match — but then reconsider the 18+
+target audience answer, because the two must agree.
+
+**Gender is constrained to `male` / `female`** as specified, at three layers: the app's picker
+(`mobile/src/utils/profile.ts:5`), the Pydantic `Literal` (`backend/app/schemas/profile.py:19`), and a
+database check constraint (`backend/app/models/user.py:12-14`). Widening the option set later means a
+migration, not just a UI change.
+
+**Compatibility choice, deliberate.** The five new fields are **required in the app but optional at the
+API**. An older installed build that posts only name and address still authenticates, and the upsert skips
+`None` values so a partial profile is never blanked out (`backend/app/api/v1/auth.py:65-68`, covered by
+`backend/tests/test_profile_fields.py::test_omitted_fields_do_not_blank_stored_values`). The Data safety
+answer follows the *app's* code path — required — because that is the path a user actually walks.
+
+**A pre-existing bug surfaced and was fixed.** `app/core/errors.py` passed pydantic's raw error list into
+the JSON envelope. Any validator raising `ValueError` puts the exception *object* in `ctx`, which is not
+JSON-serialisable — so an invalid DOB returned a 500 instead of a 422. Fixed by stringifying `ctx`
+(`_serialisable_errors`). It had never fired because until now every validator used pattern/length rules
+only. Not a privacy issue, but it would have made the age check look broken in production.
+
+**Still true, still watch it.** Everything in §7 above stands. One item gets sharper: the app now holds
+date of birth and gender, so if `SENTRY_DSN` is ever set on the backend, an unhandled exception on the
+sign-in route could carry a full profile — name, phone, address, DOB, gender — into a third-party error
+tracker in one payload.
+

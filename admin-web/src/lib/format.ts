@@ -5,6 +5,30 @@ export function formatDateTime(iso: string | null | undefined): string {
   return date.toLocaleString();
 }
 
+/** ISO yyyy-mm-dd (a plain date, no timezone) -> locale date string. */
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  // Build from parts rather than Date(iso): parsing a bare date string as UTC
+  // can shift it a day backwards for users west of Greenwich.
+  if (!m) return iso;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString();
+}
+
+/** Joins the postal address parts that are actually present. */
+export function formatAddress(parts: {
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+}): string {
+  const joined = [parts.address, parts.city, parts.state, parts.pincode]
+    .map((p) => p?.trim())
+    .filter((p): p is string => Boolean(p))
+    .join(', ');
+  return joined || '—';
+}
+
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

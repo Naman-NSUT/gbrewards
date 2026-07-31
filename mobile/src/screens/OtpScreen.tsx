@@ -21,7 +21,8 @@ import { colors, spacing } from '../theme';
 const CODE_RE = /^\d{4,8}$/;
 
 export function OtpScreen({ route }: AuthStackScreenProps<'Otp'>) {
-  const { phone, name, address, resendIn } = route.params;
+  const { profile, resendIn } = route.params;
+  const { phone } = profile;
   const { t } = useI18n();
   const { signIn } = useAuth();
   const [code, setCode] = useState('');
@@ -56,7 +57,7 @@ export function OtpScreen({ route }: AuthStackScreenProps<'Otp'>) {
     if (cooldown > 0) return;
     setError(null);
     resendMutation.mutate(
-      { phone, name, address },
+      profile,
       {
         onSuccess: (res) => setCooldown(res.resend_in),
         onError: (e) => setError(extractApiError(e)?.message ?? t('otp.errVerify')),

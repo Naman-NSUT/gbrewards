@@ -31,6 +31,23 @@ def _envelope(code: str, message: str, details: dict[str, Any]) -> dict[str, Any
     return {"error": {"code": code, "message": message, "details": details}}
 
 
+def _serialisable_errors(errors: Any) -> list[dict[str, Any]]:
+    """Strip non-JSON values out of pydantic's error list.
+
+    A validator that raises `ValueError` puts the exception *object* in `ctx`,
+    which json.dumps cannot encode — that would turn a 422 into a 500. The human
+    message is already in `msg`, so stringifying `ctx` loses nothing.
+    """
+    cleaned: list[dict[str, Any]] = []
+    for err in errors:
+        item = {k: v for k, v in err.items() if k != "ctx"}
+        ctx = err.get("ctx")
+        if ctx:
+            item["ctx"] = {k: str(v) for k, v in ctx.items()}
+        cleaned.append(item)
+    return cleaned
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
@@ -46,7 +63,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             content=_envelope(
                 "validation_error",
                 "Request validation failed",
-                {"errors": exc.errors()},
+                {"errors": _serialisable_errors(exc.errors())},
             ),
         )
 

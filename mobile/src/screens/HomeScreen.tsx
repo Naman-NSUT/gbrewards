@@ -35,8 +35,19 @@ export function HomeScreen({ navigation }: AppTabScreenProps<'Home'>) {
 
   const entries = ledger.data?.pages.flatMap((p) => p.items) ?? [];
 
+  const firstName = me.data?.name?.trim().split(/\s+/)[0];
+
   const header = (
     <View>
+      {firstName ? (
+        <View style={styles.greetingCard}>
+          <Text style={styles.greeting} numberOfLines={1}>
+            {t('home.greeting', { name: firstName })}
+          </Text>
+          <Text style={styles.greetingSub}>{t('home.greetingSub')}</Text>
+        </View>
+      ) : null}
+
       <BannerCarousel />
 
       <View style={styles.balanceCard}>
@@ -89,6 +100,13 @@ export function HomeScreen({ navigation }: AppTabScreenProps<'Home'>) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
+  greetingCard: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  greeting: { fontSize: 24, fontWeight: '800', color: colors.text },
+  greetingSub: { fontSize: 14, color: colors.muted, marginTop: 2 },
   balanceCard: {
     backgroundColor: colors.primary,
     margin: spacing.md,

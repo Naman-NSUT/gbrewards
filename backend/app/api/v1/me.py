@@ -20,6 +20,11 @@ def _me_out(db: Session, user: User) -> MeOut:
         phone=user.phone,
         name=user.name,
         address=user.address,
+        city=user.city,
+        state=user.state,
+        pincode=user.pincode,
+        dob=user.dob,
+        gender=user.gender,
         is_verified=user.is_verified,
         balance=bal,
         available=bal - pend,
@@ -42,13 +47,13 @@ def update_me(
     db: Session = Depends(get_db),
 ) -> MeOut:
     # PATCH semantics: only touch fields the client actually sent, and never
-    # blank out name/address with an empty value (avoids wiping a stored address
+    # blank out a stored value with an empty one (avoids wiping a saved address
     # when the client submits an empty field).
     data = body.model_dump(exclude_unset=True)
-    if data.get("name"):
-        user.name = data["name"]
-    if data.get("address"):
-        user.address = data["address"]
+    for field in ("name", "address", "city", "state", "pincode", "dob", "gender"):
+        value = data.get(field)
+        if value:
+            setattr(user, field, value)
     db.commit()
     db.refresh(user)
     return _me_out(db, user)

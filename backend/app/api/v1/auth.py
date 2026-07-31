@@ -45,9 +45,11 @@ def otp_request(
     redis: Redis = Depends(get_redis),
     provider: OtpProvider = Depends(get_otp_provider),
 ) -> OtpRequestOut:
-    """Step 1: upsert the broker by phone, capture name + address, send an OTP.
+    """Step 1: upsert the broker by phone, capture their profile, send an OTP.
 
-    The phone is the identity. Name and address are refreshed on every request.
+    The phone is the identity. Profile fields are refreshed on every request, but
+    only the ones actually sent — an older app build that omits city/state/pincode/
+    dob/gender must not blank out values already on file.
     The account is only marked verified once the code is confirmed (step 2).
     """
     user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
@@ -59,6 +61,11 @@ def otp_request(
             raise AppError("account_disabled", 403, "This account has been disabled")
         user.name = body.name
         user.address = body.address
+
+    for field in ("city", "state", "pincode", "dob", "gender"):
+        value = getattr(body, field)
+        if value is not None:
+            setattr(user, field, value)
     db.commit()
 
     ip = request.client.host if request.client else "unknown"

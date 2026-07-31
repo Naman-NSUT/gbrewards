@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { apiErrorMessage } from '../api/client';
 import type { LedgerEntry, LedgerType } from '../api/types';
 import { useCreditUser, useDebitUser, useUser, useUserLedger } from '../hooks/useUsers';
-import { formatDateTime } from '../lib/format';
+import { formatAddress, formatDate, formatDateTime } from '../lib/format';
+
+const GENDER_LABEL: Record<string, string> = { male: 'Male', female: 'Female' };
 
 const TYPE_LABEL: Record<LedgerType, string> = {
   scan_credit: 'Earned',
@@ -53,6 +55,14 @@ export function UserDetailDrawer({
           <Descriptions.Item label="Available">{user.data.available}</Descriptions.Item>
           <Descriptions.Item label="Total earned">{user.data.total_earned}</Descriptions.Item>
           <Descriptions.Item label="Active">{user.data.is_active ? 'yes' : 'no'}</Descriptions.Item>
+          <Descriptions.Item label="Date of birth">{formatDate(user.data.dob)}</Descriptions.Item>
+          <Descriptions.Item label="Gender">
+            {user.data.gender ? (GENDER_LABEL[user.data.gender] ?? user.data.gender) : '—'}
+          </Descriptions.Item>
+          {/* Delivery address for fulfilling redemptions. */}
+          <Descriptions.Item label="Address" span={2}>
+            {formatAddress(user.data)}
+          </Descriptions.Item>
         </Descriptions>
       )}
 

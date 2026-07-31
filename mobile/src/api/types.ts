@@ -1,8 +1,15 @@
+import type { Gender } from '../utils/profile';
+
 export interface UserOut {
   id: string;
   phone: string;
   name: string;
   address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  dob: string | null; // ISO yyyy-mm-dd
+  gender: Gender | null;
   is_verified: boolean;
   last_active_at: string | null;
 }
@@ -20,6 +27,11 @@ export interface Me {
   phone: string;
   name: string;
   address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  dob: string | null; // ISO yyyy-mm-dd
+  gender: Gender | null;
   is_verified: boolean;
   balance: number;
   available: number;

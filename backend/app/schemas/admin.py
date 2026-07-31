@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -163,6 +163,14 @@ class AdminUserListPage(BaseModel):
 
 class AdminUserDetail(AdminUserListItem):
     available: int
+    # Profile fields, shown on the detail drawer only — staff need the full
+    # postal address to fulfil a redemption.
+    address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    pincode: str | None = None
+    dob: date | None = None
+    gender: str | None = None
 
 
 class AdjustIn(BaseModel):
