@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GB Rewards — Privacy Policy</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #16232b;
+    --muted: #5a6b75;
+    --line: #d8e0e5;
+    --accent: #0b6a97;
+    --panel: #f4f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12181c;
+      --fg: #e6edf1;
+      --muted: #9fb0ba;
+      --line: #2a353d;
+      --accent: #58b6e4;
+      --panel: #1a2228;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 32px 20px 72px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 14px; margin-bottom: 8px; }
+  h1 { font-size: 27px; margin: 0 0 6px; line-height: 1.25; }
+  h2 { font-size: 19px; margin: 34px 0 8px; }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .meta { color: var(--muted); font-size: 14px; margin: 0; }
+  a { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 4px; font-size: 13.5px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+  .ph { background: #ffe9a8; color: #4a3600; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 14px; }
+  @media (prefers-color-scheme: dark) { .ph { background: #5c4a12; color: #ffe9a8; } }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+  .wrap > table { display: block; overflow-x: auto; white-space: nowrap; }
+  @media (min-width: 640px) { .wrap > table { display: table; white-space: normal; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Privacy Policy — GB Rewards</h1>
+  <p class="meta">
+    Android app <code>in.gbrewards.gbrewards</code>, published by
+    <span class="ph">{{LEGAL_ENTITY}}</span>.<br />
+    Last updated: <strong>31 July 2026</strong>
+  </p>
+</header>
+
+<p>
+  GB Rewards is a rewards program app for authorised GoodBed dealers and channel partners.
+  You scan the QR code printed on a product, the app awards you points, and you can request
+  to redeem those points. This policy explains exactly what data the app collects, why,
+  who receives it, and how to have it deleted.
+</p>
+
+<p>
+  It covers the GB Rewards Android app and the backend service the app talks to. It does
+  not cover the separate web panel used internally by <span class="ph">{{LEGAL_ENTITY}}</span> staff.
+</p>
+
+<h2>1. What we collect, and why</h2>
+
+<p>
+  Every item below is collected because the app sends it to our own server. There is nothing
+  else. The categories match the Google Play Data safety labels shown on our Play Store listing.
+</p>
+
+<table>
+  <tr>
+    <th>Data</th><th>When it is collected</th><th>Why</th><th>Required?</th>
+  </tr>
+  <tr>
+    <td><strong>Name</strong></td>
+    <td>You type it on the sign-in screen; you can edit it later in Profile.</td>
+    <td>To create and identify your rewards account, and so staff can match a redemption to you.</td>
+    <td>Required — you cannot sign in without it.</td>
+  </tr>
+  <tr>
+    <td><strong>Mobile phone number</strong></td>
+    <td>You type it on the sign-in screen.</td>
+    <td>It is your account identity. We send a one-time password (OTP) to it to log you in. There is no password.</td>
+    <td>Required.</td>
+  </tr>
+  <tr>
+    <td><strong>Postal / business address</strong></td>
+    <td>You type it on the sign-in screen; you can edit it later in Profile.</td>
+    <td>To identify your outlet and to deliver or fulfil rewards you redeem.</td>
+    <td>Required — you cannot sign in without it.</td>
+  </tr>
+  <tr>
+    <td><strong>Account ID</strong></td>
+    <td>Created by our server when your account is made, and sent by the app with each request to prove you are signed in.</td>
+    <td>To keep you signed in securely and to attach your points to the right account.</td>
+    <td>Required.</td>
+  </tr>
+  <tr>
+    <td><strong>Your activity in the app</strong> — which product QR codes you scanned and when, points earned, and redemption requests you made</td>
+    <td>Each time you scan a code or request a redemption.</td>
+    <td>This is the program itself: awarding points, showing your balance and history, processing redemptions, and detecting duplicate or copied QR codes. We also count scans in aggregate to see how the program is performing.</td>
+    <td>Required.</td>
+  </tr>
+</table>
+
+<h2>2. What we do <em>not</em> collect</h2>
+
+<ul>
+  <li><strong>No photos or camera images.</strong> See section 3.</li>
+  <li><strong>No location.</strong> The app has no location permission and never asks for one.</li>
+  <li><strong>No contacts, calendar, call logs, SMS messages, or files</strong> from your device.</li>
+  <li><strong>No financial or payment information.</strong> There is no payment, card, bank, or UPI field anywhere in the app, and points are not money.</li>
+  <li><strong>No advertising ID, and no advertising or analytics SDKs.</strong> The app contains no third-party tracking software of any kind.</li>
+  <li><strong>No crash or diagnostic reports.</strong> Crash reporting is not enabled in the published app.</li>
+  <li><strong>No health or fitness data.</strong></li>
+</ul>
+
+<p>
+  Your language choice (English or Hindi) is saved on your phone only. It is never sent to us.
+</p>
+
+<h2>3. The camera permission</h2>
+
+<p>
+  The app asks for camera access for one reason: to read the QR code on a product. The camera
+  image is decoded on your phone, in memory. <strong>No photo, video, or camera frame is ever
+  saved to your device, saved to your gallery, or sent to our servers.</strong> The only thing
+  that leaves your phone is the short code text printed inside the QR — which identifies the
+  product, not you.
+</p>
+
+<p>
+  If you decline the camera permission, you can still sign in and use the rest of the app;
+  you just cannot scan.
+</p>
+
+<h3>Other permissions listed on the Play Store page</h3>
+
+<p>
+  The app's technical package also lists microphone, vibration, storage and display-overlay
+  permissions. These are pulled in automatically by the camera and app-framework libraries we
+  build on. <strong>GB Rewards does not use any of them</strong> — it contains no code that
+  records audio, reads or writes your files, or draws over other apps. We list them here so
+  that what you see on the Play Store permission list matches what we tell you.
+</p>
+
+<h2>4. Who receives your data</h2>
+
+<p>
+  <strong>We do not sell your personal information. We do not share it with advertisers, data
+  brokers, or analytics companies.</strong> No third party receives your data for its own
+  purposes.
+</p>
+
+<p>
+  Your data is handled by two service providers who process it strictly on our instructions,
+  under contract, and only to run the app:
+</p>
+
+<table>
+  <tr><th>Provider</th><th>What it does</th><th>What it receives</th></tr>
+  <tr>
+    <td>2Factor.in (SMS gateway, India)</td>
+    <td>Delivers your one-time login code by SMS</td>
+    <td>Your mobile number and the one-time code — nothing else</td>
+  </tr>
+  <tr>
+    <td>Render (application and database hosting)</td>
+    <td>Runs our server and database</td>
+    <td>Stores the account and rewards data described in section 1</td>
+  </tr>
+</table>
+
+<p>
+  We may also disclose information if we are legally required to, or to protect our legal rights
+  or investigate fraud in the rewards program.
+</p>
+
+<h2>5. Technical information our server records</h2>
+
+<p>
+  Like any internet service, our server briefly records the network (IP) address that a login
+  request comes from. We use it for one purpose: to limit how many login codes can be requested
+  from one place, so the system cannot be abused. It is stored for <strong>24 hours</strong> and
+  then automatically deleted. We do not use it to work out your location, and we do not link it
+  to your profile.
+</p>
+
+<h2>6. Security</h2>
+
+<ul>
+  <li><strong>In transit:</strong> all communication between the app and our server uses HTTPS/TLS encryption.</li>
+  <li><strong>On your phone:</strong> your login tokens are held in the Android encrypted keystore, not in ordinary app storage. No personal details are cached on the device.</li>
+  <li><strong>One-time codes</strong> are stored only as a cryptographic hash, expire after 5 minutes, and are limited to 5 attempts.</li>
+  <li><strong>Access:</strong> only authorised <span class="ph">{{LEGAL_ENTITY}}</span> staff can see partner records, through a password-protected panel, and every change they make is recorded in an audit log.</li>
+</ul>
+
+<p>
+  No system is perfectly secure, but we take these measures seriously and review them.
+</p>
+
+<h2>7. How long we keep your data</h2>
+
+<p>
+  We keep your account details (name, phone, address) and your points history for as long as your
+  account exists and the rewards program runs, because your points balance is calculated from your
+  full history and must stay auditable. If you ask us to delete your account, we delete it as
+  described in section 8, other than records we must keep for legal, tax, or fraud-prevention
+  reasons under <span class="ph">{{JURISDICTION}}</span> law — which we keep for no longer than
+  <span class="ph">{{RETENTION_PERIOD}}</span>.
+</p>
+
+<p>One-time login codes are deleted after 5 minutes. Login IP records are deleted after 24 hours.</p>
+
+<h2 id="data-deletion">8. Your rights — access, correction and deletion</h2>
+
+<p>You may, at any time and free of charge:</p>
+
+<ul>
+  <li><strong>See what we hold about you.</strong> Your name, phone, address, balance, and full points history are visible in the app under Home and Profile. You can also ask us for a copy.</li>
+  <li><strong>Correct it.</strong> You can edit your name and address yourself in the app's Profile tab at any time.</li>
+  <li><strong>Have it deleted.</strong> See below.</li>
+  <li><strong>Withdraw.</strong> You can stop using the app and request deletion at any time.</li>
+</ul>
+
+<div class="panel">
+  <h3 style="margin-top:0">How to request deletion of your account and data</h3>
+  <p style="margin-bottom:8px">
+    Email <strong><span class="ph">{{CONTACT_EMAIL}}</span></strong> from the mobile number you
+    registered with, or include that mobile number in the message, with the subject
+    <strong>"Delete my GB Rewards account"</strong>.
+  </p>
+  <p style="margin-bottom:8px">
+    We will verify that the request is really from you, then delete your account and the personal
+    data linked to it — your name, phone number, address, and your points and redemption history.
+    We will complete this within <strong>30 days</strong> and confirm by email.
+  </p>
+  <p style="margin-bottom:0">
+    Please note: deleting your account permanently forfeits any unredeemed points balance. If you
+    want to redeem your points first, do that before requesting deletion. There is currently no
+    delete button inside the app — deletion is handled by the request above.
+  </p>
+</div>
+
+<h2>9. Children</h2>
+
+<p>
+  GB Rewards is a business tool for authorised dealers and channel partners. It is intended for
+  adults aged 18 and over, is not directed at children, and is not designed to appeal to children.
+  We do not knowingly collect data from anyone under 18. If you believe a minor has registered,
+  contact us at <span class="ph">{{CONTACT_EMAIL}}</span> and we will delete the account.
+</p>
+
+<h2>10. Changes to this policy</h2>
+
+<p>
+  If we change what we collect or who receives it, we will update this page and change the
+  "Last updated" date at the top, and update the Data safety information on our Google Play
+  listing to match.
+</p>
+
+<h2>11. Contact us</h2>
+
+<p>
+  <strong><span class="ph">{{LEGAL_ENTITY}}</span></strong><br />
+  <span class="ph">{{ENTITY_POSTAL_ADDRESS}}</span><br />
+  Email: <a href="mailto:{{CONTACT_EMAIL}}"><span class="ph">{{CONTACT_EMAIL}}</span></a>
+</p>
+
+<p>
+  This policy is governed by the laws of <span class="ph">{{JURISDICTION}}</span>.
+</p>
+
+<footer>
+  Privacy policy for the GB Rewards Android application
+  (<code>in.gbrewards.gbrewards</code>). Publicly accessible; no login required.
+</footer>
+
+</div>
+</body>
+</html>
