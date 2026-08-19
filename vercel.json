@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bash scripts/build-admin-panels.sh",
+  "outputDirectory": "public_admin",
+  "installCommand": "echo 'per-app installs happen in the build script'",
+  "rewrites": [
+    { "source": "/dealer/assets/(.*)", "destination": "/dealer/assets/$1" },
+    { "source": "/dealer/(.*)", "destination": "/dealer/index.html" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

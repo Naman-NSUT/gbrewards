@@ -29,7 +29,7 @@ createRoot(document.getElementById('root')!).render(
       <AntdApp>
         <AppBackground />
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
+          <BrowserRouter basename="/dealer">
             <AuthProvider>
               <App />
             </AuthProvider>

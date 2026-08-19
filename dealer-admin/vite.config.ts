@@ -2,6 +2,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // Both admin panels ship from ONE origin so they can share the login
+  // session in localStorage. The worker panel keeps the root; this one
+  // lives under /dealer.
+  base: '/dealer/',
   plugins: [react()],
   server: { port: 5175 },
   build: {

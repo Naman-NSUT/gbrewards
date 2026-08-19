@@ -25,6 +25,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { CommandPalette } from '../components/CommandPalette';
+import { PanelSwitch } from '../components/PanelSwitch';
 import { Logo } from '../components/Logo';
 import { APP_VERSION } from '../config';
 import { useAdminProfile } from '../hooks/useAccount';
@@ -215,6 +216,7 @@ export function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <PanelSwitch />
             <button
               type="button"
               onClick={() => setCmdOpen(true)}
