@@ -37,7 +37,7 @@ class AllocationBatch(UUIDPkMixin, CreatedAtMixin, Base):
 
     filename: Mapped[str | None] = mapped_column(String(400), nullable=True)
     uploaded_by_admin_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=False
     )
     row_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     ok_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))

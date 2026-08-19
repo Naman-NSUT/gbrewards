@@ -1,20 +1,17 @@
 """How the dealer side learns about physical units.
 
-HISTORY, because it explains the shape of this file. Dealer Rewards was first
-built as a separate service that could not share a database with GB Rewards, so
-this was an interface over a local mirror with a live read-through and a defined
-staleness tolerance. That constraint was lifted: both systems now live in one
-repo, on one backend, against one database.
+The dealer programme owns its serials outright. `dealer_units` rows are created
+by QR batch generation in the DEALER admin panel and scanned by the dealer app —
+they are unrelated to the worker programme's `product_units`, and neither token
+can be derived from the other. A mattress carries two labels, one per programme.
 
-So the answer is now the simplest possible one — read `product_units` directly.
-The interface survives because it is what made the change cheap: swapping a
-networked mirror for a local read was one new implementation and no change to
-registration logic. It also keeps the seam if the two are ever split again.
+The interface stays because it is a useful seam, not because anything remote is
+behind it: reading a unit is a local join, and it cannot fail for network
+reasons. UnitSourceUnavailable therefore never fires today.
 
-What has NOT changed is the ownership rule. The manufacturing side owns the unit:
-`product_units` rows are created by QR batch generation in the worker admin, and
-the dealer side only ever READS them. Nothing under app/dealer/ inserts or
-updates a product_unit.
+The consequence to keep in mind: nothing here knows whether the factory ever
+assembled the unit. This registry is authoritative for the dealer programme and
+knows nothing about the other one.
 """
 
 from abc import ABC, abstractmethod
@@ -25,12 +22,12 @@ from typing import Any
 def normalise_serial(raw: str) -> str:
     """Turn whatever the camera decoded into the canonical serial.
 
-    The QR carries a bare UUIDv4 today (see services/qr.py — `qrcode.make` is
-    handed `unit.token` directly, and the same value is printed in Courier under
-    the code so a scuffed label can be typed in). We still strip a URL down to
-    its last path segment, because that is the one format change that would
-    silently break every scanner, and it costs two lines to be immune to it.
-    Comparison is lowercased: a human retyping from the label will not match case.
+    The dealer QR carries a bare UUIDv4 (see app/dealer/services/qr.py), printed
+    in Courier beneath the code so a scuffed label can still be typed in. A URL
+    is stripped to its last path segment anyway: if the label format ever changes
+    that is the one alteration that would silently break every scanner, and being
+    immune to it costs two lines. Comparison is lowercased, because a human
+    retyping from a label will not match case.
     """
     value = (raw or "").strip()
     if not value:
@@ -52,12 +49,8 @@ class UnitFacts:
     model_name: str | None
     model_code: str | None
     warranty_months: int | None
-    # The manufacturing lifecycle value: 'active' | 'claimed' | 'void'.
-    #
-    # THIS IS NOT A SALE STATUS. A factory worker scanning the mattress during
-    # assembly sets it to 'claimed' months before it reaches a shop floor, so
-    # 'claimed' says nothing about whether the unit has been sold to anyone.
-    # Conflating the two would make every assembled mattress look sold.
+    # 'active' or 'void' in the dealer registry. NOT a sale status — whether a
+    # unit has been sold is warranties.status.
     source_status: str | None
     verified: bool
     raw: dict[str, Any] | None = None

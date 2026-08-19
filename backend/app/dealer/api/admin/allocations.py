@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
     Pagination,
@@ -22,6 +22,7 @@ from app.dealer.api.admin._common import (
     pagination,
     to_allocation_out,
 )
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.allocation import Allocation, AllocationBatch
 from app.dealer.models.dealer import Dealer
 from app.dealer.schemas.admin import (
@@ -34,7 +35,6 @@ from app.dealer.schemas.admin import (
 )
 from app.dealer.services import allocation as allocation_svc
 from app.dealer.services.unitsource import normalise_serial
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-allocations"])
 
@@ -161,7 +161,7 @@ def list_allocations(
     serial: str | None = Query(default=None, max_length=200),
     batch_id: uuid.UUID | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[AllocationOut]:
     stmt = allocation_select()
@@ -194,7 +194,7 @@ def list_allocations(
 @router.get("/allocations/batches", response_model=Paginated[AllocationBatchOut])
 def list_batches(
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[AllocationBatchOut]:
     stmt = select(AllocationBatch)
@@ -214,7 +214,7 @@ def list_batches(
 @router.get("/allocations/batches/{batch_id}", response_model=AllocationBatchOut)
 def get_batch(
     batch_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> AllocationBatchOut:
     batch = db.get(AllocationBatch, batch_id)

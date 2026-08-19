@@ -41,7 +41,7 @@ class PointRate(UUIDPkMixin, CreatedAtMixin, Base):
     )
 
     product_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("products.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("dealer_products.id"), nullable=False
     )
     points_per_registration: Mapped[int] = mapped_column(Integer, nullable=False)
     effective_from: Mapped[datetime] = mapped_column(
@@ -51,5 +51,5 @@ class PointRate(UUIDPkMixin, CreatedAtMixin, Base):
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=True
     )

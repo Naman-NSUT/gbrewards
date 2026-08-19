@@ -154,7 +154,7 @@ def test_a_dealer_token_cannot_reach_admin_scoped_state(client, scenario):
     """Audience separation: a dealer token is not an admin token."""
     from app.core.security import create_access_token as mint
 
-    admin_token = mint(str(uuid.uuid4()), "admin")
+    admin_token = mint(str(uuid.uuid4()), "dealer_admin")
     resp = client.get(
         "/api/v1/dealer/points", headers={"Authorization": f"Bearer {admin_token}"}
     )

@@ -35,6 +35,7 @@ from app.core.logging import get_logger
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import DealerStaff
+from app.dealer.models.unit import DealerUnit as ProductUnit
 from app.dealer.models.warranty import Warranty, WarrantyEvent
 from app.dealer.services import ledger
 from app.dealer.services.unitsource import (
@@ -43,7 +44,6 @@ from app.dealer.services.unitsource import (
     normalise_serial,
 )
 from app.dealer.services.warranty_dates import decide_clock
-from app.models.product_unit import ProductUnit
 
 logger = get_logger(__name__)
 
@@ -76,6 +76,15 @@ def _resolve_unit_facts(session: Session, serial: str) -> UnitFacts:
             "invalid_serial",
             404,
             "No mattress found for this code. Check the number printed under the QR.",
+        )
+    if facts.source_status == "void":
+        # A label is voided when a print run is scrapped or a sheet goes missing.
+        # Letting a voided label be registered would turn "we lost 200 labels"
+        # into 200 payable registrations.
+        raise AppError(
+            "unit_void",
+            409,
+            "This label has been cancelled. Contact GoodBed before selling this unit.",
         )
     return facts
 

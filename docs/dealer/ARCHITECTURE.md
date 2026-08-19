@@ -23,27 +23,47 @@ Two programmes, one backend, one database, one QR on the mattress.
 | `dealer-mobile/` | dealer app | `dealer_staff` |
 | `support-web/` | public customer site | nobody |
 
-## The physical unit is shared; nothing else is
+## Nothing is shared
 
-`products` and `product_units` are created by the worker admin when it generates
-a QR batch. **The dealer side only ever reads them.** Nothing under
-`app/dealer/` inserts or updates a product_unit, and the allocation upload
-rejects a serial that has no unit row rather than inventing one.
+The two programmes share the repository, the FastAPI process and the Postgres
+instance. They share no tables.
 
-This is why the dealer side has no unit table of its own. An earlier design —
-when the two were going to be separate services — kept a local mirror with a
-read-through and a staleness tolerance. Sharing a database deleted all of it;
-what survived is the `UnitSource` interface, which is what made deleting it a
-one-file change.
+| Concern | Worker | Dealer |
+|---|---|---|
+| Back office accounts | `admins` | `dealer_admins` |
+| Token audience | `admin` | `dealer_admin` |
+| Product catalogue | `products` | `dealer_products` |
+| Unit registry | `product_units` | `dealer_units` |
+| QR batches | `qr_batches` | `dealer_qr_batches` |
+| Points ledger | `ledger_entries` | `dealer_ledger_entries` |
+| Rewards | `rewards` | `dealer_rewards` |
+| Audit trail | `audit_logs` | `dealer_audit_logs` |
 
-### `claimed` means two different things — never conflate them
+There is **no foreign key from any dealer table into any worker table**, and no
+sync between them. Migration 0008 is purely additive: it creates new tables and
+does not alter a single existing column.
 
-`product_units.status = 'claimed'` means **a factory worker scanned it during
-assembly**. It happens months before the mattress reaches a shop and says
-nothing about whether it has been sold. Whether a unit is sold is
-`warranties.status`, a different column in a different table. Reading the worker
-status as a sale status would make every correctly assembled mattress look
-already sold.
+### Two QR labels per mattress
+
+This is the consequence to internalise. The factory prints a label carrying a
+`product_units.token`; the dealer panel prints a second label carrying a
+`dealer_units.token`. **The two serials are unrelated and neither can be derived
+from the other.**
+
+- The worker app only scans factory labels.
+- The dealer app only scans dealer labels.
+- Nothing in the system can answer "which factory unit is this dealer unit?"
+
+If that link is ever needed — say, to reconcile warranty claims against
+production batches — it has to be added deliberately as a mapping table. It does
+not exist today by design.
+
+### `dealer_units.status` is not a sale status
+
+It is `active` or `void` only. Void means the label was scrapped or a print run
+went missing, and a voided label cannot be registered — that is what stops "we
+lost 200 labels" from becoming 200 payable registrations. Whether a unit has been
+**sold** is `warranties.status`, in a different table.
 
 ## Table naming
 
@@ -53,17 +73,18 @@ Dealer tables that would have collided carry a `dealer_` prefix:
 `dealers`, `dealer_staff`, `allocations`, `warranties`, `warranty_events`,
 `customers`, `claims`, `sms_messages`, `idempotency_keys`.
 
-`admins` and `audit_logs` are **shared on purpose**. One back-office login works
-in both panels, and one audit trail answers "who changed this" across the whole
-business. `audit_logs` gained a richer actor model (`actor_type`, `actor_id`,
-`reason`, `ip`); every pre-existing row defaults to `actor_type='admin'`, which
-is exactly what it was.
+Nothing is shared, including `admins` and `audit_logs`. A person who works on
+both programmes holds two logins, and each programme has its own audit trail.
+The panels are served from one origin with different storage keys, so both
+sessions coexist in the browser: after signing into each once, the switch button
+is instant.
 
 ## Points are per product, in both programmes
 
 | | Worker | Dealer |
 |---|---|---|
 | Column | `products.points_value` | `dealer_point_rates.points_per_registration` |
+| Product | `products` | `dealer_products` |
 | Set in | worker admin | dealer admin |
 | Earned for | scanning during assembly | registering the sale |
 | Versioned | no | yes — old rows keep their rate |

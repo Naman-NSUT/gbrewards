@@ -11,9 +11,10 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_admin, get_db
+from app.core.deps import get_current_dealer_admin, get_db
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, day_window, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.dealer import Dealer
 from app.dealer.schemas.admin import (
     ComplianceOut,
@@ -28,7 +29,6 @@ from app.dealer.schemas.admin import (
     UnregisteredUnitOut,
 )
 from app.dealer.services import compliance as compliance_svc
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-compliance"])
 
@@ -45,7 +45,7 @@ def dealer_compliance(
     ),
     sort: str = Query(default="worst"),
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> ComplianceOut:
     """Every dealer's registration behaviour, worst offenders first.
@@ -85,7 +85,7 @@ def dealer_drilldown(
     date_from: date | None = None,
     date_to: date | None = None,
     limit: int = Query(default=100, ge=1, le=500),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> DealerComplianceDetailOut:
     """Why this dealer is on the list, in the order an account manager argues it.

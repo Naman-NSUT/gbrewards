@@ -457,6 +457,41 @@ class PointRateOut(Base):
     is_current: bool = False
 
 
+class DealerProductIn(Base):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    # Printed on the physical label under the QR.
+    terms: str | None = Field(default=None, max_length=2000)
+    model_code: str | None = Field(default=None, max_length=64)
+    warranty_months: int = Field(default=60, gt=0, le=600)
+    is_active: bool = True
+
+
+class DealerProductOut(Base):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    terms: str | None
+    model_code: str | None
+    warranty_months: int
+    is_active: bool
+    # How many serials have been minted for this product so far.
+    units_generated: int
+
+
+class GenerateBatchIn(Base):
+    quantity: int = Field(gt=0, le=10_000)
+    label: str | None = Field(default=None, max_length=200)
+
+
+class QrBatchOut(Base):
+    id: uuid.UUID
+    product_id: uuid.UUID
+    quantity: int
+    label: str | None
+    created_at: datetime
+
+
 class ProductRateOut(Base):
     """A product and what registering it currently pays a dealer."""
 

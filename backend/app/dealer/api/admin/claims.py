@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
     Pagination,
@@ -24,6 +24,7 @@ from app.dealer.api.admin._common import (
     pagination,
     to_warranty_item,
 )
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.claim import Claim
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer
@@ -39,7 +40,6 @@ from app.dealer.schemas.admin import (
 )
 from app.dealer.services.audit import record_audit
 from app.dealer.services.unitsource import normalise_serial
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-claims"])
 
@@ -105,7 +105,7 @@ def list_claims(
     date_from: date | None = None,
     date_to: date | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[ClaimListItem]:
     stmt = claim_select()
@@ -146,7 +146,7 @@ def list_claims(
 @router.get("/claims/{claim_id}", response_model=ClaimDetailOut)
 def get_claim(
     claim_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> ClaimDetailOut:
     row = db.execute(claim_select().where(Claim.id == claim_id)).one_or_none()

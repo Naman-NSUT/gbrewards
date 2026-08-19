@@ -14,9 +14,10 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, like, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.ledger_entry import LedgerEntry
@@ -38,7 +39,6 @@ from app.dealer.schemas.admin import (
 from app.dealer.schemas.common import Ok
 from app.dealer.services import ledger
 from app.dealer.services.audit import record_audit
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-dealers"])
 
@@ -76,7 +76,7 @@ def list_dealers(
     q: str | None = Query(default=None, max_length=120),
     status: str | None = Query(default=None, pattern="^(active|suspended|closed)$"),
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[DealerListItem]:
     stmt = _dealer_list_query()
@@ -154,7 +154,7 @@ def create_dealer(
 @router.get("/dealers/{dealer_id}", response_model=DealerDetailOut)
 def get_dealer(
     dealer_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> DealerDetailOut:
     dealer = _get_dealer(db, dealer_id)
@@ -311,7 +311,7 @@ def reactivate_dealer(
 def list_staff(
     dealer_id: uuid.UUID,
     include_inactive: bool = Query(default=True),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> list[DealerStaff]:
     _get_dealer(db, dealer_id)

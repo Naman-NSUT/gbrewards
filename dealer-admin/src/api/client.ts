@@ -66,7 +66,7 @@ async function doRefresh(): Promise<boolean> {
   if (!refreshToken) return false;
   try {
     const resp = await axios.post<TokenPair>(
-      `${API_BASE_URL}${API_PREFIX}/auth/admin/refresh`,
+      `${API_BASE_URL}${API_PREFIX}/dealer/auth/admin/refresh`,
       { refresh_token: refreshToken },
       { headers: { 'Content-Type': 'application/json' } },
     );

@@ -32,10 +32,10 @@ from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.dealer.models.allocation import Allocation, AllocationBatch
 from app.dealer.models.dealer import Dealer
+from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import LIVE_STATUSES, Warranty
 from app.dealer.services.audit import record_audit
 from app.dealer.services.unitsource import normalise_serial
-from app.models.product_unit import ProductUnit as Unit
 
 logger = get_logger(__name__)
 

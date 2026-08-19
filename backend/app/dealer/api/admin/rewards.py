@@ -17,9 +17,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.reward import Redemption, Reward
 from app.dealer.schemas.admin import (
@@ -38,7 +39,6 @@ from app.dealer.schemas.admin import (
 from app.dealer.schemas.common import Ok
 from app.dealer.services import ledger
 from app.dealer.services.audit import record_audit
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-rewards"])
 
@@ -50,7 +50,7 @@ router = APIRouter(tags=["admin-rewards"])
 def list_rewards(
     is_active: bool | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[RewardOut]:
     stmt = select(Reward)
@@ -96,7 +96,7 @@ def create_reward(
 @router.get("/rewards/{reward_id}", response_model=RewardOut)
 def get_reward(
     reward_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Reward:
     return _get_reward(db, reward_id)
@@ -209,7 +209,7 @@ def list_redemptions(
     ),
     dealer_id: uuid.UUID | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[RedemptionOut]:
     stmt = _redemption_select()

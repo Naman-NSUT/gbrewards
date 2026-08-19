@@ -13,12 +13,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_admin, get_db
+from app.core.deps import get_current_dealer_admin, get_db
 from app.dealer.api.admin._common import Pagination, count_of, day_window, like, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
+from app.dealer.models.audit_log import DealerAuditLog as AuditLog
 from app.dealer.models.dealer import DealerStaff
 from app.dealer.schemas.admin import AuditOut, Paginated
-from app.models.admin import Admin
-from app.models.audit_log import AuditLog
 
 router = APIRouter(tags=["admin-audit"])
 
@@ -36,7 +36,7 @@ def list_audit(
     date_from: date | None = None,
     date_to: date | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[AuditOut]:
     # Actor ids are polymorphic and deliberately not foreign keys (an audit row
@@ -98,7 +98,7 @@ def list_audit(
 
 @router.get("/audit/filters")
 def audit_filters(
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, list[str]]:
     """The action and entity values actually present, for the filter dropdowns.
@@ -121,7 +121,7 @@ def entity_history(
     entity_type: str,
     entity_id: uuid.UUID,
     limit: int = Query(default=100, ge=1, le=500),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> list[AuditOut]:
     """Everything ever done to one record — the 'History' tab on any detail page."""

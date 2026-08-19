@@ -205,7 +205,7 @@ def test_future_invoice_date_cannot_start_the_clock_late(db):
 
 
 def test_approving_a_backdate_activates_and_pays_and_is_audited(db):
-    from app.models.audit_log import AuditLog
+    from app.dealer.models.audit_log import DealerAuditLog as AuditLog
     from tests.dealer.factories import make_admin
 
     dealer = make_dealer(db)

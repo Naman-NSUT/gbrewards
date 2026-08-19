@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import decode_token
 from app.db.session import SessionLocal
+from app.dealer.models.admin import DealerAdmin
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.models.admin import Admin
 from app.models.user import User
@@ -117,19 +118,41 @@ def get_current_staff(
     return staff
 
 
-def require_admin_write(admin: Admin = Depends(get_current_admin)) -> Admin:
+def get_current_dealer_admin(
+    db: Session = Depends(get_db),
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> DealerAdmin:
+    """Back office for the DEALER programme.
+
+    Its own table and its own token audience. A worker-panel admin token
+    (aud='admin') is rejected here and vice versa, because the two programmes
+    share no accounts — a person working on both holds two logins.
+    """
+    if creds is None:
+        raise AppError("invalid_token", 401, "Missing bearer token")
+    payload = decode_token(creds.credentials, expected_aud="dealer_admin", expected_type="access")
+    admin = db.get(DealerAdmin, payload["sub"])
+    if admin is None:
+        raise AppError("invalid_token", 401, "Unknown admin")
+    if not admin.is_active:
+        raise AppError("admin_disabled", 403, "This account has been disabled")
+    return admin
+
+
+def require_admin_write(
+    admin: DealerAdmin = Depends(get_current_dealer_admin),
+) -> DealerAdmin:
     """Guard for anything that moves points or changes a warranty.
 
-    Denies only the read-only 'support' role rather than allow-listing writers:
-    the worker side already has admins with roles like 'operator', and an
-    allow-list would silently lock existing staff out of the new panel.
+    'support' is read-mostly: it works the serial lookup and claims queue all day
+    but must not be able to adjust a balance or approve a backdate.
     """
     if admin.role == "support":
         raise AppError("forbidden", 403, "This action needs more than a support account")
     return admin
 
 
-def require_owner(admin: Admin = Depends(get_current_admin)) -> Admin:
+def require_owner(admin: DealerAdmin = Depends(get_current_dealer_admin)) -> DealerAdmin:
     if admin.role != "owner":
         raise AppError("forbidden", 403, "This action requires an owner account")
     return admin

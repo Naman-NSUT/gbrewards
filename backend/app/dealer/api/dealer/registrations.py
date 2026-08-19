@@ -22,6 +22,8 @@ from app.core.deps import client_ip, get_current_staff, get_db, get_redis, idemp
 from app.core.errors import AppError
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import DealerStaff
+from app.dealer.models.product import DealerProduct as Product
+from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import Warranty
 from app.dealer.schemas.registration import (
     CustomerBrief,
@@ -32,8 +34,6 @@ from app.dealer.schemas.registration import (
 )
 from app.dealer.services import idempotency, ledger, ratelimit, registration, sms
 from app.dealer.services.unitsource import UnitSourceUnavailable, get_unit_source, normalise_serial
-from app.models.product import Product
-from app.models.product_unit import ProductUnit as Unit
 
 
 def _unit_warranty_months(db: Session, unit: Unit | None) -> int:

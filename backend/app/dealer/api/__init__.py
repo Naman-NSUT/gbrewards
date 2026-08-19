@@ -23,6 +23,7 @@ from app.dealer.api.admin import (
     dealers,
     lookup,
     points,
+    products,
     rewards,
     sms,
     warranties,
@@ -43,6 +44,7 @@ for _r in (auth, registrations, corrections, dealer_rewards, profile):
 for _r in (
     dashboard,
     dealers,
+    products,
     allocations,
     warranties,
     approvals,

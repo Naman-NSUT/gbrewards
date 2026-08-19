@@ -7,10 +7,11 @@ import { brand } from '../theme';
  * Jump to the worker programme's back office.
  *
  * A full page navigation, not a router link: the two panels are separate builds.
- * They are served from ONE origin precisely so the session survives the hop —
- * both authenticate the same `admins` row with the same aud='admin' token, and
- * both read it from the same localStorage keys, so nobody is asked to log in
- * twice. See src/auth/tokenStore.ts.
+ *
+ * The programmes share no accounts, so this does NOT carry a session — the
+ * worker panel needs its own login. Because both are served from one origin with
+ * different storage keys, the two sessions coexist: once signed into both, the
+ * switch is instant thereafter. See src/auth/tokenStore.ts.
  */
 export function PanelSwitch() {
   return (

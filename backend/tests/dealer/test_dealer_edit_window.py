@@ -8,9 +8,9 @@ from fastapi.testclient import TestClient
 
 from app.core.deps import get_db
 from app.core.security import create_access_token
+from app.dealer.models.audit_log import DealerAuditLog as AuditLog
 from app.dealer.models.warranty import Warranty
 from app.main import create_app
-from app.models.audit_log import AuditLog
 from tests.dealer.factories import (
     allocate,
     make_dealer,

@@ -46,12 +46,12 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer
+from app.dealer.models.product import DealerProduct as Product
+from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import LIVE_STATUSES, Warranty, WarrantyEvent
 from app.dealer.services.registration import _upsert_customer
 from app.dealer.services.unitsource import normalise_serial
 from app.dealer.services.warranty_dates import decide_clock
-from app.models.product import Product
-from app.models.product_unit import ProductUnit as Unit
 
 
 @dataclass

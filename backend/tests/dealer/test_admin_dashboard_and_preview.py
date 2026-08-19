@@ -41,7 +41,7 @@ def client(db, session_factory):  # type: ignore[no-untyped-def]
 def admin_headers(db):  # type: ignore[no-untyped-def]
     admin = make_admin(db)
     db.commit()
-    token = create_access_token(str(admin.id), "admin", {"role": admin.role})
+    token = create_access_token(str(admin.id), "dealer_admin", {"role": admin.role})
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -161,7 +161,7 @@ def test_dealer_token_cannot_reach_the_admin_dashboard(client, db):
 
 def test_support_role_cannot_move_points(client, db):
     """Support staff work lookup and claims all day; they must not adjust balances."""
-    from app.models.admin import Admin
+    from app.dealer.models.admin import DealerAdmin as Admin
 
     support = Admin(
         email="support@goodbed.test", password_hash="x", name="Support", role="support"
@@ -169,7 +169,7 @@ def test_support_role_cannot_move_points(client, db):
     dealer = make_dealer(db)
     db.add(support)
     db.commit()
-    token = create_access_token(str(support.id), "admin", {"role": "support"})
+    token = create_access_token(str(support.id), "dealer_admin", {"role": "support"})
 
     resp = client.post(
         f"/api/v1/dealer-admin/dealers/{dealer.id}/points/adjust",

@@ -13,14 +13,14 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, day_window, like, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.sms_message import SmsMessage
 from app.dealer.schemas.admin import Paginated, SmsOut
 from app.dealer.services import sms as sms_svc
 from app.dealer.services.audit import record_audit
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-sms"])
 
@@ -56,7 +56,7 @@ def list_messages(
     date_from: date | None = None,
     date_to: date | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[SmsOut]:
     stmt = select(SmsMessage)
@@ -94,7 +94,7 @@ def list_messages(
 
 
 @router.get("/sms/templates")
-def list_templates(_: Admin = Depends(get_current_admin)) -> dict[str, dict[str, object]]:
+def list_templates(_: Admin = Depends(get_current_dealer_admin)) -> dict[str, dict[str, object]]:
     """The template registry, so the log's filter is not a free-text guess."""
     return {
         key: {"body": template.body, "variables": list(template.variables)}
@@ -105,7 +105,7 @@ def list_templates(_: Admin = Depends(get_current_admin)) -> dict[str, dict[str,
 @router.get("/sms/{message_id}", response_model=SmsOut)
 def get_message(
     message_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> SmsOut:
     message = db.get(SmsMessage, message_id)

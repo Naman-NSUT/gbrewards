@@ -18,6 +18,8 @@ from app.core.config import settings
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer
+from app.dealer.models.product import DealerProduct as Product
+from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import LIVE_STATUSES, Warranty
 from app.dealer.schemas.admin import (
     AllocationOut,
@@ -26,8 +28,6 @@ from app.dealer.schemas.admin import (
     WarrantyListItem,
 )
 from app.dealer.services import warranty as warranty_svc
-from app.models.product import Product
-from app.models.product_unit import ProductUnit as Unit
 
 MAX_PAGE = 200
 

@@ -19,14 +19,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_admin, get_db
+from app.core.deps import get_current_dealer_admin, get_db
 from app.dealer.api.admin._common import day_window
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.claim import Claim
 from app.dealer.models.dealer import Dealer
 from app.dealer.models.ledger_entry import LedgerEntry
 from app.dealer.models.warranty import Warranty
 from app.dealer.services.warranty_dates import business_today
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-dashboard"])
 
@@ -35,7 +35,7 @@ _LIVE = ("pending_confirmation", "pending_review", "pending_backdate", "active",
 
 @router.get("/dashboard")
 def dashboard(
-    admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     today = business_today()
@@ -108,7 +108,7 @@ def dashboard(
 
 @router.get("/dashboard/analytics")
 def analytics(
-    admin: Admin = Depends(get_current_admin),
+    admin: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
     days: int = Query(default=30, ge=1, le=365),
 ) -> dict[str, Any]:
@@ -158,7 +158,7 @@ def analytics(
 
 
 @router.get("/me")
-def me(admin: Admin = Depends(get_current_admin)) -> dict[str, Any]:
+def me(admin: Admin = Depends(get_current_dealer_admin)) -> dict[str, Any]:
     return {
         "id": str(admin.id),
         "email": admin.email,

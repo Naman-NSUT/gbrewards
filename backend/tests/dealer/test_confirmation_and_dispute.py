@@ -7,10 +7,10 @@ warranty is already active and there is no status change to make.
 
 import pytest
 
+from app.dealer.models.audit_log import DealerAuditLog as AuditLog
 from app.dealer.models.warranty import WarrantyEvent
 from app.dealer.services import ledger, registration
 from app.dealer.services import warranty as warranty_svc
-from app.models.audit_log import AuditLog
 from tests.dealer.factories import (
     allocate,
     make_admin,

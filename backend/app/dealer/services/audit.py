@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.models.audit_log import AuditLog
+from app.dealer.models.audit_log import DealerAuditLog as AuditLog
 
 # Actions where "why" is not optional. Anything that moves points or rewrites a
 # customer's record has to be explicable to the client months later.

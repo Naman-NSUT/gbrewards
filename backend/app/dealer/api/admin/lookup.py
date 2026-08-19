@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_admin, get_db
+from app.core.deps import get_current_dealer_admin, get_db
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
     allocation_select,
@@ -30,9 +30,12 @@ from app.dealer.api.admin._common import (
 from app.dealer.api.admin.claims import claim_select, to_claim_item
 from app.dealer.api.admin.sms import to_sms_out
 from app.dealer.api.admin.warranties import build_warranty_detail, resolve_actor_names
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.claim import Claim
+from app.dealer.models.product import DealerProduct as Product
 from app.dealer.models.sms_message import SmsMessage
+from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import LIVE_STATUSES, Warranty, WarrantyEvent
 from app.dealer.schemas.admin import (
     ClaimListItem,
@@ -42,9 +45,6 @@ from app.dealer.schemas.admin import (
     WarrantyEventOut,
 )
 from app.dealer.services.unitsource import get_unit_source, normalise_serial
-from app.models.admin import Admin
-from app.models.product import Product
-from app.models.product_unit import ProductUnit as Unit
 
 
 def _unit_model_name(db: Session, unit: Unit | None) -> str | None:
@@ -90,7 +90,7 @@ def _unit_out(db: Session, serial: str) -> UnitOut:
 @router.get("/lookup/{raw_serial:path}", response_model=SerialLookupOut)
 def lookup_serial(
     raw_serial: str,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> SerialLookupOut:
     """Everything known about one serial.

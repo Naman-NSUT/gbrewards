@@ -77,7 +77,7 @@ class LedgerEntry(UUIDPkMixin, CreatedAtMixin, Base):
     # Who caused it. Admin adjustments REQUIRE a reason — enforced in the service
     # and by a CHECK in the migration.
     admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=True
     )
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     entry_metadata: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)

@@ -14,16 +14,18 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import (
     client_ip,
-    get_current_admin,
+    get_current_dealer_admin,
     get_db,
     require_admin_write,
     require_owner,
 )
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, pagination
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.dealer import Dealer
 from app.dealer.models.ledger_entry import LedgerEntry
 from app.dealer.models.point_rate import PointRate
+from app.dealer.models.product import DealerProduct as Product
 from app.dealer.schemas.admin import (
     AdjustPointsIn,
     AdjustPointsOut,
@@ -38,8 +40,6 @@ from app.dealer.schemas.admin import (
 )
 from app.dealer.services import ledger
 from app.dealer.services.audit import record_audit
-from app.models.admin import Admin
-from app.models.product import Product
 
 router = APIRouter(tags=["admin-points"])
 
@@ -78,7 +78,7 @@ def _brief(dealer: Dealer) -> DealerBrief:
 
 @router.get("/points/rates/current", response_model=list[ProductRateOut])
 def current_rates(
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> list[ProductRateOut]:
     """Every product with the registration points currently in force.
@@ -114,7 +114,7 @@ def current_rates(
 def rate_history(
     product_id: uuid.UUID | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[PointRateOut]:
     stmt = select(PointRate)
@@ -183,7 +183,7 @@ def set_rate(
 @router.get("/dealers/{dealer_id}/points", response_model=PointsSummaryOut)
 def dealer_points(
     dealer_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> PointsSummaryOut:
     _get_dealer(db, dealer_id)
@@ -194,7 +194,7 @@ def dealer_points(
 def dealer_ledger(
     dealer_id: uuid.UUID,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> DealerLedgerOut:
     """The dealer's statement, newest first, with a running balance.

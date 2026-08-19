@@ -44,6 +44,6 @@ class Claim(UUIDPkMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'open'"))
     resolution_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     handled_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=True
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

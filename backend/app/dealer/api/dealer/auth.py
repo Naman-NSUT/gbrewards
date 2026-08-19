@@ -11,7 +11,9 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    verify_password,
 )
+from app.dealer.models.admin import DealerAdmin
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.schemas.common import Base, PhoneMixin
 from app.dealer.services import otp, ratelimit
@@ -157,7 +159,58 @@ def logout(body: RefreshIn, redis: redis_lib.Redis = Depends(get_redis)) -> None
     redis.set(_revoked_key(payload["jti"]), "1", ex=settings.jwt_refresh_ttl_days * 86400)
 
 
-# NOTE: admin login is NOT redefined here. The worker back office already serves
-# POST /api/v1/auth/admin/login against the same `admins` table, so the dealer
-# panel signs in through that. Two endpoints minting tokens for one identity is
-# how they drift apart.
+@router.post("/admin/login", response_model=TokenPair)
+def dealer_admin_login(
+    body: AdminLoginIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    redis: redis_lib.Redis = Depends(get_redis),
+) -> TokenPair:
+    """Sign in to the DEALER back office.
+
+    Its own table, its own token audience. The worker panel's login is a separate
+    endpoint against a separate table; the two programmes share no accounts, so a
+    person who works on both holds two logins.
+    """
+    ratelimit.enforce(redis, f"dealeradminlogin:{client_ip(request)}", limit=10, window_s=300)
+
+    admin = db.execute(
+        select(DealerAdmin).where(DealerAdmin.email == body.email.lower().strip())
+    ).scalar_one_or_none()
+    if admin is None or not verify_password(body.password, admin.password_hash):
+        raise AppError("invalid_credentials", 401, "Incorrect email or password")
+    if not admin.is_active:
+        raise AppError("admin_disabled", 403, "This account has been disabled")
+
+    return TokenPair(
+        access_token=create_access_token(
+            str(admin.id), "dealer_admin", {"role": admin.role, "name": admin.name}
+        ),
+        refresh_token=create_refresh_token(str(admin.id), "dealer_admin")[0],
+        expires_in=settings.jwt_access_ttl_minutes * 60,
+    )
+
+
+@router.post("/admin/refresh", response_model=TokenPair)
+def dealer_admin_refresh(
+    body: RefreshIn,
+    db: Session = Depends(get_db),
+    redis: redis_lib.Redis = Depends(get_redis),
+) -> TokenPair:
+    payload = decode_token(
+        body.refresh_token, expected_aud="dealer_admin", expected_type="refresh"
+    )
+    if redis.exists(_revoked_key(payload["jti"])):
+        raise AppError("invalid_token", 401, "Refresh token revoked")
+    admin = db.get(DealerAdmin, payload["sub"])
+    if admin is None or not admin.is_active:
+        raise AppError("invalid_token", 401, "Unknown or disabled admin")
+    redis.set(_revoked_key(payload["jti"]), "1", ex=settings.jwt_refresh_ttl_days * 86400)
+
+    return TokenPair(
+        access_token=create_access_token(
+            str(admin.id), "dealer_admin", {"role": admin.role, "name": admin.name}
+        ),
+        refresh_token=create_refresh_token(str(admin.id), "dealer_admin")[0],
+        expires_in=settings.jwt_access_ttl_minutes * 60,
+    )

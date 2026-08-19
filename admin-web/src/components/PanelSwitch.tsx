@@ -8,9 +8,10 @@ import { brand } from '../theme';
  *
  * A full page navigation, not a router link: the two panels are separate builds
  * served from one origin — this one at `/`, the dealer panel at `/dealer`.
- * Sharing the origin is what lets the session come along: both panels
- * authenticate the same `admins` row with the same aud='admin' token and read it
- * from the same localStorage keys, so switching never asks for a second login.
+ * The programmes share no accounts, so this does NOT carry a session — the
+ * dealer panel has its own login against its own `dealer_admins` table. Both
+ * being on one origin with different storage keys means the two sessions coexist
+ * in the browser: after signing into each once, switching is instant.
  */
 export function PanelSwitch() {
   return (

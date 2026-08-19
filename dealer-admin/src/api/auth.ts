@@ -2,7 +2,7 @@ import { api } from './client';
 import type { AdminProfile, AdminRole, TokenPair } from './types';
 
 export async function login(email: string, password: string): Promise<TokenPair> {
-  const resp = await api.post<TokenPair>('/auth/admin/login', { email, password });
+  const resp = await api.post<TokenPair>('/dealer/auth/admin/login', { email, password });
   return resp.data;
 }
 

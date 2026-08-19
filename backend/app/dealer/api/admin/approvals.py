@@ -22,10 +22,11 @@ from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.core.config import settings
-from app.core.deps import get_current_admin, get_db, require_admin_write
+from app.core.deps import get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, pagination
 from app.dealer.api.admin.warranties import build_warranty_detail
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer, DealerStaff
@@ -44,7 +45,6 @@ from app.dealer.services import sms
 from app.dealer.services import warranty as warranty_svc
 from app.dealer.services.audit import record_audit
 from app.dealer.services.warranty_dates import business_today
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-approvals"])
 
@@ -132,7 +132,7 @@ def list_approvals(
     status: str | None = Query(default=None, pattern="^(pending_backdate|pending_review)$"),
     dealer_id: uuid.UUID | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[ApprovalItem]:
     stmt = _queue_select()
@@ -162,7 +162,7 @@ def list_approvals(
 
 @router.get("/approvals/count")
 def pending_count(
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, int]:
     """Badge counts for the nav. One grouped count, called on every page load."""

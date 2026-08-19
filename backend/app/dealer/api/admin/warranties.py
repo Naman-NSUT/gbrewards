@@ -18,7 +18,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import client_ip, get_current_admin, get_db, require_admin_write
+from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_admin_write
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
     Pagination,
@@ -31,6 +31,7 @@ from app.dealer.api.admin._common import (
     to_warranty_item,
     warranty_select,
 )
+from app.dealer.models.admin import DealerAdmin as Admin
 from app.dealer.models.allocation import Allocation
 from app.dealer.models.claim import Claim
 from app.dealer.models.customer import Customer
@@ -55,7 +56,6 @@ from app.dealer.services import warranty as warranty_svc
 from app.dealer.services.audit import record_audit
 from app.dealer.services.unitsource import normalise_serial
 from app.dealer.services.warranty_dates import business_today
-from app.models.admin import Admin
 
 router = APIRouter(tags=["admin-warranties"])
 
@@ -124,7 +124,7 @@ def list_warranties(
     date_from: date | None = None,
     date_to: date | None = None,
     page: Pagination = Depends(pagination),
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[WarrantyListItem]:
     stmt = warranty_select()
@@ -185,7 +185,7 @@ def list_warranties(
 @router.get("/warranties/{warranty_id}", response_model=WarrantyDetailOut)
 def get_warranty(
     warranty_id: uuid.UUID,
-    _: Admin = Depends(get_current_admin),
+    _: Admin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> WarrantyDetailOut:
     row = db.execute(warranty_select().where(Warranty.id == warranty_id)).one_or_none()

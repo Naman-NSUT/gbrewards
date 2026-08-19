@@ -98,13 +98,13 @@ class Warranty(UUIDPkMixin, TimestampMixin, Base):
     # A future change to the model's warranty policy must not retroactively
     # rewrite a warranty that was already sold under the old terms.
     unit_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("product_units.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_units.id"), nullable=True
     )
     # Frozen at sale time alongside the model name: the rate that paid for this
     # registration was the product's rate, and the product must stay knowable
     # even if the unit row is later voided by manufacturing.
     product_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("products.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_products.id"), nullable=True
     )
     model_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     model_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -137,7 +137,7 @@ class Warranty(UUIDPkMixin, TimestampMixin, Base):
     # authority. Non-zero values are what the admin backdating report filters on.
     backdate_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     backdate_approved_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=True
     )
 
     status: Mapped[str] = mapped_column(String(24), nullable=False)

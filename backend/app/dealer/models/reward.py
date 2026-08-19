@@ -79,6 +79,6 @@ class Redemption(UUIDPkMixin, TimestampMixin, Base):
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     processed_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("admins.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("dealer_admins.id"), nullable=True
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
