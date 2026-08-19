@@ -499,9 +499,6 @@ class ProductRateOut(Base):
     product_name: str
     is_active: bool
     warranty_months: int | None
-    # The worker-side value, shown for context so an admin setting dealer points
-    # can see what the factory side already pays for the same product.
-    worker_points_value: int
     points_per_registration: int | None
     rate_id: uuid.UUID | None
     effective_from: datetime | None

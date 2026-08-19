@@ -387,12 +387,15 @@ def unregistered_units(
         text(
             """
             SELECT a.serial,
-                   u.model_name,
+                   p.name AS model_name,
                    a.dispatch_ref,
                    a.allocated_at,
                    (CURRENT_DATE - a.allocated_at::date) AS days_held
             FROM allocations a
-            LEFT JOIN units u ON u.serial = a.serial
+            -- the dealer registry, not the factory's: model names live on
+            -- dealer_products, reached through dealer_units
+            LEFT JOIN dealer_units u ON u.token = a.serial
+            LEFT JOIN dealer_products p ON p.id = u.product_id
             WHERE a.dealer_id = CAST(:dealer_id AS uuid)
               AND a.status = 'allocated'
               AND NOT EXISTS (

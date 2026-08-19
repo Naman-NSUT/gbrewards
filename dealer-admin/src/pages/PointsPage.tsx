@@ -433,7 +433,7 @@ export function PointsPage() {
                   ? `${current.product_name} has no rate — registrations earn nothing today`
                   : `${current.product_name} currently pays ${current.points_per_registration}`
               }
-              description={`Workers earn ${current.worker_points_value} for assembling it. Warranty runs ${current.warranty_months ?? '—'} months.`}
+              description={`Warranty runs ${current.warranty_months ?? '—'} months.`}
             />
           )}
           <Form.Item

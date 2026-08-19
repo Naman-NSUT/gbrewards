@@ -622,8 +622,6 @@ export interface ProductRateRow {
   product_name: string;
   is_active: boolean;
   warranty_months: number | null;
-  /** What the worker programme pays for assembling the same product, for context. */
-  worker_points_value: number;
   /** null when no rate has been set — the row an admin needs to act on. */
   points_per_registration: number | null;
   rate_id: string | null;

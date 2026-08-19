@@ -101,7 +101,6 @@ def current_rates(
             product_name=product.name,
             is_active=product.is_active,
             warranty_months=product.warranty_months,
-            worker_points_value=product.points_value,
             points_per_registration=rate.points_per_registration if rate else None,
             rate_id=rate.id if rate else None,
             effective_from=rate.effective_from if rate else None,

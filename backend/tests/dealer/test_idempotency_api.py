@@ -9,7 +9,7 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_redis
 from app.core.security import create_access_token
 from app.main import create_app
 from tests.dealer.factories import (
@@ -32,7 +32,14 @@ def client(db, session_factory):  # type: ignore[no-untyped-def]
         finally:
             session.close()
 
+    # Rate limiters are per IP and every test calls from the same one, so a
+    # shared real Redis would make later tests fail on counters earlier tests
+    # ran up. A fresh fake per test keeps them independent.
+    import fakeredis
+
+    fake = fakeredis.FakeRedis(decode_responses=True)
     app.dependency_overrides[get_db] = _get_db
+    app.dependency_overrides[get_redis] = lambda: fake
     with TestClient(app) as c:
         yield c
 
