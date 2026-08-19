@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "API_BASE_URL": "https://dealerrewards-api.onrender.com"
+        "API_BASE_URL": "https://gbrewards.onrender.com"
       }
     },
     "production": {
@@ -25,7 +25,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "API_BASE_URL": "https://dealerrewards-api.onrender.com"
+        "API_BASE_URL": "https://gbrewards.onrender.com"
       }
     }
   },
