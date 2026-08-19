@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.db.bootstrap import ensure_bootstrap_admin
+from app.dealer.bootstrap import ensure_bootstrap_dealer_admin
 
 logger = get_logger("request")
 
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         logger.warning("startup_warning %s", _warning)
     _init_sentry()
     ensure_bootstrap_admin()
+    ensure_bootstrap_dealer_admin()
 
     app = FastAPI(title="GB Rewards API", version="0.1.0")
 

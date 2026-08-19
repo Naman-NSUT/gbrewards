@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     bootstrap_admin_email: str = ""
     bootstrap_admin_password: str = ""
 
+    # The dealer back office has its own accounts table, so it needs its own
+    # first-run bootstrap. Same reason as the worker one above: Render's plan
+    # has no shell, so without this the panel deploys with nobody able to log in.
+    dealer_bootstrap_admin_email: str = ""
+    dealer_bootstrap_admin_password: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

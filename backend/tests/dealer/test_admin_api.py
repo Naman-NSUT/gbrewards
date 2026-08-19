@@ -582,3 +582,41 @@ def test_claims_queue_moves_through_its_workflow(client, db, h):
 def test_an_unauthenticated_caller_gets_nothing(client):
     for path in ("/dealers", "/warranties", "/compliance", "/dashboard"):
         assert client.get(f"{PREFIX}{path}").status_code == 401
+
+
+def test_the_first_dealer_admin_can_be_created_from_the_environment(
+    db, session_factory, monkeypatch
+):
+    """Render's plan has no shell, so without this the dealer panel would deploy
+    with nobody able to sign in."""
+    from app.core.config import settings
+    from app.core.security import verify_password
+    from app.dealer.bootstrap import ensure_bootstrap_dealer_admin
+    from app.dealer.models.admin import DealerAdmin
+
+    monkeypatch.setattr(settings, "dealer_bootstrap_admin_email", "First.Owner@Goodbed.test")
+    monkeypatch.setattr(settings, "dealer_bootstrap_admin_password", "a-strong-password")
+    # the function opens its own session against the app's engine; point it at
+    # the test database instead
+    monkeypatch.setattr("app.dealer.bootstrap.SessionLocal", session_factory)
+
+    ensure_bootstrap_dealer_admin()
+    admin = db.query(DealerAdmin).filter_by(email="first.owner@goodbed.test").one()
+    assert admin.role == "owner"
+    assert verify_password("a-strong-password", admin.password_hash)
+    assert admin.password_hash != "a-strong-password", "never store the plaintext"
+
+    # idempotent: a redeploy must not fail or duplicate
+    ensure_bootstrap_dealer_admin()
+    assert db.query(DealerAdmin).filter_by(email="first.owner@goodbed.test").count() == 1
+
+
+def test_bootstrap_is_a_no_op_when_unset(db, session_factory, monkeypatch):
+    from app.dealer.bootstrap import ensure_bootstrap_dealer_admin
+    from app.dealer.models.admin import DealerAdmin
+
+    monkeypatch.setattr("app.dealer.bootstrap.SessionLocal", session_factory)
+
+    before = db.query(DealerAdmin).count()
+    ensure_bootstrap_dealer_admin()
+    assert db.query(DealerAdmin).count() == before
