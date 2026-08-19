@@ -63,7 +63,10 @@ def main() -> int:
                 # Serials come from the real batch service, so the seeded data
                 # looks exactly like data an admin would produce.
                 qr.generate_batch(
-                    db, product_id=product.id, quantity=8, label="dev seed",
+                    db,
+                    product_id=product.id,
+                    quantity=8,
+                    label="dev seed",
                     admin_id=admin.id,
                 )
             set_rate(db, product_id=product.id, points_per_registration=points)
@@ -123,9 +126,9 @@ def main() -> int:
         db.commit()
 
         sample = db.execute(
-            select(DealerUnit.token).join(
-                Allocation, Allocation.serial == DealerUnit.token
-            ).limit(1)
+            select(DealerUnit.token)
+            .join(Allocation, Allocation.serial == DealerUnit.token)
+            .limit(1)
         ).scalar_one_or_none()
 
         print("  Dealer Rewards — dev data ready")

@@ -297,9 +297,7 @@ def approve(
     record_audit(
         session,
         action=(
-            "approve_backdate"
-            if previous == "pending_backdate"
-            else "approve_self_registration"
+            "approve_backdate" if previous == "pending_backdate" else "approve_self_registration"
         ),
         entity_type="warranty",
         entity_id=warranty.id,

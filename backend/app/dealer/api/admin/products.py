@@ -33,9 +33,7 @@ router = APIRouter(tags=["dealer-admin-products"])
 def _product_out(db: Session, product: DealerProduct) -> DealerProductOut:
     units = int(
         db.execute(
-            select(func.count())
-            .select_from(DealerUnit)
-            .where(DealerUnit.product_id == product.id)
+            select(func.count()).select_from(DealerUnit).where(DealerUnit.product_id == product.id)
         ).scalar_one()
     )
     return DealerProductOut(
@@ -122,8 +120,10 @@ def update_product(
         actor_id=admin.id,
         # Changing warranty_months does NOT touch warranties already sold — the
         # length is frozen onto each warranty at registration.
-        metadata={"before": before, "after": {"name": product.name,
-                                              "warranty_months": product.warranty_months}},
+        metadata={
+            "before": before,
+            "after": {"name": product.name, "warranty_months": product.warranty_months},
+        },
         ip=client_ip(request),
     )
     db.commit()

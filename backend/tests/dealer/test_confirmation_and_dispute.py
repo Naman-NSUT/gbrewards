@@ -57,11 +57,7 @@ def test_confirming_an_already_active_warranty_records_the_acknowledgment(db):
     assert warranty.customer.is_phone_verified is True, (
         "this is what distinguishes a dealer-typed number from a proven one"
     )
-    event = (
-        db.query(WarrantyEvent)
-        .filter_by(warranty_id=warranty.id, event="confirmed")
-        .one()
-    )
+    event = db.query(WarrantyEvent).filter_by(warranty_id=warranty.id, event="confirmed").one()
     assert event.event_metadata["activated"] is False
 
 
@@ -75,9 +71,9 @@ def test_confirming_twice_does_not_duplicate_the_event(db):
     db.commit()
 
     assert result.warranty.confirmed_at == first_at
-    events = db.query(WarrantyEvent).filter_by(
-        warranty_id=result.warranty.id, event="confirmed"
-    ).all()
+    events = (
+        db.query(WarrantyEvent).filter_by(warranty_id=result.warranty.id, event="confirmed").all()
+    )
     assert len(events) == 1
 
 
@@ -125,9 +121,7 @@ def test_dispute_does_not_void_and_leaves_the_points_alone(db):
     assert warranty.status == "active", "a dispute must not void — it flags for a human"
     assert ledger.balance(db, dealer_id) == 50, "points survive until a human decides"
 
-    event = db.query(WarrantyEvent).filter_by(
-        warranty_id=warranty.id, event="disputed"
-    ).one()
+    event = db.query(WarrantyEvent).filter_by(warranty_id=warranty.id, event="disputed").one()
     assert event.reason == "I never bought this"
 
     audit = db.query(AuditLog).filter_by(action="dispute_warranty").one()

@@ -93,17 +93,13 @@ def resolve_actor_names(db: Session, actor_ids: set[uuid.UUID]) -> dict[uuid.UUI
     if not actor_ids:
         return {}
     names: dict[uuid.UUID, str] = {}
-    for admin_row in db.execute(
-        select(Admin.id, Admin.name).where(Admin.id.in_(actor_ids))
-    ):
+    for admin_row in db.execute(select(Admin.id, Admin.name).where(Admin.id.in_(actor_ids))):
         names[admin_row[0]] = admin_row[1]
     for staff_row in db.execute(
         select(DealerStaff.id, DealerStaff.name).where(DealerStaff.id.in_(actor_ids))
     ):
         names[staff_row[0]] = staff_row[1]
-    for row in db.execute(
-        select(Customer.id, Customer.name).where(Customer.id.in_(actor_ids))
-    ):
+    for row in db.execute(select(Customer.id, Customer.name).where(Customer.id.in_(actor_ids))):
         names.setdefault(row[0], row[1])
     return names
 
@@ -218,9 +214,7 @@ def build_warranty_detail(
     )
     claims = list(
         db.execute(
-            select(Claim)
-            .where(Claim.warranty_id == warranty.id)
-            .order_by(Claim.created_at.desc())
+            select(Claim).where(Claim.warranty_id == warranty.id).order_by(Claim.created_at.desc())
         ).scalars()
     )
     allocation_row = db.execute(
@@ -377,9 +371,7 @@ def edit_customer(
     target = customer
 
     if new_phone and new_phone != customer.phone:
-        owner = db.execute(
-            select(Customer).where(Customer.phone == new_phone)
-        ).scalar_one_or_none()
+        owner = db.execute(select(Customer).where(Customer.phone == new_phone)).scalar_one_or_none()
         if owner is None:
             owner = Customer(phone=new_phone, name=changes.get("name") or customer.name)
             db.add(owner)

@@ -62,7 +62,6 @@ class SelfRegistration:
     dealer: Dealer | None
 
 
-
 def _unit_warranty_months(session: Session, unit: Unit | None) -> int:
     """Warranty length for a unit, from its product, with a safe default."""
     if unit is None:
@@ -77,6 +76,7 @@ def _unit_model_name(session: Session, unit: Unit | None) -> str | None:
         return None
     product = session.get(Product, unit.product_id)
     return product.name if product else None
+
 
 def normalise(raw_serial: str) -> str:
     serial = normalise_serial(raw_serial)

@@ -14,9 +14,7 @@ class DealerAdmin(UUIDPkMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "dealer_admins"
-    __table_args__ = (
-        CheckConstraint("role in ('owner','staff','support')", name="role_valid"),
-    )
+    __table_args__ = (CheckConstraint("role in ('owner','staff','support')", name="role_valid"),)
 
     email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)

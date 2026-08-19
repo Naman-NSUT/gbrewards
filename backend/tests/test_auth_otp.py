@@ -61,9 +61,7 @@ def test_verify_rejects_wrong_code(client: TestClient) -> None:
 
 
 def test_verify_without_request_is_expired(client: TestClient) -> None:
-    r = client.post(
-        "/api/v1/auth/otp/verify", json={"phone": "+919900000005", "code": "123456"}
-    )
+    r = client.post("/api/v1/auth/otp/verify", json={"phone": "+919900000005", "code": "123456"})
     assert r.status_code == 400
     assert r.json()["error"]["code"] == "otp_expired"
 

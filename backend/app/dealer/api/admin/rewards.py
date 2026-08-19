@@ -276,9 +276,7 @@ def approve_redemption(
     """
     redemption, dealer = _load_for_decision(db, redemption_id)
     if redemption.status != "pending":
-        raise AppError(
-            "not_pending", 409, f"This redemption is already '{redemption.status}'"
-        )
+        raise AppError("not_pending", 409, f"This redemption is already '{redemption.status}'")
 
     balance = ledger.balance(db, dealer.id)
     if balance < redemption.points:
@@ -360,9 +358,7 @@ def reject_redemption(
     """
     redemption, dealer = _load_for_decision(db, redemption_id)
     if redemption.status != "pending":
-        raise AppError(
-            "not_pending", 409, f"This redemption is already '{redemption.status}'"
-        )
+        raise AppError("not_pending", 409, f"This redemption is already '{redemption.status}'")
 
     redemption.status = "rejected"
     redemption.note = body.reason

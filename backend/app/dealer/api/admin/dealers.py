@@ -59,9 +59,7 @@ def _dealer_list_query() -> Select[tuple[Dealer, int, int]]:
         .correlate(Dealer)
         .scalar_subquery()
     )
-    return select(
-        Dealer, staff_count.label("staff_count"), balance.label("points_balance")
-    )
+    return select(Dealer, staff_count.label("staff_count"), balance.label("points_balance"))
 
 
 def _get_dealer(db: Session, dealer_id: uuid.UUID) -> Dealer:
@@ -93,9 +91,7 @@ def list_dealers(
         stmt = stmt.where(Dealer.status == status)
 
     total = count_of(db, stmt)
-    rows = db.execute(
-        stmt.order_by(Dealer.code.asc()).limit(page.limit).offset(page.offset)
-    ).all()
+    rows = db.execute(stmt.order_by(Dealer.code.asc()).limit(page.limit).offset(page.offset)).all()
     return Paginated[DealerListItem](
         items=[
             DealerListItem(
@@ -126,9 +122,7 @@ def create_dealer(
         select(Dealer).where(func.upper(Dealer.code) == code.upper())
     ).scalar_one_or_none()
     if clash is not None:
-        raise AppError(
-            "dealer_code_taken", 409, f"Dealer code '{clash.code}' already exists"
-        )
+        raise AppError("dealer_code_taken", 409, f"Dealer code '{clash.code}' already exists")
 
     dealer = Dealer(**{**body.model_dump(), "code": code})
     db.add(dealer)
@@ -346,9 +340,7 @@ def create_staff(
             {"dealer_id": str(existing.dealer_id), "is_active": existing.is_active},
         )
 
-    staff = DealerStaff(
-        dealer_id=dealer.id, name=body.name, phone=body.phone, role=body.role
-    )
+    staff = DealerStaff(dealer_id=dealer.id, name=body.name, phone=body.phone, role=body.role)
     db.add(staff)
     try:
         db.flush()

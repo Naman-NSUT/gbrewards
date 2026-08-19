@@ -54,6 +54,7 @@ def _unit_model_name(db: Session, unit: Unit | None) -> str | None:
     product = db.get(Product, unit.product_id)
     return product.name if product else None
 
+
 router = APIRouter(tags=["admin-lookup"])
 
 
@@ -86,7 +87,6 @@ def _unit_out(db: Session, serial: str) -> UnitOut:
     )
 
 
-
 @router.get("/lookup/{raw_serial:path}", response_model=SerialLookupOut)
 def lookup_serial(
     raw_serial: str,
@@ -116,9 +116,7 @@ def lookup_serial(
     )
 
     warranty_rows = db.execute(
-        warranty_select()
-        .where(Warranty.serial == serial)
-        .order_by(Warranty.registered_at.desc())
+        warranty_select().where(Warranty.serial == serial).order_by(Warranty.registered_at.desc())
     ).all()
     warranties = [to_warranty_item(w, c, d) for w, c, d in warranty_rows]
 
@@ -147,9 +145,7 @@ def _claims_for(db: Session, warranty_ids: list[uuid.UUID]) -> list[ClaimListIte
     if not warranty_ids:
         return []
     rows = db.execute(
-        claim_select()
-        .where(Claim.warranty_id.in_(warranty_ids))
-        .order_by(Claim.created_at.desc())
+        claim_select().where(Claim.warranty_id.in_(warranty_ids)).order_by(Claim.created_at.desc())
     ).all()
     return [to_claim_item(*row) for row in rows]
 

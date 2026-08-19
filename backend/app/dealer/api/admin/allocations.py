@@ -135,7 +135,7 @@ def preview_allocations(
             batch=_batch_out(result.batch, with_errors=False),
             created_count=result.created_count,
             unchanged_count=result.unchanged_count,
-                errors=[
+            errors=[
                 BatchRowErrorOut(
                     line=e.line, serial=e.serial, dealer_code=e.dealer_code, reason=e.reason
                 )
@@ -155,9 +155,7 @@ def preview_allocations(
 def list_allocations(
     dealer_id: uuid.UUID | None = None,
     dealer_code: str | None = Query(default=None, max_length=32),
-    status: str | None = Query(
-        default=None, pattern="^(allocated|registered|revoked|returned)$"
-    ),
+    status: str | None = Query(default=None, pattern="^(allocated|registered|revoked|returned)$"),
     serial: str | None = Query(default=None, max_length=200),
     batch_id: uuid.UUID | None = None,
     page: Pagination = Depends(pagination),
@@ -244,7 +242,5 @@ def revoke_allocation(
     )
     db.commit()
 
-    row = db.execute(
-        allocation_select().where(Allocation.id == allocation_id)
-    ).one()
+    row = db.execute(allocation_select().where(Allocation.id == allocation_id)).one()
     return to_allocation_out(row)

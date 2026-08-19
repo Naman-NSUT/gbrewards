@@ -56,6 +56,7 @@ def _unit_model_name(db: Session, unit: Unit | None) -> str | None:
     product = db.get(Product, unit.product_id)
     return product.name if product else None
 
+
 router = APIRouter(tags=["dealer-registrations"])
 
 
@@ -72,9 +73,7 @@ def preview_unit(
     stop the dealer before they even start typing, so every failure path here
     still returns `registerable` based on the allocation alone.
     """
-    ratelimit.enforce(
-        redis, f"preview:{staff.id}", limit=120, window_s=60, fail_open=True
-    )
+    ratelimit.enforce(redis, f"preview:{staff.id}", limit=120, window_s=60, fail_open=True)
     serial = normalise_serial(raw_serial)
 
     existing = db.execute(
@@ -220,9 +219,7 @@ def create_registration(
 
         out = RegisterOut(
             warranty=WarrantyOut.model_validate(warranty),
-            customer=CustomerBrief(
-                name=warranty.customer.name, phone=warranty.customer.phone
-            ),
+            customer=CustomerBrief(name=warranty.customer.name, phone=warranty.customer.phone),
             points_awarded=result.points_awarded,
             balance=result.balance,
             idempotent=result.idempotent,

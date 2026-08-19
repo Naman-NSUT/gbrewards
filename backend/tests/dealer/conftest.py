@@ -41,9 +41,7 @@ def db(engine: Engine, session_factory: sessionmaker) -> Iterator[Session]:
 
 
 @pytest.fixture
-def session_maker(
-    engine: Engine, session_factory: sessionmaker
-) -> Iterator[sessionmaker]:
+def session_maker(engine: Engine, session_factory: sessionmaker) -> Iterator[sessionmaker]:
     _wipe(engine)
     yield session_factory
     _wipe(engine)

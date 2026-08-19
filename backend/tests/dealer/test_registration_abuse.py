@@ -245,8 +245,11 @@ def test_void_writes_a_compensating_debit_and_never_edits_history(db):
 
     result = _register(db, staff, serial)
     clawed = warranty_svc.void(
-        db, warranty=result.warranty, reason="Customer returned the mattress",
-        actor_type="admin", actor_id=admin.id,
+        db,
+        warranty=result.warranty,
+        reason="Customer returned the mattress",
+        actor_type="admin",
+        actor_id=admin.id,
     )
     db.commit()
 
@@ -273,8 +276,12 @@ def test_clawback_may_drive_the_balance_negative(db):
 
     # Dealer spends the points before the return comes back.
     ledger.add_entry(
-        db, dealer_id=dealer.id, amount=-50, type=ledger.ADMIN_DEBIT,
-        admin_id=admin.id, reason="redeemed",
+        db,
+        dealer_id=dealer.id,
+        amount=-50,
+        type=ledger.ADMIN_DEBIT,
+        admin_id=admin.id,
+        reason="redeemed",
     )
     db.commit()
 
@@ -351,7 +358,7 @@ def test_a_product_with_no_rate_registers_but_pays_nothing(db):
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
     serial = new_serial()
-    make_unit(db, serial)          # real unit, real product, no rate configured
+    make_unit(db, serial)  # real unit, real product, no rate configured
     allocate(db, serial, dealer)
 
     result = _register(db, staff, serial)
@@ -420,9 +427,7 @@ def test_parallel_registrations_of_one_serial_create_exactly_one_warranty(sessio
 
     verify = session_maker()
     warranties = verify.query(Warranty).filter_by(serial=serial).all()
-    credits = (
-        verify.query(LedgerEntry).filter_by(type="registration_credit").all()
-    )
+    credits = verify.query(LedgerEntry).filter_by(type="registration_credit").all()
     assert len(warranties) == 1, f"expected exactly one warranty, got {len(warranties)}"
     assert len(credits) == 1, f"expected exactly one credit, got {len(credits)}"
     assert outcomes.count("created") == 1, f"outcomes={outcomes}"

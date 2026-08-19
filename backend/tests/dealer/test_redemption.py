@@ -572,17 +572,13 @@ def test_a_staff_member_only_sees_their_own_dealerships_redemptions(client, two_
 def test_cancelling_another_dealerships_request_is_a_404_over_http(client, two_shops, db):
     redemption_id = two_shops["redemption"].id
 
-    resp = client.post(
-        f"/api/v1/dealer/redemptions/{redemption_id}/cancel", headers=two_shops["b"]
-    )
+    resp = client.post(f"/api/v1/dealer/redemptions/{redemption_id}/cancel", headers=two_shops["b"])
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "not_found"
     db.expire_all()
     assert db.get(Redemption, redemption_id).status == "pending"
 
-    mine = client.post(
-        f"/api/v1/dealer/redemptions/{redemption_id}/cancel", headers=two_shops["a"]
-    )
+    mine = client.post(f"/api/v1/dealer/redemptions/{redemption_id}/cancel", headers=two_shops["a"])
     assert mine.status_code == 200
     assert mine.json()["status"] == "cancelled"
 
@@ -604,7 +600,5 @@ def test_the_catalogue_marks_each_reward_against_available_points(client, two_sh
 
 
 def test_an_unknown_redemption_id_is_a_404_not_a_500(client, two_shops):
-    resp = client.post(
-        f"/api/v1/dealer/redemptions/{uuid.uuid4()}/cancel", headers=two_shops["a"]
-    )
+    resp = client.post(f"/api/v1/dealer/redemptions/{uuid.uuid4()}/cancel", headers=two_shops["a"])
     assert resp.status_code == 404

@@ -155,9 +155,7 @@ def history(
         filters.append(Redemption.status == status)
 
     total = int(
-        session.execute(
-            select(func.count()).select_from(Redemption).where(*filters)
-        ).scalar_one()
+        session.execute(select(func.count()).select_from(Redemption).where(*filters)).scalar_one()
     )
     rows = list(
         session.execute(
@@ -239,9 +237,7 @@ def approve(
     brand holding the loss.
     """
     if redemption.status != "pending":
-        raise AppError(
-            "not_pending", 409, f"This request has already been {redemption.status}"
-        )
+        raise AppError("not_pending", 409, f"This request has already been {redemption.status}")
 
     _lock_dealer(session, redemption.dealer_id)
     balance = ledger.balance(session, redemption.dealer_id)
@@ -325,9 +321,7 @@ def reject(
     if not (reason and reason.strip()):
         raise AppError("reason_required", 400, "Rejecting a redemption requires a reason")
     if redemption.status != "pending":
-        raise AppError(
-            "not_pending", 409, f"This request has already been {redemption.status}"
-        )
+        raise AppError("not_pending", 409, f"This request has already been {redemption.status}")
 
     redemption.status = "rejected"
     redemption.processed_by_admin_id = admin_id
@@ -360,9 +354,7 @@ def cancel(session: Session, *, redemption: Redemption, staff: DealerStaff) -> R
     if redemption.dealer_id != staff.dealer_id:
         raise AppError("not_found", 404, "No such redemption request")
     if redemption.status != "pending":
-        raise AppError(
-            "not_pending", 409, f"This request has already been {redemption.status}"
-        )
+        raise AppError("not_pending", 409, f"This request has already been {redemption.status}")
 
     redemption.status = "cancelled"
     # Not an admin action, so processed_by_admin_id stays null — but the row did

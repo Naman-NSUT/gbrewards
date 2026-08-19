@@ -84,9 +84,7 @@ def to_claim_item(
         warranty_end_date=warranty.warranty_end_date,
         # Judged on the day the claim was RAISED, not today: a claim that came in
         # inside the window does not lapse because it sat in a queue.
-        in_warranty=(
-            warranty.warranty_start_date <= raised_on <= warranty.warranty_end_date
-        ),
+        in_warranty=(warranty.warranty_start_date <= raised_on <= warranty.warranty_end_date),
         handled_by_admin_id=claim.handled_by_admin_id,
         resolved_at=claim.resolved_at,
         created_at=claim.created_at,
@@ -95,9 +93,7 @@ def to_claim_item(
 
 @router.get("/claims", response_model=Paginated[ClaimListItem])
 def list_claims(
-    status: str | None = Query(
-        default=None, pattern="^(open|in_review|approved|rejected|closed)$"
-    ),
+    status: str | None = Query(default=None, pattern="^(open|in_review|approved|rejected|closed)$"),
     q: str | None = Query(
         default=None, max_length=200, description="reference, serial, mobile or name"
     ),

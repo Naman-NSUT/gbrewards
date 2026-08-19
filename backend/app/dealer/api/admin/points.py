@@ -120,13 +120,9 @@ def rate_history(
     stmt = select(PointRate)
     if product_id is not None:
         stmt = stmt.where(PointRate.product_id == product_id)
-    total = int(
-        db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
-    )
+    total = int(db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one())
     rates = db.execute(
-        stmt.order_by(PointRate.effective_from.desc())
-        .limit(page.limit)
-        .offset(page.offset)
+        stmt.order_by(PointRate.effective_from.desc()).limit(page.limit).offset(page.offset)
     ).scalars()
     return Paginated[PointRateOut](
         items=[_rate_out(rate) for rate in rates],

@@ -17,9 +17,7 @@ from app.dealer.models.product import DealerProduct
 from app.dealer.models.unit import DealerUnit
 
 
-def make_admin(
-    db: Session, email: str = "admin@example.com", role: str = "owner"
-) -> DealerAdmin:
+def make_admin(db: Session, email: str = "admin@example.com", role: str = "owner") -> DealerAdmin:
     admin = DealerAdmin(email=email, password_hash="x", name="Admin", role=role)
     db.add(admin)
     db.flush()
@@ -40,9 +38,7 @@ def make_staff(db: Session, dealer: Dealer, phone: str = "+919000000001") -> Dea
     return staff
 
 
-def make_product(
-    db: Session, name: str = "GoodBed HR Foam", months: int = 60
-) -> DealerProduct:
+def make_product(db: Session, name: str = "GoodBed HR Foam", months: int = 60) -> DealerProduct:
     product = DealerProduct(
         name=name,
         description="Test product",

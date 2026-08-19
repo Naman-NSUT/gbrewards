@@ -25,9 +25,7 @@ router = APIRouter(tags=["admin-audit"])
 
 @router.get("/audit", response_model=Paginated[AuditOut])
 def list_audit(
-    actor_type: str | None = Query(
-        default=None, pattern="^(admin|dealer_staff|customer|system)$"
-    ),
+    actor_type: str | None = Query(default=None, pattern="^(admin|dealer_staff|customer|system)$"),
     actor_id: uuid.UUID | None = None,
     action: str | None = Query(default=None, max_length=60),
     entity_type: str | None = Query(default=None, max_length=40),

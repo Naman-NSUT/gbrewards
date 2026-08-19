@@ -45,7 +45,12 @@ logger = get_logger(__name__)
 _SERIAL_KEYS = ("serial", "serial_no", "serial_number", "serialno", "unit_serial", "qr", "qr_code")
 _DEALER_KEYS = ("dealer_code", "dealercode", "dealer", "code", "dealer_id")
 _DISPATCH_KEYS = (
-    "dispatch_ref", "dispatchref", "dispatch", "dispatch_no", "invoice", "invoice_ref",
+    "dispatch_ref",
+    "dispatchref",
+    "dispatch",
+    "dispatch_no",
+    "invoice",
+    "invoice_ref",
 )
 
 # Rejections are stored on the batch row as JSON. Cap what we persist so one
@@ -204,9 +209,7 @@ def _live_warranties(db: Session, serials: list[str]) -> dict[str, Warranty]:
     found: dict[str, Warranty] = {}
     for chunk in _chunked(serials):
         rows = db.execute(
-            select(Warranty).where(
-                Warranty.serial.in_(chunk), Warranty.status.in_(LIVE_STATUSES)
-            )
+            select(Warranty).where(Warranty.serial.in_(chunk), Warranty.status.in_(LIVE_STATUSES))
         ).scalars()
         for warranty in rows:
             found[warranty.serial] = warranty

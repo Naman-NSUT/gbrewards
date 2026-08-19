@@ -42,9 +42,7 @@ def test_reward_redemption_holds_points_cost(client: TestClient, db: Session) ->
     assert ledger.available(db, user.id) == 70
 
 
-def test_reward_redemption_approve_debits_and_sets_reward(
-    client: TestClient, db: Session
-) -> None:
+def test_reward_redemption_approve_debits_and_sets_reward(client: TestClient, db: Session) -> None:
     admin = make_admin(db)
     user = make_user(db)
     reward = make_reward(db, points_cost=40)

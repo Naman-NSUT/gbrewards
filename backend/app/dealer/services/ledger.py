@@ -139,9 +139,7 @@ def add_entry(
     if type in _ADJUSTMENTS and not (reason and reason.strip()):
         # The database also refuses this. Checking here too turns a 500 from an
         # IntegrityError into an honest 400 with a usable message.
-        raise AppError(
-            "reason_required", 400, "A manual point adjustment requires a reason"
-        )
+        raise AppError("reason_required", 400, "A manual point adjustment requires a reason")
     if amount == 0:
         raise AppError("invalid_amount", 400, "A ledger entry of zero points is meaningless")
 

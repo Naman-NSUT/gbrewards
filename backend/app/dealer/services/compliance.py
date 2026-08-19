@@ -267,9 +267,7 @@ def dealer_compliance(
     rate is the true one.
     """
     if sort not in _SORTS:
-        raise AppError(
-            "invalid_sort", 400, f"Unknown sort '{sort}'", {"allowed": sorted(_SORTS)}
-        )
+        raise AppError("invalid_sort", 400, f"Unknown sort '{sort}'", {"allowed": sorted(_SORTS)})
 
     params = _params(
         from_ts=from_ts,
@@ -285,18 +283,22 @@ def dealer_compliance(
     ).mappings()
     items = [_row(dict(row)) for row in rows]
 
-    summary = db.execute(
-        text(
-            f"{_CTES}"
-            "SELECT count(*) AS dealers,"
-            "       COALESCE(sum(units_allocated), 0) AS units_allocated,"
-            "       COALESCE(sum(warranties_registered), 0) AS warranties_registered,"
-            "       COALESCE(sum(unregistered_units), 0) AS unregistered_units,"
-            "       COALESCE(sum(self_registrations), 0) AS self_registrations"
-            f" FROM ({_ROW_SELECT}) rows"
-        ),
-        params,
-    ).mappings().one()
+    summary = (
+        db.execute(
+            text(
+                f"{_CTES}"
+                "SELECT count(*) AS dealers,"
+                "       COALESCE(sum(units_allocated), 0) AS units_allocated,"
+                "       COALESCE(sum(warranties_registered), 0) AS warranties_registered,"
+                "       COALESCE(sum(unregistered_units), 0) AS unregistered_units,"
+                "       COALESCE(sum(self_registrations), 0) AS self_registrations"
+                f" FROM ({_ROW_SELECT}) rows"
+            ),
+            params,
+        )
+        .mappings()
+        .one()
+    )
 
     allocated = int(summary["units_allocated"])
     registered = int(summary["warranties_registered"])

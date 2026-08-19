@@ -99,9 +99,7 @@ def _upsert_customer(
     state: str | None,
     pincode: str | None,
 ) -> Customer:
-    customer = session.execute(
-        select(Customer).where(Customer.phone == phone)
-    ).scalar_one_or_none()
+    customer = session.execute(select(Customer).where(Customer.phone == phone)).scalar_one_or_none()
     if customer is None:
         customer = Customer(phone=phone, name=name)
         session.add(customer)
@@ -198,9 +196,7 @@ def register(
     facts = _resolve_unit_facts(session, serial)
     warranty_months = facts.warranty_months or settings.default_warranty_months
 
-    clock = decide_clock(
-        warranty_months=warranty_months, invoice_date=invoice_date, now=now
-    )
+    clock = decide_clock(warranty_months=warranty_months, invoice_date=invoice_date, now=now)
 
     customer = _upsert_customer(
         session,

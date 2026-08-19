@@ -142,9 +142,7 @@ def list_approvals(
         # Matches either the registering dealer or the dealer who held the
         # allocation, so filtering by a dealer also shows the sales they DIDN'T
         # record — which is the whole reason this queue exists.
-        stmt = stmt.where(
-            or_(Warranty.dealer_id == dealer_id, Allocation.dealer_id == dealer_id)
-        )
+        stmt = stmt.where(or_(Warranty.dealer_id == dealer_id, Allocation.dealer_id == dealer_id))
 
     total = count_of(db, stmt)
     rows = db.execute(

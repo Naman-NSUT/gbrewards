@@ -110,15 +110,13 @@ def test_allocation_preview_writes_nothing_but_reports_what_upload_would_do(
 ):
     make_dealer(db, code="D001")
     serial = new_serial()
-    make_unit(db, serial)          # a real manufactured unit
+    make_unit(db, serial)  # a real manufactured unit
     bad_dealer_serial = new_serial()
     make_unit(db, bad_dealer_serial)
     db.commit()
     # Second row names a dealer that does not exist, so it is rejected for that
     # reason rather than for a missing unit.
-    csv = (
-        f"serial,dealer_code\n{serial},D001\n{bad_dealer_serial},NOPE\n"
-    ).encode()
+    csv = (f"serial,dealer_code\n{serial},D001\n{bad_dealer_serial},NOPE\n").encode()
 
     preview = client.post(
         "/api/v1/dealer-admin/allocations/preview",
@@ -163,9 +161,7 @@ def test_support_role_cannot_move_points(client, db):
     """Support staff work lookup and claims all day; they must not adjust balances."""
     from app.dealer.models.admin import DealerAdmin as Admin
 
-    support = Admin(
-        email="support@goodbed.test", password_hash="x", name="Support", role="support"
-    )
+    support = Admin(email="support@goodbed.test", password_hash="x", name="Support", role="support")
     dealer = make_dealer(db)
     db.add(support)
     db.commit()

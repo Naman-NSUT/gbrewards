@@ -122,9 +122,7 @@ def _issue_pair(staff: DealerStaff, dealer: Dealer) -> TokenPair:
         access_token=access,
         refresh_token=refresh,
         expires_in=settings.jwt_access_ttl_minutes * 60,
-        staff=StaffOut(
-            id=str(staff.id), name=staff.name, phone=staff.phone, role=staff.role
-        ),
+        staff=StaffOut(id=str(staff.id), name=staff.name, phone=staff.phone, role=staff.role),
         dealer=DealerBrief(id=str(dealer.id), code=dealer.code, name=dealer.name),
     )
 
@@ -147,9 +145,7 @@ def refresh_token(
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     # Rotate: the presented refresh token is burned as it is exchanged.
-    redis.set(
-        _revoked_key(payload["jti"]), "1", ex=settings.jwt_refresh_ttl_days * 86400
-    )
+    redis.set(_revoked_key(payload["jti"]), "1", ex=settings.jwt_refresh_ttl_days * 86400)
     return _issue_pair(staff, dealer)
 
 
@@ -197,9 +193,7 @@ def dealer_admin_refresh(
     db: Session = Depends(get_db),
     redis: redis_lib.Redis = Depends(get_redis),
 ) -> TokenPair:
-    payload = decode_token(
-        body.refresh_token, expected_aud="dealer_admin", expected_type="refresh"
-    )
+    payload = decode_token(body.refresh_token, expected_aud="dealer_admin", expected_type="refresh")
     if redis.exists(_revoked_key(payload["jti"])):
         raise AppError("invalid_token", 401, "Refresh token revoked")
     admin = db.get(DealerAdmin, payload["sub"])

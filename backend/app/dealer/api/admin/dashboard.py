@@ -55,9 +55,7 @@ def dashboard(
 
     points_issued = int(
         db.execute(
-            select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
-                LedgerEntry.amount > 0
-            )
+            select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(LedgerEntry.amount > 0)
         ).scalar_one()
     )
     points_reversed = int(
@@ -124,9 +122,7 @@ def analytics(
 
     # Bucket by the date the sale happened WHERE IT HAPPENED. Grouping on the
     # UTC date would shift every evening sale in India into the next day's bar.
-    day = func.date(
-        func.timezone(settings.business_timezone, Warranty.registered_at)
-    ).label("day")
+    day = func.date(func.timezone(settings.business_timezone, Warranty.registered_at)).label("day")
     rows = db.execute(
         select(day, Warranty.source, func.count().label("n"))
         .where(

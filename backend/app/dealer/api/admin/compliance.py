@@ -100,9 +100,7 @@ def dealer_drilldown(
         raise AppError("dealer_not_found", 404, "No such dealer")
 
     from_ts, to_ts = day_window(date_from, date_to)
-    summary = compliance_svc.dealer_summary(
-        db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts
-    )
+    summary = compliance_svc.dealer_summary(db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts)
     if summary is None:  # pragma: no cover - the dealer row was just loaded
         raise AppError("dealer_not_found", 404, "No such dealer")
 
@@ -110,9 +108,7 @@ def dealer_drilldown(
     self_regs = compliance_svc.self_registrations(
         db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts, limit=limit
     )
-    staff = compliance_svc.staff_activity(
-        db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts
-    )
+    staff = compliance_svc.staff_activity(db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts)
 
     return DealerComplianceDetailOut(
         dealer=DealerBrief(
@@ -142,9 +138,7 @@ def dealer_drilldown(
         ],
         staff_activity=[
             StaffActivityOut(
-                staff=StaffBrief(
-                    id=row.staff_id, name=row.name, phone=row.phone, role=row.role
-                ),
+                staff=StaffBrief(id=row.staff_id, name=row.name, phone=row.phone, role=row.role),
                 is_active=row.is_active,
                 last_active_at=row.last_active_at,
                 registrations=row.registrations,

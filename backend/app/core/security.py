@@ -28,9 +28,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def create_access_token(
-    sub: str, aud: str = "broker", extra: dict[str, Any] | None = None
-) -> str:
+def create_access_token(sub: str, aud: str = "broker", extra: dict[str, Any] | None = None) -> str:
     now = _now()
     payload = {
         "sub": sub,

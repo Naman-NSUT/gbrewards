@@ -61,9 +61,7 @@ def create_for_reward(db: Session, *, user: User, reward_id: uuid.UUID) -> Redem
     if points > ledger.available(db, user.id):
         raise AppError("insufficient_balance", 400, "Requested points exceed available balance")
 
-    req = RedemptionRequest(
-        user_id=user.id, points=points, status="pending", reward_id=reward.id
-    )
+    req = RedemptionRequest(user_id=user.id, points=points, status="pending", reward_id=reward.id)
     db.add(req)
     db.flush()
     return req

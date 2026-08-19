@@ -155,9 +155,7 @@ def test_a_dealer_token_cannot_reach_admin_scoped_state(client, scenario):
     from app.core.security import create_access_token as mint
 
     admin_token = mint(str(uuid.uuid4()), "dealer_admin")
-    resp = client.get(
-        "/api/v1/dealer/points", headers={"Authorization": f"Bearer {admin_token}"}
-    )
+    resp = client.get("/api/v1/dealer/points", headers={"Authorization": f"Bearer {admin_token}"})
     assert resp.status_code == 401
     assert resp.json()["error"]["code"] == "invalid_token"
 
@@ -169,9 +167,7 @@ def test_preview_reports_a_cross_dealer_unit_as_not_registerable(client, db, sce
     allocate(db, other_serial, other)
     db.commit()
 
-    resp = client.get(
-        f"/api/v1/dealer/units/{other_serial}/preview", headers=scenario["headers"]
-    )
+    resp = client.get(f"/api/v1/dealer/units/{other_serial}/preview", headers=scenario["headers"])
     assert resp.status_code == 200
     assert resp.json()["registerable"] is False
     assert "different dealer" in resp.json()["reason"]

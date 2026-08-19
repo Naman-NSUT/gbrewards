@@ -19,16 +19,12 @@ class DealerProduct(UUIDPkMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "dealer_products"
-    __table_args__ = (
-        CheckConstraint("warranty_months > 0", name="warranty_months_positive"),
-    )
+    __table_args__ = (CheckConstraint("warranty_months > 0", name="warranty_months_positive"),)
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Printed on the physical label, under the QR.
     terms: Mapped[str | None] = mapped_column(Text, nullable=True)
     model_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    warranty_months: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default=text("60")
-    )
+    warranty_months: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("60"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
