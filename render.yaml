@@ -68,7 +68,10 @@ services:
         sync: false
       - key: MSG91_OTP_TEMPLATE_ID
         sync: false
-      # Destination of the {link} in the warranty SMS — the public support site.
+      # Destination of the {link} in the warranty SMS. The public site is served
+      # from the admin deployment under /warranty, so this is
+      # https://<admin-domain>/warranty — NOT a bare domain. Getting it wrong
+      # sends every customer to a 404 from an SMS you have already paid for.
       - key: PUBLIC_BASE_URL
         sync: false
       # Proof-of-purchase uploads from customer self-registration. These are the

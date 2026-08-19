@@ -2,6 +2,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // Served from the same deployment as the admin panels, under /warranty.
+  // This is the URL printed in the warranty SMS, so it has to stay stable.
+  base: '/warranty/',
   plugins: [react()],
   server: { port: 5174 },
   build: {

@@ -44,7 +44,7 @@ function RouteChrome() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/warranty">
       <RouteChrome />
       <Layout>
         <ErrorBoundary>

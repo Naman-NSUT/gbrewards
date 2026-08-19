@@ -4,6 +4,8 @@
   "outputDirectory": "public_admin",
   "installCommand": "echo 'per-app installs happen in the build script'",
   "rewrites": [
+    { "source": "/warranty/assets/(.*)", "destination": "/warranty/assets/$1" },
+    { "source": "/warranty/(.*)", "destination": "/warranty/index.html" },
     { "source": "/dealer/assets/(.*)", "destination": "/dealer/assets/$1" },
     { "source": "/dealer/(.*)", "destination": "/dealer/index.html" },
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
