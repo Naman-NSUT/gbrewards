@@ -10,6 +10,10 @@ services:
     dockerContext: ./backend
     plan: starter
     healthCheckPath: /api/v1/healthz
+    disk:
+      name: dealer-uploads
+      mountPath: /var/data
+      sizeGB: 5
     autoDeploy: true
     envVars:
       - key: ENV
@@ -26,7 +30,10 @@ services:
           name: gbrewards-redis
           property: connectionString
       - key: CORS_ORIGINS
-        sync: false # your Vercel admin URL, e.g. https://gbrewards-admin.vercel.app
+        # Comma-separated. THREE origins now: the worker admin, the dealer admin
+        # and the public support site. Omitting the support site breaks warranty
+        # lookup for customers with no error a dealer would ever see.
+        sync: false
       - key: OTP_PROVIDER
         value: twofactor # must not be 'fake' in prod
       - key: TWOFACTOR_API_KEY
@@ -35,6 +42,39 @@ services:
         value: OTP1
       - key: SENTRY_DSN
         sync: false # optional; leave blank to disable
+      # --- Dealer Rewards -------------------------------------------------
+      # One API serves both programmes; these are the dealer-side knobs.
+      - key: BUSINESS_TIMEZONE
+        value: Asia/Kolkata
+      - key: BACKDATE_GRACE_DAYS
+        value: "7"
+      - key: DEFAULT_WARRANTY_MONTHS
+        value: "60"
+      - key: DEALER_EDIT_WINDOW_HOURS
+        value: "24"
+      - key: REQUIRE_CUSTOMER_CONFIRMATION
+        value: "false"
+      # Warranty confirmations need their OWN DLT-approved template — the OTP
+      # template above carries one value in a URL path and cannot express a
+      # warranty message. Keep SMS_PROVIDER=fake until that template is live:
+      # everything is logged to the admin SMS screen, nothing is delivered.
+      - key: SMS_PROVIDER
+        value: fake
+      - key: SMS_SENDER_ID
+        sync: false
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_WARRANTY_TEMPLATE_ID
+        sync: false
+      - key: MSG91_OTP_TEMPLATE_ID
+        sync: false
+      # Destination of the {link} in the warranty SMS — the public support site.
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # Proof-of-purchase uploads from customer self-registration. These are the
+      # evidence behind an approval decision, so they need a persistent disk.
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
       - key: BOOTSTRAP_ADMIN_EMAIL
         sync: false # set to create the first admin on next deploy (no shell access needed)
       - key: BOOTSTRAP_ADMIN_PASSWORD
@@ -48,5 +88,8 @@ services:
 
 databases:
   - name: gbrewards-db
-    plan: basic-256mb # upgrade for daily backups / PITR (balances are money-adjacent)
+    # Upgraded from basic-256mb. This database is now the system of record for
+    # five-year warranty obligations, not just a points balance — losing it means
+    # losing proof of every warranty sold. This plan has daily backups + PITR.
+    plan: basic-1gb
     postgresMajorVersion: "16"
