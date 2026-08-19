@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    # Populated by assert_production_ready and logged at startup. Things that
+    # degrade a feature but must not stop the service from serving.
+    startup_warnings: list[str] = []
+
     def assert_production_ready(self) -> None:
         """Fail fast on unsafe defaults outside dev."""
         if self.env == "dev":
@@ -87,16 +91,27 @@ class Settings(BaseSettings):
             problems.append("OTP_PROVIDER must not be 'fake' in production")
         if self.otp_provider == "twofactor" and not self.twofactor_api_key:
             problems.append("TWOFACTOR_API_KEY must be set when OTP_PROVIDER=twofactor")
+        # Dealer SMS gaps are WARNINGS, not boot failures.
+        #
+        # One process now serves both programmes. Refusing to start because the
+        # dealer programme's DLT template is not approved yet would take the
+        # worker app — which has live users scanning right now — offline for a
+        # feature it does not use. The dealer side degrades instead: warranty
+        # messages are still recorded and visible on the admin SMS screen, they
+        # are simply not delivered until a real provider is configured.
+        #
+        # The worker programme's own OTP provider check above stays fail-fast,
+        # because that IS its feature and a silent failure there is worse.
         if self.env == "prod":
             if self.sms_provider == "fake":
-                problems.append(
-                    "SMS_PROVIDER must not be 'fake' in production — warranty "
-                    "confirmations would never reach customers"
+                self.startup_warnings.append(
+                    "SMS_PROVIDER=fake in production — warranty confirmations are "
+                    "recorded but NOT delivered to customers"
                 )
-            if self.sms_provider == "msg91" and not self.msg91_warranty_template_id:
-                problems.append(
-                    "MSG91_WARRANTY_TEMPLATE_ID must be set — the warranty SMS needs "
-                    "its own DLT-approved template, distinct from the OTP one"
+            elif self.sms_provider == "msg91" and not self.msg91_warranty_template_id:
+                self.startup_warnings.append(
+                    "MSG91_WARRANTY_TEMPLATE_ID is unset — the warranty SMS needs its "
+                    "own DLT-approved template, distinct from the OTP one"
                 )
         if problems:
             raise RuntimeError("Invalid production config: " + "; ".join(problems))
