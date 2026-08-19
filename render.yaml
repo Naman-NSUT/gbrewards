@@ -91,8 +91,18 @@ services:
 
 databases:
   - name: gbrewards-db
-    # Upgraded from basic-256mb. This database is now the system of record for
-    # five-year warranty obligations, not just a points balance — losing it means
-    # losing proof of every warranty sold. This plan has daily backups + PITR.
-    plan: basic-1gb
+    # basic-256mb is fine for this workload: a few hundred dealers and workers,
+    # narrow tables, indexed lookups. Size is not the reason to move.
+    #
+    # It is also a PAID instance, so it already has point-in-time recovery —
+    # the "upgrade for daily backups / PITR" note that used to sit here was
+    # written when this project was on the free tier and is no longer true.
+    # Check the recovery window on the database's Recovery tab (3 days on
+    # Hobby, 7 on Pro).
+    #
+    # What DOES matter now: this database holds five-year warranty obligations,
+    # not just a points balance. Take a manual pg_dump before any migration —
+    # PITR covers "yesterday was fine", a dump covers "the migration ran twenty
+    # minutes ago and I want exactly that state back".
+    plan: basic-256mb
     postgresMajorVersion: "16"
