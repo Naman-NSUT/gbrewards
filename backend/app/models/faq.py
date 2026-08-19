@@ -12,6 +12,4 @@ class Faq(UUIDPkMixin, TimestampMixin, Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    is_published: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("true")
-    )
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))

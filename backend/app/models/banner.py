@@ -7,9 +7,7 @@ from app.models.mixins import TimestampMixin, UUIDPkMixin
 
 class Banner(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "banners"
-    __table_args__ = (
-        Index("ix_banners_is_active_sort_order", "is_active", "sort_order"),
-    )
+    __table_args__ = (Index("ix_banners_is_active_sort_order", "is_active", "sort_order"),)
 
     # For uploaded images, `image_url` points at the serve endpoint
     # (/api/v1/catalog/banners/{id}/image) and the bytes live in `image_data`;

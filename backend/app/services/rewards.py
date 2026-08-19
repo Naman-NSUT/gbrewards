@@ -14,11 +14,7 @@ from app.services.audit import record_audit
 
 
 def list_rewards(db: Session) -> list[Reward]:
-    return list(
-        db.execute(
-            select(Reward).order_by(Reward.sort_order, Reward.created_at)
-        ).scalars()
-    )
+    return list(db.execute(select(Reward).order_by(Reward.sort_order, Reward.created_at)).scalars())
 
 
 def _get_or_404(db: Session, reward_id: uuid.UUID) -> Reward:

@@ -53,3 +53,14 @@ Thumbs.db
 /GoodBed 75x125mm Update 1.pdf
 *.orig
 testers.csv
+
+# Dealer Rewards
+dealer-admin/node_modules/
+dealer-admin/dist/
+dealer-mobile/node_modules/
+dealer-mobile/android/
+dealer-mobile/ios/
+support-web/node_modules/
+support-web/dist/
+backend/var/
+public_admin/

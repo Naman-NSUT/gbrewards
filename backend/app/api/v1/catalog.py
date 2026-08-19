@@ -89,9 +89,7 @@ def list_faqs(
 ) -> list[Faq]:
     return list(
         db.execute(
-            select(Faq)
-            .where(Faq.is_published.is_(True))
-            .order_by(Faq.sort_order, Faq.created_at)
+            select(Faq).where(Faq.is_published.is_(True)).order_by(Faq.sort_order, Faq.created_at)
         ).scalars()
     )
 

@@ -53,11 +53,7 @@ def process_banner_image(raw: bytes) -> tuple[bytes, str]:
 
 
 def list_banners(db: Session) -> list[Banner]:
-    return list(
-        db.execute(
-            select(Banner).order_by(Banner.sort_order, Banner.created_at)
-        ).scalars()
-    )
+    return list(db.execute(select(Banner).order_by(Banner.sort_order, Banner.created_at)).scalars())
 
 
 def get_banner(db: Session, banner_id: uuid.UUID) -> Banner:

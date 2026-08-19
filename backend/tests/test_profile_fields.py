@@ -32,9 +32,7 @@ def _sign_in(
     return verify.json()
 
 
-def test_signin_captures_every_profile_field(
-    client: TestClient, fake_otp: FakeOtpProvider
-) -> None:
+def test_signin_captures_every_profile_field(client: TestClient, fake_otp: FakeOtpProvider) -> None:
     user = _sign_in(client, fake_otp, "+919900001001")["user"]
     for field, expected in FULL_PROFILE.items():
         assert user[field] == expected
@@ -141,9 +139,7 @@ def test_admin_user_detail_exposes_profile(
     assert body["gender"] == "female"
 
 
-def test_me_patch_rejects_invalid_pincode(
-    client: TestClient, fake_otp: FakeOtpProvider
-) -> None:
+def test_me_patch_rejects_invalid_pincode(client: TestClient, fake_otp: FakeOtpProvider) -> None:
     tokens = _sign_in(client, fake_otp, "+919900001007")
     auth = {"Authorization": f"Bearer {tokens['access_token']}"}
     r = client.patch("/api/v1/me", headers=auth, json={"pincode": "12"})

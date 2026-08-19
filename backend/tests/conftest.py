@@ -1,3 +1,6 @@
+import os
+import pathlib
+import subprocess
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -42,8 +45,34 @@ def engine() -> Iterator[Engine]:
     with eng.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
         conn.commit()
-    Base.metadata.drop_all(eng)
-    Base.metadata.create_all(eng)
+    # Build the schema with ALEMBIC, not create_all.
+    #
+    # create_all only knows what the SQLAlchemy models declare. The guarantees
+    # the dealer side depends on — partial unique indexes (one live warranty per
+    # serial, one credit per warranty, one current rate per product) and the
+    # append-only triggers on the ledger — exist only in the migrations. Under
+    # create_all a test asserting "the database rejects this" would pass because
+    # nothing rejected anything, which is the worst possible kind of green.
+    # Drop the whole schema rather than metadata.drop_all: the migrations also
+    # create triggers and a plpgsql function, which metadata knows nothing about
+    # and which make drop_all's ordering fail on the second run.
+    with eng.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
+    subprocess.run(
+        ["uv", "run", "alembic", "upgrade", "head"],
+        check=True,
+        cwd=str(pathlib.Path(__file__).resolve().parent.parent),
+        env={**os.environ, "DATABASE_URL": TEST_DB_URL.render_as_string(hide_password=False)},
+        capture_output=True,
+    )
+    # Migrations bring schema AND their seed data (0005 inserts a default
+    # banner). Tests assert against an empty database, so clear the rows while
+    # keeping the schema the migrations just built.
+    with eng.begin() as conn:
+        names = ",".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
     yield eng
     eng.dispose()
 

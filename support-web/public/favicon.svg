@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GoodBed">
+  <rect width="32" height="32" rx="8" fill="#184860" />
+  <path
+    d="M6 19.5v-6.2a1.6 1.6 0 0 1 1.6-1.6h16.8A1.6 1.6 0 0 1 26 13.3v6.2"
+    fill="none"
+    stroke="#0090D8"
+    stroke-width="2.4"
+    stroke-linecap="round"
+  />
+  <rect x="6" y="19" width="20" height="5" rx="1.8" fill="#EEF4F8" />
+</svg>

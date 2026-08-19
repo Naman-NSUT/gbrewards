@@ -42,9 +42,7 @@ def test_broker_banners_active_only_ordered(client: TestClient, db: Session) -> 
     assert r.json()[0]["image_url"] == "/static/banners/goodbed-poster.jpg"
 
 
-def test_admin_create_banner_from_upload_writes_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_admin_create_banner_from_upload_writes_audit(client: TestClient, db: Session) -> None:
     admin = make_admin(db)
     db.commit()
     r = client.post(
@@ -96,9 +94,7 @@ def test_admin_create_banner_rejects_non_image(client: TestClient, db: Session) 
     assert r.json()["error"]["code"] == "invalid_image"
 
 
-def test_admin_list_banners_includes_inactive_ordered(
-    client: TestClient, db: Session
-) -> None:
+def test_admin_list_banners_includes_inactive_ordered(client: TestClient, db: Session) -> None:
     admin = make_admin(db)
     make_banner(db, caption="B", sort_order=1, is_active=False)
     make_banner(db, caption="A", sort_order=0)
@@ -140,16 +136,12 @@ def test_admin_delete_banner_writes_audit(client: TestClient, db: Session) -> No
     admin = make_admin(db)
     banner = make_banner(db)
     db.commit()
-    r = client.delete(
-        f"/api/v1/admin/banners/{banner.id}", headers=admin_headers(admin)
-    )
+    r = client.delete(f"/api/v1/admin/banners/{banner.id}", headers=admin_headers(admin))
     assert r.status_code == 204
     assert _audit_count(db, "delete_banner") == 1
 
 
-def test_broker_token_rejected_on_admin_banners(
-    client: TestClient, db: Session
-) -> None:
+def test_broker_token_rejected_on_admin_banners(client: TestClient, db: Session) -> None:
     user = make_user(db)
     db.commit()
     r = client.get("/api/v1/admin/banners", headers=auth_headers(user))
@@ -157,9 +149,7 @@ def test_broker_token_rejected_on_admin_banners(
     assert r.json()["error"]["code"] == "invalid_token"
 
 
-def test_admin_token_rejected_on_broker_banners(
-    client: TestClient, db: Session
-) -> None:
+def test_admin_token_rejected_on_broker_banners(client: TestClient, db: Session) -> None:
     admin = make_admin(db)
     db.commit()
     r = client.get("/api/v1/catalog/banners", headers=admin_headers(admin))

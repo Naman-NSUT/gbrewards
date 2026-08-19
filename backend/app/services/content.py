@@ -15,20 +15,14 @@ def list_content(db: Session) -> list[ContentDoc]:
 
 
 def get_content(db: Session, key: str) -> ContentDoc:
-    doc = db.execute(
-        select(ContentDoc).where(ContentDoc.key == key)
-    ).scalar_one_or_none()
+    doc = db.execute(select(ContentDoc).where(ContentDoc.key == key)).scalar_one_or_none()
     if doc is None:
         raise AppError("content_not_found", 404, "Unknown content doc")
     return doc
 
 
-def upsert_content(
-    db: Session, *, admin: Admin, key: str, body: ContentDocUpsertIn
-) -> ContentDoc:
-    doc = db.execute(
-        select(ContentDoc).where(ContentDoc.key == key)
-    ).scalar_one_or_none()
+def upsert_content(db: Session, *, admin: Admin, key: str, body: ContentDocUpsertIn) -> ContentDoc:
+    doc = db.execute(select(ContentDoc).where(ContentDoc.key == key)).scalar_one_or_none()
     if doc is None:
         doc = ContentDoc(key=key, title=body.title, body=body.body)
         db.add(doc)

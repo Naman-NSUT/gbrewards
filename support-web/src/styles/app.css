@@ -1,0 +1,885 @@
+/* Layout, controls and result surfaces.
+ *
+ * Written as plain global CSS rather than a component library: the whole app is
+ * five screens and a handful of controls, and shipping a design system to do
+ * that would cost the customer a slower first paint for no benefit.
+ */
+
+/* ---------------------------------------------------------------- shell -- */
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 20;
+  background: var(--surface);
+  color: var(--navy-dark);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
+  font-weight: 600;
+  transition: top 120ms ease;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+.masthead {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.masthead__inner {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0.875rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.brand__mark {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
+.brand__name {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--navy-dark);
+  line-height: 1.15;
+}
+
+.brand__sub {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.colophon {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  border-top: 1px solid var(--border);
+}
+
+.colophon p {
+  margin-bottom: 0.5rem;
+}
+
+.colophon a {
+  color: var(--navy);
+}
+
+/* ------------------------------------------------------------- headings -- */
+
+.page-head {
+  margin-bottom: 1.25rem;
+}
+
+.page-head p {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--navy);
+  text-decoration: none;
+  min-height: 44px;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------- cards -- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+.card__title {
+  margin-bottom: 0.25rem;
+}
+
+.card__note {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stack--tight {
+  gap: 0.75rem;
+}
+
+/* ---------------------------------------------------------------- forms -- */
+
+.field {
+  display: block;
+}
+
+.field__label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--navy-dark);
+  margin-bottom: 0.3125rem;
+}
+
+/* Sits between the label and the control, as a sibling of both — see Field.tsx. */
+.field__hint {
+  display: block;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.field__control,
+.input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.75rem 0.875rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-size: 1.0625rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+textarea.field__control {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+select.field__control {
+  /* Chevron drawn inline so the control needs no icon font or image request. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%235C7A88' stroke-width='1.75' stroke-linecap='round'%3E%3Cpath d='M1.5 1.75 6 6.25l4.5-4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 12px 8px;
+  padding-right: 2.5rem;
+}
+
+.field__control::placeholder {
+  color: var(--faint);
+}
+
+.field__control:hover {
+  border-color: rgba(24, 72, 96, 0.38);
+}
+
+.field__control:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+.field__control:disabled {
+  background: #f5f8fa;
+  color: var(--muted);
+}
+
+.field--invalid .field__control {
+  border-color: var(--danger);
+}
+
+.field--invalid .field__control:focus {
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.field__error {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--danger-ink);
+}
+
+.field--big .field__control {
+  min-height: 60px;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.field__control--mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------- button -- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.75rem 1.25rem;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Navy, not cyan: white-on-cyan fails contrast for text at this size. */
+.btn--primary {
+  background: var(--navy);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--navy-dark);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--navy-dark);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  border-color: var(--navy);
+}
+
+/* The dispute button. Quiet on purpose — see ConfirmPage. */
+.btn--quiet {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--muted);
+  font-weight: 550;
+  font-size: 1rem;
+}
+
+.btn--quiet:hover:not(:disabled) {
+  color: var(--navy-dark);
+  border-color: var(--navy);
+}
+
+.btn--auto {
+  width: auto;
+}
+
+.spinner {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------- alerts -- */
+
+.alert {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.alert__body {
+  min-width: 0;
+}
+
+.alert strong {
+  display: block;
+  font-weight: 650;
+  margin-bottom: 0.125rem;
+}
+
+.alert--error {
+  background: var(--danger-soft);
+  border-color: rgba(209, 77, 107, 0.28);
+  color: var(--danger-ink);
+}
+
+.alert--warning {
+  background: var(--warning-soft);
+  border-color: rgba(192, 138, 46, 0.3);
+  color: var(--warning-ink);
+}
+
+.alert--success {
+  background: var(--success-soft);
+  border-color: rgba(30, 158, 106, 0.28);
+  color: var(--success-ink);
+}
+
+.alert--info {
+  background: var(--cyan-soft);
+  border-color: rgba(0, 144, 216, 0.28);
+  color: var(--navy-dark);
+}
+
+.alert__icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+/* ------------------------------------------------------------ status ui -- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  padding: 0.3125rem 0.75rem 0.3125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.pill__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.pill--success {
+  background: var(--success-soft);
+  color: var(--success-ink);
+}
+
+.pill--warning {
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+}
+
+.pill--danger {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+
+.pill--neutral {
+  background: rgba(24, 72, 96, 0.08);
+  color: var(--navy);
+}
+
+/* --------------------------------------------------------- warranty card -- */
+
+.warranty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.warranty__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.warranty__model {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--navy-dark);
+  letter-spacing: -0.01em;
+}
+
+.warranty__headline {
+  margin-top: 0.25rem;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.warranty__body {
+  padding: 0.375rem 1.25rem 1.125rem;
+}
+
+/* Stacked by default: a right-aligned value column wraps raggedly on a 360px
+ * phone — "14 Feb 2026 – 14 Feb" then a lonely "2031" — and a 36-character
+ * serial breaks across three lines. Label above value always reads cleanly.
+ * Two columns come back once there is room for them. */
+.facts {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.facts dt {
+  padding-top: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+.facts dt:first-of-type {
+  border-top: 0;
+  padding-top: 0.25rem;
+}
+
+.facts dd {
+  padding-bottom: 0.625rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 420px) {
+  .facts {
+    grid-template-columns: minmax(6.5rem, max-content) 1fr;
+    /* Spacing comes from padding, not column-gap: a gap would cut a visible
+     * notch in the divider rule that runs across both columns. */
+    column-gap: 0;
+  }
+
+  .facts dt {
+    padding-bottom: 0.625rem;
+    padding-right: 1.25rem;
+  }
+
+  .facts dd {
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .facts dd:first-of-type {
+    border-top: 0;
+    padding-top: 0.25rem;
+  }
+
+  .facts dt:first-of-type {
+    padding-bottom: 0.625rem;
+  }
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+}
+
+.warranty__foot {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.warranty__seller {
+  padding: 0.875rem 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+
+.warranty__seller-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.warranty__seller-name {
+  margin-top: 0.125rem;
+  font-weight: 650;
+  color: var(--navy-dark);
+}
+
+.warranty__seller-city {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+/* ------------------------------------------------------------- skeleton -- */
+
+/* Sized to the real card so results do not shove the page around when they
+ * arrive. The customer's thumb should still be over the same pixel. */
+.skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.125rem 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.skeleton-line {
+  height: 0.875rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e6eef3 25%, #f2f7fa 50%, #e6eef3 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line + .skeleton-line {
+  margin-top: 0.75rem;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----------------------------------------------------------- callout CTA -- */
+
+/* The single most important thing on the site: an unregistered warranty is the
+ * exact failure this whole system exists to fix, so when a lookup finds nothing
+ * the route to self-registration outranks everything else on the screen. */
+.cta {
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 100%);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 1.375rem 1.25rem;
+  box-shadow: var(--shadow-raised);
+}
+
+.cta h2 {
+  color: #fff;
+  font-size: 1.1875rem;
+}
+
+.cta p {
+  margin-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.9375rem;
+}
+
+.cta .btn {
+  margin-top: 1rem;
+  background: #fff;
+  color: var(--navy-dark);
+}
+
+.cta .btn:hover:not(:disabled) {
+  background: #eaf6fd;
+}
+
+.cta :focus-visible {
+  outline-color: #fff;
+}
+
+/* ---------------------------------------------------------------- upload -- */
+
+.upload {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: #fafcfd;
+}
+
+.upload__input {
+  /* Visually hidden but still focusable and still the accessible control —
+   * the visible label is a <label>, so no aria wiring is invented. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.upload__input:focus-visible + .upload__button {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.upload__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--navy-dark);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upload__button:hover {
+  border-color: var(--navy);
+}
+
+.preview {
+  display: flex;
+  gap: 0.875rem;
+  align-items: center;
+}
+
+.preview__thumb {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.preview__doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.preview__meta {
+  min-width: 0;
+}
+
+.preview__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  font-size: 0.9375rem;
+}
+
+.preview__size {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.preview__remove {
+  margin-left: auto;
+  flex: none;
+  background: none;
+  border: 0;
+  color: var(--danger-ink);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.preview__remove:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------- reference -- */
+
+.reference {
+  text-align: center;
+  padding: 1.25rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border-strong);
+}
+
+.reference__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.reference__value {
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--navy-dark);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- choices -- */
+
+.choice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.875rem 1rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--surface);
+}
+
+.choice:hover {
+  border-color: var(--navy);
+}
+
+.choice--selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+.choice input {
+  margin-top: 0.3125rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--cyan);
+  flex: none;
+}
+
+.choice__title {
+  font-weight: 600;
+}
+
+.choice__note {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 1.25rem 0;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-sm {
+  font-size: 0.9375rem;
+}
+
+.results-heading {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.link-row .btn {
+  width: auto;
+  flex: 1 1 12rem;
+}
+
+@media (min-width: 480px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  .main {
+    padding-top: 2rem;
+  }
+}

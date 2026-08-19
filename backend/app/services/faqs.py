@@ -13,9 +13,7 @@ from app.services.audit import record_audit
 
 
 def list_faqs(db: Session) -> list[Faq]:
-    return list(
-        db.execute(select(Faq).order_by(Faq.sort_order, Faq.created_at)).scalars()
-    )
+    return list(db.execute(select(Faq).order_by(Faq.sort_order, Faq.created_at)).scalars())
 
 
 def _get_or_404(db: Session, faq_id: uuid.UUID) -> Faq:

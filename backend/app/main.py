@@ -30,6 +30,8 @@ def _init_sentry() -> None:
 def create_app() -> FastAPI:
     configure_logging()
     settings.assert_production_ready()
+    for _warning in settings.startup_warnings:
+        logger.warning("startup_warning %s", _warning)
     _init_sentry()
     ensure_bootstrap_admin()
 

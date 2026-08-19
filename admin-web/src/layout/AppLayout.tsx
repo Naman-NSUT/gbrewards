@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { CommandPalette } from '../components/CommandPalette';
+import { PanelSwitch } from '../components/PanelSwitch';
 import { Logo } from '../components/Logo';
 import { useAuth } from '../auth/AuthContext';
 import { useHotkey } from '../lib/useHotkey';
@@ -131,6 +132,7 @@ export function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <PanelSwitch />
             <button
               type="button"
               onClick={() => setCmdOpen(true)}

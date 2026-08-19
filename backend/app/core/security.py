@@ -28,7 +28,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def create_access_token(sub: str, aud: str = "broker") -> str:
+def create_access_token(sub: str, aud: str = "broker", extra: dict[str, Any] | None = None) -> str:
     now = _now()
     payload = {
         "sub": sub,
@@ -38,6 +38,11 @@ def create_access_token(sub: str, aud: str = "broker") -> str:
         "exp": now + timedelta(minutes=settings.jwt_access_ttl_minutes),
         "jti": str(uuid.uuid4()),
     }
+    # Dealer tokens carry dealer_id so the app can render the shop name without
+    # a second round trip. Never trusted for authorisation — every request
+    # re-reads the staff row and its dealership.
+    if extra:
+        payload.update(extra)
     return jwt.encode(payload, settings.jwt_secret, algorithm=_ALGORITHM)
 
 
@@ -70,3 +75,13 @@ def decode_token(token: str, *, expected_aud: str, expected_type: str) -> dict[s
     if payload.get("type") != expected_type:
         raise AppError("invalid_token", 401, "Wrong token type")
     return payload
+
+
+# Dealer-side call sites use these names; the worker side calls the same
+# functions hash_secret/verify_secret. Aliases rather than a rename so no
+# existing worker code has to change.
+hash_password = hash_secret
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    return verify_secret(password_hash, password)
