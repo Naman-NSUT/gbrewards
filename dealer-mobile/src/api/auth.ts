@@ -5,6 +5,8 @@ export interface OtpRequestOut {
   resend_in: number;
   /** True when the code will finish creating a new shop rather than sign in. */
   is_new_account?: boolean;
+  /** False when this number has no account — offer signup instead of waiting. */
+  account_exists?: boolean;
 }
 
 export interface SignupInput {
@@ -33,9 +35,8 @@ export async function signup(input: SignupInput): Promise<OtpRequestOut> {
 /**
  * Ask for a login code.
  *
- * Always succeeds for a well-formed number, whether or not it belongs to a
- * dealer — the backend refuses to leak which numbers have accounts. A number
- * with no account is told so at verify time, and offered signup.
+ * Returns account_exists: false when the number has no account, so the caller
+ * can send them to signup rather than waiting for a code that was never sent.
  */
 export async function requestOtp(phone: string): Promise<OtpRequestOut> {
   const resp = await api.post<OtpRequestOut>('/dealer/auth/otp/request', { phone });

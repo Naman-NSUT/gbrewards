@@ -24,10 +24,12 @@ import { isValidPhone, normalisePhone } from '../utils/phone';
  * else can be filled in later from the admin side. A dealer stands at a counter
  * with a customer waiting; a long form here is a shop that never signs up.
  */
-export function SignupScreen({ navigation }: AuthStackScreenProps<'Signup'>) {
+export function SignupScreen({ navigation, route }: AuthStackScreenProps<'Signup'>) {
   const [name, setName] = useState('');
   const [shopName, setShopName] = useState('');
-  const [phone, setPhone] = useState('');
+  // Prefilled when we arrived here from a sign-in attempt on a number that
+  // has no account — retyping it would be a small insult.
+  const [phone, setPhone] = useState(route.params?.phone ?? '');
   const [city, setCity] = useState('');
   const [gst, setGst] = useState('');
   const [busy, setBusy] = useState(false);

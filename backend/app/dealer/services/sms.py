@@ -12,13 +12,23 @@ Two things are deliberately different from GB Rewards here.
    and the provider's answer is written back onto it. That row is the admin SMS
    log screen.
 
-INDIA DLT — ON THE CRITICAL PATH. Every template must be registered and approved
-on the operator's DLT portal before it can be delivered, and approval takes days.
-GB Rewards has exactly ONE approved template, an OTP one ("OTP1" on 2Factor), and
-it cannot carry warranty variables. So the templates below need their own DLT
-registration and that should be started before any of this code matters. Until
-they are approved, run SMS_PROVIDER=fake: everything is logged and visible in the
-admin screen, nothing is delivered, and no other work is blocked.
+INDIA DLT. Every template must be approved on the operator's portal before it can
+be delivered, and approval takes days. Where that leaves each message:
+
+  login_otp            DELIVERABLE TODAY. The worker programme's 2Factor account
+                       already has an approved OTP template, and a dealer login
+                       code is the same shape — one value in one template. Set
+                       SMS_PROVIDER=twofactor and it works with no new approval.
+
+  warranty_registered  NEEDS ITS OWN TEMPLATE. Five variables (name, model, end
+                       date, serial, link) cannot go through 2Factor's
+                       single-value endpoint. Approve a multi-variable template
+                       and switch to SMS_PROVIDER=msg91.
+  warranty_voided
+  claim_received
+
+SMS_PROVIDER=fake records everything and delivers nothing — the right setting
+before any template is live, and it blocks no other work.
 """
 
 import uuid
@@ -107,6 +117,56 @@ class FakeSmsProvider(SmsProvider):
         return f"fake-{uuid.uuid4()}"
 
 
+class TwoFactorProvider(SmsProvider):
+    """Sends the login code through the worker programme's existing 2Factor setup.
+
+    The credentials and the DLT-approved template are already live for the worker
+    OTP, and a dealer login code is the SAME SHAPE — one value dropped into one
+    approved template — so it works today with no new approval.
+
+    What it CANNOT send is the warranty confirmation. 2Factor's template endpoint
+    takes a single value in the URL path; a warranty message needs a name, a
+    model, a date, a serial and a link. Those are recorded and left undelivered
+    until a multi-variable template is approved (see MSG91 below). Failing loudly
+    on that is deliberate: a warranty SMS that silently vanishes is worse than
+    one that shows as failed on the admin screen.
+    """
+
+    name = "twofactor"
+    BASE_URL = "https://2factor.in/API/V1"
+
+    def send(self, phone: str, template: Template, variables: dict[str, Any]) -> str | None:
+        if template.key != "login_otp":
+            raise RuntimeError(
+                f"2Factor can only deliver the OTP template; '{template.key}' needs a "
+                "multi-variable DLT template (set SMS_PROVIDER=msg91 once approved)"
+            )
+        code = str(variables.get("otp", ""))
+        if not code:
+            raise RuntimeError("no otp in message variables")
+
+        # E.164 (+91XXXXXXXXXX) -> 2Factor wants the number without the '+'.
+        number = phone.lstrip("+")
+        url = (
+            f"{self.BASE_URL}/{settings.twofactor_api_key}"
+            # Same key and same approved template the worker OTP already uses:
+            # TWOFACTOR_API_KEY / TWOFACTOR_TEMPLATE_NAME are set in production
+            # today, so this needs no new configuration.
+            f"/SMS/{number}/{code}/{settings.twofactor_template_name}"
+        )
+        resp = httpx.get(url, timeout=settings.sms_timeout_seconds)
+        if resp.is_error:
+            raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+        try:
+            data = resp.json()
+        except ValueError:
+            raise RuntimeError(resp.text[:200]) from None
+        if str(data.get("Status", "")).lower() != "success":
+            # 2Factor puts the human-readable reason in Details.
+            raise RuntimeError(str(data.get("Details", "provider rejected the message"))[:200])
+        return str(data.get("Details") or "") or None
+
+
 class Msg91Provider(SmsProvider):
     """MSG91 flow API — chosen over 2Factor for transactional templates.
 
@@ -156,7 +216,12 @@ _provider: SmsProvider | None = None
 def get_provider() -> SmsProvider:
     global _provider
     if _provider is None:
-        _provider = Msg91Provider() if settings.sms_provider == "msg91" else FakeSmsProvider()
+        if settings.sms_provider == "msg91":
+            _provider = Msg91Provider()
+        elif settings.sms_provider == "twofactor":
+            _provider = TwoFactorProvider()
+        else:
+            _provider = FakeSmsProvider()
     return _provider
 
 
