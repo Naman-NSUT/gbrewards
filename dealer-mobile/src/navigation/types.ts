@@ -6,7 +6,7 @@ import type { RegisterBody, UnitPreviewOut } from '../api/types';
 
 export type AuthStackParamList = {
   Phone: undefined;
-  Signup: undefined;
+  Signup: { phone?: string } | undefined;
   Otp: { phone: string; resendIn?: number; isNewAccount?: boolean };
 };
 

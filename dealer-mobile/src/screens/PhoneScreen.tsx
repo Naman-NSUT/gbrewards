@@ -27,7 +27,16 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
     }
     requestOtpMutation.mutate(normalised, {
       onSuccess: (res) =>
-        navigation.navigate('Otp', { phone: normalised, resendIn: res.resend_in }),
+        {
+          // No account for this number: sending them to the OTP screen would be
+          // a dead end, because no code was generated. Take them where they can
+          // actually get in, with the number they already typed.
+          if (res.account_exists === false) {
+            navigation.navigate('Signup', { phone: normalised });
+            return;
+          }
+          navigation.navigate('Otp', { phone: normalised, resendIn: res.resend_in });
+        },
       onError: (e) => setError(errorMessage(e, 'Could not send the code. Try again.')),
     });
   };

@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # Transactional SMS for warranty confirmations. Separate from the OTP
     # provider above: the OTP template carries one value in a URL path and
     # cannot express a warranty message, and each needs its own DLT approval.
-    sms_provider: Literal["fake", "msg91"] = "fake"
+    sms_provider: Literal["fake", "twofactor", "msg91"] = "fake"
     sms_sender_id: str = ""
     msg91_auth_key: str = ""
     msg91_warranty_template_id: str = ""
@@ -116,8 +116,12 @@ class Settings(BaseSettings):
         if self.env == "prod":
             if self.sms_provider == "fake":
                 self.startup_warnings.append(
-                    "SMS_PROVIDER=fake in production — warranty confirmations are "
-                    "recorded but NOT delivered to customers"
+                    "SMS_PROVIDER=fake in production — no dealer SMS is delivered"
+                )
+            elif self.sms_provider == "twofactor":
+                self.startup_warnings.append(
+                    "SMS_PROVIDER=twofactor delivers login codes only — warranty "
+                    "confirmations need a multi-variable DLT template (use msg91)"
                 )
             elif self.sms_provider == "msg91" and not self.msg91_warranty_template_id:
                 self.startup_warnings.append(

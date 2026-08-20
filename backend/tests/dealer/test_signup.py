@@ -182,3 +182,76 @@ def test_auto_approve_skips_the_pending_state(client, db, monkeypatch):
     _signup(client)
     client.post(f"{AUTH}/otp/verify", json={"phone": "9812300001", "code": _latest_otp(db)})
     assert db.query(Dealer).one().status == "active"
+
+
+def test_signing_in_with_an_unknown_number_says_so(client, db):
+    """The bug this fixes: a dealer tapped sign in, got a cheerful 'code sent',
+    and waited forever for a code that was never generated.
+
+    Disclosing that no account exists is safe now — anyone can learn the same
+    thing by attempting a signup and reading `already_registered` — and the
+    silence was a dead end.
+    """
+    from app.dealer.models.sms_message import SmsMessage
+
+    resp = client.post(f"{AUTH}/otp/request", json={"phone": "9812309999"})
+    assert resp.status_code == 200
+    assert resp.json()["account_exists"] is False
+    assert db.query(SmsMessage).count() == 0, "no code should be generated"
+
+
+def test_signing_in_with_a_known_number_sends_a_code(client, db):
+    from app.dealer.models.sms_message import SmsMessage
+
+    _signup(client)
+    client.post(f"{AUTH}/otp/verify", json={"phone": "9812300001", "code": _latest_otp(db)})
+    before = db.query(SmsMessage).count()
+
+    # The signup moments ago left a resend cooldown; clear it rather than
+    # sleeping through a real 30 seconds.
+    client.fake_redis.delete("otp:cooldown:+919812300001")
+
+    resp = client.post(f"{AUTH}/otp/request", json={"phone": "9812300001"})
+    assert resp.status_code == 200
+    assert resp.json()["account_exists"] is True
+    assert db.query(SmsMessage).count() == before + 1
+
+
+def test_twofactor_sends_the_login_code_but_refuses_a_warranty_message(monkeypatch):
+    """The login code and the worker OTP are the same shape, so the existing
+    approved template carries it. A warranty message is not, and must fail
+    loudly rather than vanish."""
+    import httpx
+
+    from app.core.config import settings
+    from app.dealer.services import sms as sms_svc
+
+    monkeypatch.setattr(settings, "twofactor_api_key", "test-key")
+    monkeypatch.setattr(settings, "twofactor_template_name", "OTP1")
+    sent: dict[str, str] = {}
+
+    class _Resp:
+        is_error = False
+        text = '{"Status":"Success","Details":"abc-123"}'
+
+        @staticmethod
+        def json() -> dict[str, str]:
+            return {"Status": "Success", "Details": "abc-123"}
+
+    def _get(url: str, **_: object) -> _Resp:
+        sent["url"] = url
+        return _Resp()
+
+    monkeypatch.setattr(httpx, "get", _get)
+    provider = sms_svc.TwoFactorProvider()
+
+    ref = provider.send("+919812300001", sms_svc.TEMPLATES["login_otp"], {"otp": "123456"})
+    assert ref == "abc-123"
+    assert "/SMS/919812300001/123456/OTP1" in sent["url"], "no '+' and the approved template"
+
+    with pytest.raises(RuntimeError, match="multi-variable"):
+        provider.send(
+            "+919812300001",
+            sms_svc.TEMPLATES["warranty_registered"],
+            {"name": "Asha", "model": "M", "end_date": "01-01-2031", "serial": "s", "link": "l"},
+        )

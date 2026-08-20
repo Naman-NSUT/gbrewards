@@ -32,6 +32,10 @@ class OtpRequestOut(Base):
     # Tells the app which screen comes after the code: a returning staff member
     # goes to the dealer app, a new shop finishes creating its account.
     is_new_account: bool = False
+    # False when no account exists for this number, so the app can offer signup
+    # instead of waiting for a code that was never sent. See the note on
+    # otp_request for why this is safe to disclose.
+    account_exists: bool = True
 
 
 class SignupIn(PhoneMixin, Base):
@@ -90,10 +94,20 @@ def otp_request(
     db: Session = Depends(get_db),
     redis: redis_lib.Redis = Depends(get_redis),
 ) -> OtpRequestOut:
-    """Send a login code to a KNOWN dealer staff number.
+    """Send a login code, or say plainly that there is no account.
 
-    Nothing about the account is created or modified here — see services/otp.py
-    for why that matters.
+    This used to answer identically whether or not the number belonged to a
+    dealer, so the endpoint could not be used to discover which numbers are
+    dealers. That protection is now worthless: shops sign themselves up, so
+    anyone can learn the same fact by attempting a signup and reading
+    `already_registered`.
+
+    What it still cost was real — a dealer tapping "sign in" with a number that
+    has no account got a cheerful "code sent" and then waited forever for a code
+    that was never generated. That is exactly how this endpoint was first
+    reported as broken.
+
+    Nothing about the account is created or modified here — see services/otp.py.
     """
     ratelimit.enforce(redis, f"otp:ip:{client_ip(request)}", limit=20, window_s=3600)
 
@@ -101,11 +115,10 @@ def otp_request(
         select(DealerStaff).where(DealerStaff.phone == body.phone)
     ).scalar_one_or_none()
 
-    # Same response either way: this endpoint must not reveal which numbers
-    # belong to dealers.
-    if staff is not None and staff.is_active:
-        otp.issue(db, redis, body.phone)
+    if staff is None or not staff.is_active:
+        return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds, account_exists=False)
 
+    otp.issue(db, redis, body.phone)
     return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
 
 
