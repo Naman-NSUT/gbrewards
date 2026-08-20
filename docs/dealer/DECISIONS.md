@@ -329,3 +329,54 @@ be added the first time someone actually needs it rather than speculatively.
 
 None of these blocks the others, and none of them blocks a dealer registering a
 sale correctly. That was the point of sequencing them this way.
+
+
+## 9. Open scanning: any registered dealer may register any label
+
+**Decision.** Allocation does not gate registration. A dealer who is registered
+on the app can scan any manufactured label and claim the points for it. Stock is
+not scoped to shops.
+
+**What this does not break.** Payout stays bounded. `uq_warranties_live_serial`
+still allows exactly one live warranty per serial, so a label pays once no
+matter who scans it, and total spend is capped by labels printed. Voided labels
+remain unregistrable, and the per-staff and per-dealer velocity limits still
+apply.
+
+**What it costs, stated plainly.** Attribution. Registration becomes a race:
+whoever scans a label first is paid, and the shop that actually sold it is then
+refused with `already_registered`. A label photographed in a warehouse, in
+transit, or in a competitor's showroom registers exactly as well as one sold
+over a counter. This is not a hypothetical — it is the expected steady state
+wherever labels are visible before the point of sale, and it is pinned by
+`test_first_scanner_wins_and_the_second_is_refused`.
+
+The defences that remain are detective, not preventive:
+
+- the audit trail and per-warranty event history
+- the customer's confirmation reply, which is the only evidence that a real buyer
+  at that number actually received the mattress
+- velocity limits, which are now the main thing standing between a compromised
+  login and a large payout — worth tuning down from the current 60/hour/staff if
+  abuse appears
+- customer self-registrations, which still name a shop (see below)
+
+**Compliance changed shape.** "Units allocated versus warranties registered" has
+no denominator without allocations, so `registration_rate` is null unless the
+brand happens to have uploaded allocations anyway. The ranking still works
+because `non_compliance_score` is driven by customer self-registrations, which
+need no allocation: a customer registering their own warranty is direct evidence
+that a shop did not.
+
+Self-registrations are attributed by asking the CUSTOMER which shop sold them the
+mattress (`dealer_hint`), falling back to an allocation if one exists. That is
+arguably better evidence than an allocation ever was — the buyer naming the shop
+is a statement, where an allocation was a guess about where stock ended up. An
+ambiguous name match attributes to nobody rather than blaming a shop by
+inference.
+
+**To reverse.** The gate was a single block in
+`app/dealer/services/registration.py`; restoring it means re-adding the
+allocation lookup and the two `not_allocated` / `not_your_unit` errors, and
+turning the preview's reasons back on. The allocations table, its CSV upload and
+its admin screens were all kept, so the data path still exists.

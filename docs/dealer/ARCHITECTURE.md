@@ -23,6 +23,16 @@ Two programmes, one backend, one database, one QR on the mattress.
 | `dealer-mobile/` | dealer app | `dealer_staff` |
 | `support-web/` | public customer site | nobody |
 
+## Allocation does not gate registration
+
+Any dealer registered on the app may scan any manufactured label. Allocations are
+optional planning data now — uploading them still populates the compliance
+denominator, but nothing refuses a registration for their absence.
+
+The consequence to hold in mind when reading `services/registration.py`: the only
+things that can refuse a scan are "no such label", "label voided" and "already
+registered". See DECISIONS.md §9 for what that costs.
+
 ## Nothing is shared
 
 The two programmes share the repository, the FastAPI process and the Postgres

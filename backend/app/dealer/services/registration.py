@@ -170,28 +170,31 @@ def register(
             {"registered_on": existing.warranty_start_date.isoformat()},
         )
 
-    # --- May this dealer sell this unit? ------------------------------------
-    # The cheap check that removes a whole class of abuse: without it, any dealer
-    # could register any serial they can photograph, including a competitor's
-    # stock or a label glimpsed in a warehouse.
+    # --- Open scanning -------------------------------------------------------
+    # Any registered dealer may register any manufactured label. There is no
+    # allocation gate; stock is not scoped to shops.
+    #
+    # What still bounds this, and what does not:
+    #   * BOUNDED: one warranty per serial (uq_warranties_live_serial), so each
+    #     label pays exactly once no matter who scans it. Total payout is capped
+    #     by labels printed, not by dealer behaviour.
+    #   * BOUNDED: void labels are unregistrable, so a scrapped print run cannot
+    #     be turned into registrations.
+    #   * BOUNDED: per-staff and per-dealer velocity limits in the router.
+    #   * NOT BOUNDED: attribution. Whoever scans first is paid. A label
+    #     photographed in a warehouse or another shop registers just as well as
+    #     one actually sold, and the shop that really sold it is then refused
+    #     with `already_registered`.
+    #
+    # The remaining defences are therefore detective rather than preventive: the
+    # audit trail, the customer confirmation reply, and the velocity limits.
+    # See docs/dealer/DECISIONS.md.
     allocation = session.execute(
         select(Allocation).where(
             Allocation.serial == serial,
-            Allocation.status.in_(("allocated", "registered")),
+            Allocation.status == "allocated",
         )
     ).scalar_one_or_none()
-    if allocation is None:
-        raise AppError(
-            "not_allocated",
-            403,
-            "This unit is not allocated to any dealer. Ask the brand to allocate it first.",
-        )
-    if allocation.dealer_id != dealer_id:
-        raise AppError(
-            "not_your_unit",
-            403,
-            "This unit is allocated to a different dealer",
-        )
 
     facts = _resolve_unit_facts(session, serial)
     warranty_months = facts.warranty_months or settings.default_warranty_months
@@ -252,7 +255,11 @@ def register(
             "already_registered", 409, "This unit was just registered by someone else"
         ) from exc
 
-    allocation.status = "registered"
+    # Allocations are optional planning data now, not permission. If the brand
+    # happens to have recorded one for this serial, keep it consistent; its
+    # absence means nothing.
+    if allocation is not None:
+        allocation.status = "registered"
 
     points = 0
     # Per product: a premium mattress is worth more to register than an entry

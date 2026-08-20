@@ -96,16 +96,54 @@ def selling_dealer(session: Session, warranty: Warranty) -> Dealer | None:
     return session.get(Dealer, warranty.dealer_id) if warranty.dealer_id else None
 
 
-def allocated_dealer(session: Session, serial: str) -> Dealer | None:
+def attribute_dealer(
+    session: Session, serial: str, dealer_hint: str | None = None
+) -> Dealer | None:
+    """Which shop should answer for this unregistered sale.
+
+    Two sources, in order of strength:
+
+    1. An allocation, if the brand happens to have recorded one. Allocations no
+       longer gate registration, so most serials will not have one.
+    2. What the CUSTOMER said. With open scanning this is usually the only
+       attribution available — and it is arguably better evidence anyway: the
+       buyer naming the shop they bought from is a direct statement, where an
+       allocation was only ever a guess about where stock ended up.
+
+    Returns None when neither is available, which is honest: the approval queue
+    then shows an unattributed self-registration rather than blaming a shop
+    picked by inference.
+    """
     allocation = session.execute(
         select(Allocation).where(
             Allocation.serial == serial,
             Allocation.status.in_(("allocated", "registered")),
         )
     ).scalar_one_or_none()
-    if allocation is None:
+    if allocation is not None:
+        return session.get(Dealer, allocation.dealer_id)
+
+    hint = (dealer_hint or "").strip()
+    if not hint:
         return None
-    return session.get(Dealer, allocation.dealer_id)
+    # exact dealer code first, then a name match — customers type shop names,
+    # not codes, but a code is unambiguous when they do have one
+    by_code = session.execute(
+        select(Dealer).where(func.lower(Dealer.code) == hint.lower())
+    ).scalar_one_or_none()
+    if by_code is not None:
+        return by_code
+    matches = list(
+        session.execute(select(Dealer).where(Dealer.name.ilike(f"%{hint}%")).limit(2)).scalars()
+    )
+    # Only attribute on an UNAMBIGUOUS match. Two "Sharma Beds" in one city must
+    # not have one of them blamed by coin flip.
+    return matches[0] if len(matches) == 1 else None
+
+
+# Kept for callers that only have a serial.
+def allocated_dealer(session: Session, serial: str) -> Dealer | None:
+    return attribute_dealer(session, serial)
 
 
 def submit(
@@ -145,7 +183,7 @@ def submit(
     months = _unit_warranty_months(session, unit)
     warranty_months = (months if unit else None) or settings.default_warranty_months
 
-    dealer = allocated_dealer(session, serial)
+    dealer = attribute_dealer(session, serial, dealer_hint)
 
     # The stated purchase date is recorded as asked, however old. `needs_approval`
     # is ignored: this record is going to an admin regardless, and normalising the
