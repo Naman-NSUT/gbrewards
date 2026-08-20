@@ -2,18 +2,16 @@
 
 Everything here happens in ONE database transaction, or none of it does:
 
-    resolve serial → check allocation → upsert customer → create warranty
-    → credit points → write the warranty event → queue the SMS
+    resolve serial → upsert customer → create warranty → credit points
+    → write the warranty event → queue the SMS
 
-The ordering matters. The allocation check comes before anything is written, so
-a cross-dealer attempt costs one SELECT. The points credit is in the same
-transaction as the warranty, so a crash between them is impossible rather than
-merely unlikely. The SMS is queued as a row inside the transaction but SENT
-outside it, because a slow provider must not hold a database transaction open
-while a dealer waits, and an SMS failure must not roll back a completed sale.
+The points credit is in the same transaction as the warranty, so a crash between
+them is impossible rather than merely unlikely. The SMS is queued as a row inside
+the transaction but SENT outside it, because a slow provider must not hold a
+database transaction open while a dealer waits, and an SMS failure must not roll
+back a completed sale.
 
 Abuse resistance is not a later hardening pass; it is the shape of this function:
-  * a dealer can only register serials allocated to them        (allocation gate)
   * a serial can carry only one live warranty                   (DB partial index)
   * a warranty can be paid for only once                        (DB partial index)
   * a retry returns the original result                         (idempotency)
@@ -32,7 +30,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.logging import get_logger
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import DealerStaff
 from app.dealer.models.unit import DealerUnit as ProductUnit
@@ -56,8 +53,8 @@ class RegistrationResult:
     # True when this call replayed an existing registration rather than creating
     # one. The app shows "already registered" instead of a second success screen.
     idempotent: bool
-    # Set when the unit could not be verified upstream and the sale proceeded on
-    # the allocation alone.
+    # Reserved: set when a registration was accepted without the unit being
+    # fully verified. Always False today.
     unit_unverified: bool
 
 
@@ -181,6 +178,8 @@ def register(
     #   * BOUNDED: void labels are unregistrable, so a scrapped print run cannot
     #     be turned into registrations.
     #   * BOUNDED: per-staff and per-dealer velocity limits in the router.
+    #     These are now the main thing between a compromised login and a large
+    #     payout, so they are worth tuning down if abuse appears.
     #   * NOT BOUNDED: attribution. Whoever scans first is paid. A label
     #     photographed in a warehouse or another shop registers just as well as
     #     one actually sold, and the shop that really sold it is then refused
@@ -189,12 +188,6 @@ def register(
     # The remaining defences are therefore detective rather than preventive: the
     # audit trail, the customer confirmation reply, and the velocity limits.
     # See docs/dealer/DECISIONS.md.
-    allocation = session.execute(
-        select(Allocation).where(
-            Allocation.serial == serial,
-            Allocation.status == "allocated",
-        )
-    ).scalar_one_or_none()
 
     facts = _resolve_unit_facts(session, serial)
     warranty_months = facts.warranty_months or settings.default_warranty_months
@@ -254,12 +247,6 @@ def register(
         raise AppError(
             "already_registered", 409, "This unit was just registered by someone else"
         ) from exc
-
-    # Allocations are optional planning data now, not permission. If the brand
-    # happens to have recorded one for this serial, keep it consistent; its
-    # absence means nothing.
-    if allocation is not None:
-        allocation.status = "registered"
 
     points = 0
     # Per product: a premium mattress is worth more to register than an entry

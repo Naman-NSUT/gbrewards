@@ -13,7 +13,6 @@ from app.core.config import settings
 from app.dealer.services import registration
 from app.dealer.services.warranty_dates import add_months, business_today, decide_clock
 from tests.dealer.factories import (
-    allocate,
     make_dealer,
     make_rate,
     make_staff,
@@ -206,7 +205,6 @@ def test_a_leap_day_sale_stores_a_clamped_five_year_end_date(db):
     make_rate(db, 50)
     serial = new_serial()
     make_unit(db, serial, months=60)
-    allocate(db, serial, dealer)
 
     leap_day = datetime(2024, 2, 29, 6, 0, tzinfo=UTC)  # 11:30 IST
     result = registration.register(
@@ -231,7 +229,6 @@ def test_a_backdated_registration_stores_the_end_date_from_the_backdated_start(d
     make_rate(db, 50)
     serial = new_serial()
     make_unit(db, serial, months=60)
-    allocate(db, serial, dealer)
 
     now = datetime(2025, 3, 5, 6, 0, tzinfo=UTC)  # 11:30 IST on 5 March 2025
     result = registration.register(

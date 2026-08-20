@@ -12,7 +12,6 @@ from app.dealer.models.audit_log import DealerAuditLog as AuditLog
 from app.dealer.models.warranty import Warranty
 from app.main import create_app
 from tests.dealer.factories import (
-    allocate,
     make_dealer,
     make_priced_unit,
     make_staff,
@@ -48,7 +47,6 @@ def _setup(db, code="D001", phone="+919000000001"):
     staff = make_staff(db, dealer, phone=phone)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     db.commit()
     return dealer, staff, serial
 

@@ -170,7 +170,6 @@ export interface WarrantyDetail {
   customer: Customer;
   dealer: DealerBrief | null;
   staff: StaffBrief | null;
-  allocation: Allocation | null;
   events: WarrantyEvent[];
   ledger_entries: LedgerEntry[];
   claims: ClaimBrief[];
@@ -210,22 +209,19 @@ export interface DashboardAnalytics {
 
 // --------------------------------------------------------- compliance -------
 
-/** ComplianceRowOut. `registration_rate` is 0..1 and null when nothing was
- *  allocated — a dealer with no stock has no rate, which is not the same as 0%. */
+/** ComplianceRowOut. Stock is not scoped to shops, so there is no allocated-vs-
+ *  registered ratio: the signal is self_registrations (a customer had to do it
+ *  themselves) and how long a shop has been quiet. */
 export interface ComplianceRow {
   dealer_id: string;
   dealer_code: string;
   dealer_name: string;
   city: string | null;
   dealer_status: string;
-  units_allocated: number;
   warranties_registered: number;
-  unregistered_units: number;
-  registration_rate: number | null;
   /** Warranties on this dealer's serials that the CUSTOMER registered, not them. */
   self_registrations: number;
   backdated_registrations: number;
-  avg_days_to_register: number | null;
   last_registration_at: string | null;
   days_since_last_registration: number | null;
   non_compliance_score: number;
@@ -233,11 +229,8 @@ export interface ComplianceRow {
 
 export interface ComplianceTotals {
   dealers: number;
-  units_allocated: number;
   warranties_registered: number;
-  unregistered_units: number;
   self_registrations: number;
-  registration_rate: number | null;
 }
 
 /** ComplianceOut — paginated, plus the window it was computed over. */
@@ -246,14 +239,6 @@ export interface CompliancePage extends Page<ComplianceRow> {
   date_to: string | null;
   sort: string;
   totals: ComplianceTotals;
-}
-
-export interface UnregisteredUnit {
-  serial: string;
-  model_name: string | null;
-  dispatch_ref: string | null;
-  allocated_at: string;
-  days_held: number;
 }
 
 export interface SelfRegistration {
@@ -279,7 +264,6 @@ export interface ComplianceDetail {
   summary: ComplianceRow;
   date_from: string | null;
   date_to: string | null;
-  unregistered_units: UnregisteredUnit[];
   self_registrations: SelfRegistration[];
   staff_activity: StaffActivity[];
 }
@@ -344,8 +328,6 @@ export interface UnitInfo {
 export interface SerialLookup {
   serial: string;
   unit: UnitInfo;
-  allocation: Allocation | null;
-  allocation_history: Allocation[];
   current_warranty: WarrantyDetail | null;
   warranties: WarrantyListItem[];
   claims: ClaimListItem[];
@@ -389,40 +371,6 @@ export interface ClaimDetail {
 export type AllocationStatus = 'allocated' | 'registered' | 'revoked' | 'returned';
 
 /** AllocationOut — the dealer is flattened onto the row as id/code/name. */
-export interface Allocation {
-  id: string;
-  serial: string;
-  dealer_id: string;
-  dealer_code?: string | null;
-  dealer_name?: string | null;
-  batch_id: string | null;
-  status: AllocationStatus;
-  dispatch_ref: string | null;
-  allocated_at: string;
-  revoked_at: string | null;
-  revoke_reason: string | null;
-  model_name?: string | null;
-  warranty_id?: string | null;
-}
-
-export interface BatchRowError {
-  line: number;
-  serial: string | null;
-  dealer_code: string | null;
-  reason: string;
-}
-
-export interface AllocationBatch {
-  id: string;
-  filename: string | null;
-  uploaded_by_admin_id: string;
-  row_count: number;
-  ok_count: number;
-  error_count: number;
-  created_at: string;
-  errors?: BatchRowError[];
-}
-
 /**
  * AllocationUploadOut — returned by BOTH /allocations/preview (dry run) and
  * /allocations/upload (commit), so the review step and the result step read the
@@ -430,14 +378,12 @@ export interface AllocationBatch {
  * error row, never a silent move.
  */
 export interface AllocationUploadResult {
-  batch: AllocationBatch;
   /** New allocation rows. */
   created_count: number;
   /** Rows already allocated to this same dealer — a safe re-upload. */
   unchanged_count: number;
   /** Serials with no unit record, for which a stub was written. */
   units_stubbed: number;
-  errors: BatchRowError[];
 }
 
 // ------------------------------------------------------------ dealers ------
@@ -467,8 +413,6 @@ export interface DealerListItem extends Dealer {
 }
 
 export interface DealerStats {
-  units_allocated: number;
-  units_unregistered: number;
   warranties_registered: number;
   warranties_voided: number;
   self_registrations: number;

@@ -11,18 +11,14 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from fastapi import Query
-from sqlalchemy import Row, Select, and_, func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer
-from app.dealer.models.product import DealerProduct as Product
-from app.dealer.models.unit import DealerUnit as Unit
-from app.dealer.models.warranty import LIVE_STATUSES, Warranty
+from app.dealer.models.warranty import Warranty
 from app.dealer.schemas.admin import (
-    AllocationOut,
     CustomerBrief,
     DealerBrief,
     WarrantyListItem,
@@ -125,38 +121,4 @@ def to_warranty_item(
             if dealer is not None
             else None
         ),
-    )
-
-
-AllocationRow = Row[tuple[Allocation, str, str, str | None, Any]]
-
-
-def allocation_select() -> Select[Any]:
-    """An allocation with the three things every screen shows beside it.
-
-    Who holds it, what the product is, and whether it has been sold — joined
-    once here so the allocation list, the warranty detail and the serial lookup
-    all render the same row rather than three subtly different ones.
-    """
-    return (
-        select(Allocation, Dealer.code, Dealer.name, Product.name, Warranty.id)
-        .join(Dealer, Dealer.id == Allocation.dealer_id)
-        .outerjoin(Unit, Unit.token == Allocation.serial)
-        .outerjoin(Product, Product.id == Unit.product_id)
-        .outerjoin(
-            Warranty,
-            and_(Warranty.serial == Allocation.serial, Warranty.status.in_(LIVE_STATUSES)),
-        )
-    )
-
-
-def to_allocation_out(row: AllocationRow) -> AllocationOut:
-    allocation, dealer_code, dealer_name, model_name, warranty_id = row
-    return AllocationOut.model_validate(allocation).model_copy(
-        update={
-            "dealer_code": dealer_code,
-            "dealer_name": dealer_name,
-            "model_name": model_name,
-            "warranty_id": warranty_id,
-        }
     )

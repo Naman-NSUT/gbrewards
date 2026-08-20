@@ -24,9 +24,6 @@ const SerialLookupPage = lazy(() =>
 const ClaimsPage = lazy(() =>
   import('./pages/ClaimsPage').then((m) => ({ default: m.ClaimsPage })),
 );
-const AllocationsPage = lazy(() =>
-  import('./pages/AllocationsPage').then((m) => ({ default: m.AllocationsPage })),
-);
 const DealersPage = lazy(() =>
   import('./pages/DealersPage').then((m) => ({ default: m.DealersPage })),
 );
@@ -71,7 +68,6 @@ export default function App() {
           <Route path="warranties" element={<WarrantiesPage />} />
           <Route path="lookup" element={<SerialLookupPage />} />
           <Route path="claims" element={<ClaimsPage />} />
-          <Route path="allocations" element={<AllocationsPage />} />
           <Route path="dealers" element={<DealersPage />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="redemptions" element={<RedemptionsPage />} />

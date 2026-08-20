@@ -12,7 +12,6 @@ from app.core.deps import get_db, get_redis
 from app.dealer.services import registration
 from app.main import create_app
 from tests.dealer.factories import (
-    allocate,
     make_dealer,
     make_priced_unit,
     make_staff,
@@ -52,7 +51,6 @@ def sale(db):  # type: ignore[no-untyped-def]
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = registration.register(
         db,
         staff=staff,
@@ -106,7 +104,6 @@ def test_self_registration_queues_for_review_and_pays_nobody(client, db):
     dealer = make_dealer(db, code="D009", name="Silent Beds")
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     db.commit()
 
     resp = client.post(
@@ -116,6 +113,9 @@ def test_self_registration_queues_for_review_and_pays_nobody(client, db):
             "customer_name": "Ravi Kumar",
             "customer_phone": "9812300099",
             "purchase_date": "2026-01-15",
+            # with no allocations, the CUSTOMER naming the shop is the only
+            # attribution there is — and it is the stronger evidence anyway
+            "dealer_hint": "D009",
         },
         files={"proof": ("bill.jpg", b"\xff\xd8\xff" + b"x" * 200, "image/jpeg")},
     )
@@ -128,15 +128,14 @@ def test_self_registration_queues_for_review_and_pays_nobody(client, db):
     w = db.query(Warranty).filter_by(serial=serial).one()
     assert w.status == "pending_review"
     assert w.source == "customer_self"
-    assert w.dealer_id == dealer.id, "the queue must name the shop that failed to register"
+    assert w.dealer_id == dealer.id, "the shop the customer named must be on the record"
     assert ledger.balance(db, dealer.id) == 0, "a self-registration pays nobody"
 
 
 def test_self_registration_refuses_an_oversized_or_wrong_file(client, db):
-    dealer = make_dealer(db)
+    make_dealer(db)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     db.commit()
 
     resp = client.post(

@@ -33,7 +33,6 @@ from app.dealer.services import ledger, registration
 from app.dealer.services import redemption as redemption_svc
 from app.dealer.services import warranty as warranty_svc
 from tests.dealer.factories import (
-    allocate,
     make_admin,
     make_dealer,
     make_product,
@@ -73,7 +72,6 @@ def _earn(db: Session, staff: DealerStaff, dealer: Dealer, count: int, points: i
     for i in range(count):
         serial = new_serial()
         make_unit(db, serial, product=product)
-        allocate(db, serial, dealer)
         registration.register(
             db,
             staff=staff,

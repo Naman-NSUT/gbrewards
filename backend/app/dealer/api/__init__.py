@@ -14,7 +14,6 @@ either; the prefixes keep the two feature sets from colliding.
 from fastapi import APIRouter
 
 from app.dealer.api.admin import (
-    allocations,
     approvals,
     audit,
     claims,
@@ -45,7 +44,6 @@ for _r in (
     dashboard,
     dealers,
     products,
-    allocations,
     warranties,
     approvals,
     compliance,

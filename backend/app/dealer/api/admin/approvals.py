@@ -18,7 +18,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, aliased
 
 from app.core.config import settings
@@ -27,7 +27,6 @@ from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, pagination
 from app.dealer.api.admin.warranties import build_warranty_detail
 from app.dealer.models.admin import DealerAdmin as Admin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.warranty import Warranty
@@ -57,21 +56,12 @@ def _queue_select() -> Select[tuple[Warranty, Customer, Dealer, Dealer, DealerSt
     The second dealer join is the interesting one: a self-registration carries
     no dealer_id, so the seller is inferred from the allocation on that serial.
     LATERAL-free because a serial has at most one open allocation (enforced by
-    uq_allocations_open_serial), so this cannot multiply rows.
     """
     holder = aliased(Dealer)
     return (
         select(Warranty, Customer, Dealer, holder, DealerStaff)
         .join(Customer, Customer.id == Warranty.customer_id)
         .outerjoin(Dealer, Dealer.id == Warranty.dealer_id)
-        .outerjoin(
-            Allocation,
-            and_(
-                Allocation.serial == Warranty.serial,
-                Allocation.status.in_(("allocated", "registered")),
-            ),
-        )
-        .outerjoin(holder, holder.id == Allocation.dealer_id)
         .outerjoin(DealerStaff, DealerStaff.id == Warranty.staff_id)
         .where(Warranty.status.in_(PENDING))
     )
@@ -142,7 +132,7 @@ def list_approvals(
         # Matches either the registering dealer or the dealer who held the
         # allocation, so filtering by a dealer also shows the sales they DIDN'T
         # record — which is the whole reason this queue exists.
-        stmt = stmt.where(or_(Warranty.dealer_id == dealer_id, Allocation.dealer_id == dealer_id))
+        stmt = stmt.where(Warranty.dealer_id == dealer_id)
 
     total = count_of(db, stmt)
     rows = db.execute(

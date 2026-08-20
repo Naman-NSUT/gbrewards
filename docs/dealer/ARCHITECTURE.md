@@ -23,15 +23,17 @@ Two programmes, one backend, one database, one QR on the mattress.
 | `dealer-mobile/` | dealer app | `dealer_staff` |
 | `support-web/` | public customer site | nobody |
 
-## Allocation does not gate registration
+## Stock is not scoped to shops
 
-Any dealer registered on the app may scan any manufactured label. Allocations are
-optional planning data now — uploading them still populates the compliance
-denominator, but nothing refuses a registration for their absence.
+Any dealer registered on the app may scan any manufactured label. There are no
+allocations at all — the table, the upload and the admin page were removed in
+0009.
 
-The consequence to hold in mind when reading `services/registration.py`: the only
-things that can refuse a scan are "no such label", "label voided" and "already
-registered". See DECISIONS.md §9 for what that costs.
+Reading `services/registration.py`, the only things that can refuse a scan are
+"no such label", "label voided" and "already registered".
+
+The cost is attribution: registration is a race, and whoever scans first is paid.
+See DECISIONS.md §9 and §10.
 
 ## Nothing is shared
 

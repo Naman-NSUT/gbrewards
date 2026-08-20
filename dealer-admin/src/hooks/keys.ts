@@ -34,10 +34,6 @@ export const qk = {
   claimList: (params: unknown) => ['claims', 'list', params] as const,
   claimDetail: (id: string | null) => ['claims', 'detail', id] as const,
 
-  allocations: ['allocations'] as const,
-  allocationList: (params: unknown) => ['allocations', 'list', params] as const,
-  allocationBatches: (params: unknown) => ['allocations', 'batches', params] as const,
-
   dealers: ['dealers'] as const,
   dealerList: (params: unknown) => ['dealers', 'list', params] as const,
   dealerDetail: (id: string | null) => ['dealers', 'detail', id] as const,

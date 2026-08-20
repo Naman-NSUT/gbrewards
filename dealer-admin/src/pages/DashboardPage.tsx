@@ -16,7 +16,6 @@ import { ChartCard } from '../components/ChartCard';
 import { RegistrationsAreaChart } from '../components/charts/RegistrationsAreaChart';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/PageHeader';
-import { RateBar } from '../components/RateBar';
 import { ChartSkeleton, StatSkeleton } from '../components/skeletons';
 import { SpotlightCard } from '../components/SpotlightCard';
 import { StatCard } from '../components/StatCard';
@@ -247,12 +246,12 @@ function WorstCompliance({ rows }: { rows: ComplianceRow[] }) {
                 ` · silent ${r.days_since_last_registration}d`}
             </div>
           </div>
-          <RateBar
-            rate={r.registration_rate}
-            registered={r.warranties_registered}
-            allocated={r.units_allocated}
-            width={116}
-          />
+          <div style={{ textAlign: 'right', minWidth: 116 }}>
+            <div className="tnum" style={{ fontSize: 15, fontWeight: 650, color: brand.danger }}>
+              {r.self_registrations}
+            </div>
+            <div style={{ fontSize: 11, color: brand.textFaint }}>self-registered</div>
+          </div>
         </button>
       ))}
     </div>

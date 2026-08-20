@@ -22,17 +22,14 @@ from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_a
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
     Pagination,
-    allocation_select,
     count_of,
     day_window,
     like,
     pagination,
-    to_allocation_out,
     to_warranty_item,
     warranty_select,
 )
 from app.dealer.models.admin import DealerAdmin as Admin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.claim import Claim
 from app.dealer.models.customer import Customer
 from app.dealer.models.dealer import Dealer, DealerStaff
@@ -217,13 +214,6 @@ def build_warranty_detail(
             select(Claim).where(Claim.warranty_id == warranty.id).order_by(Claim.created_at.desc())
         ).scalars()
     )
-    allocation_row = db.execute(
-        allocation_select()
-        .where(Allocation.serial == warranty.serial)
-        .order_by(Allocation.allocated_at.desc())
-        .limit(1)
-    ).one_or_none()
-
     return WarrantyDetailOut(
         warranty=to_warranty_item(warranty, customer, dealer),
         is_expired=warranty_svc.is_expired(warranty),
@@ -244,7 +234,6 @@ def build_warranty_detail(
             if staff
             else None
         ),
-        allocation=to_allocation_out(allocation_row) if allocation_row is not None else None,
         events=[_event_out(e, actor_names) for e in events],
         ledger_entries=[
             LedgerEntryOut(

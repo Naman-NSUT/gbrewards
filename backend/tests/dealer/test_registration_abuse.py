@@ -15,7 +15,6 @@ from app.dealer.services import ledger, registration
 from app.dealer.services import warranty as warranty_svc
 from app.dealer.services.warranty_dates import business_today
 from tests.dealer.factories import (
-    allocate,
     make_dealer,
     make_priced_unit,
     make_staff,
@@ -44,7 +43,6 @@ def test_registration_credits_once_and_starts_clock_today(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     result = _register(db, staff, serial)
 
@@ -66,7 +64,6 @@ def test_same_dealer_rescanning_replays_instead_of_paying_twice(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     first = _register(db, staff, serial)
     second = _register(db, staff, serial)
@@ -83,7 +80,6 @@ def test_second_dealer_cannot_register_an_already_registered_unit(db):
     staff_b = make_staff(db, dealer_b, phone="+919000000002")
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer_a)
 
     _register(db, staff_a, serial)
 
@@ -137,7 +133,6 @@ def test_any_registered_dealer_may_register_any_label(db):
     staff_b = make_staff(db, dealer_b, phone="+919000000002")
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer_a)  # allocated to A; B scans it anyway
 
     result = _register(db, staff_b, serial)
     assert result.warranty.dealer_id == dealer_b.id
@@ -185,7 +180,6 @@ def test_invoice_date_inside_grace_window_is_honoured(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     three_days_ago = business_today() - timedelta(days=3)
     result = _register(db, staff, serial, invoice_date=three_days_ago)
@@ -201,7 +195,6 @@ def test_backdate_beyond_window_parks_for_approval_and_pays_nothing_yet(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     long_ago = business_today() - timedelta(days=400)
     result = _register(db, staff, serial, invoice_date=long_ago)
@@ -218,7 +211,6 @@ def test_future_invoice_date_cannot_start_the_clock_late(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     next_year = business_today() + timedelta(days=365)
     result = _register(db, staff, serial, invoice_date=next_year)
@@ -236,7 +228,6 @@ def test_approving_a_backdate_activates_and_pays_and_is_audited(db):
     admin = make_admin(db)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     result = _register(db, staff, serial, invoice_date=business_today() - timedelta(days=400))
     points = warranty_svc.approve(
@@ -264,7 +255,6 @@ def test_void_writes_a_compensating_debit_and_never_edits_history(db):
     admin = make_admin(db)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     result = _register(db, staff, serial)
     clawed = warranty_svc.void(
@@ -294,7 +284,6 @@ def test_clawback_may_drive_the_balance_negative(db):
     admin = make_admin(db)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = _register(db, staff, serial)
 
     # Dealer spends the points before the return comes back.
@@ -324,7 +313,6 @@ def test_voided_serial_can_be_registered_again(db):
     admin = make_admin(db)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
 
     first = _register(db, staff, serial)
     warranty_svc.void(
@@ -343,7 +331,6 @@ def test_void_requires_a_reason(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = _register(db, staff, serial)
 
     with pytest.raises(AppError) as exc:
@@ -365,7 +352,6 @@ def test_a_serial_that_was_never_manufactured_is_refused(db):
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
     serial = new_serial()
-    allocate(db, serial, dealer)  # allocated by mistake; no unit exists
 
     with pytest.raises(AppError) as exc:
         _register(db, staff, serial)
@@ -382,7 +368,6 @@ def test_a_product_with_no_rate_registers_but_pays_nothing(db):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_unit(db, serial)  # real unit, real product, no rate configured
-    allocate(db, serial, dealer)
 
     result = _register(db, staff, serial)
     assert result.warranty.status == "active"
@@ -403,7 +388,6 @@ def test_parallel_registrations_of_one_serial_create_exactly_one_warranty(sessio
     staff = make_staff(setup, dealer)
     serial = new_serial()
     make_priced_unit(setup, serial, 50)
-    allocate(setup, serial, dealer)
     setup.commit()
     staff_id = staff.id
     setup.close()

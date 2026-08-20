@@ -7,16 +7,13 @@ from fastapi.testclient import TestClient
 
 from app.core.deps import get_db, get_redis
 from app.core.security import create_access_token
-from app.dealer.models.allocation import Allocation
 from app.dealer.services import registration
 from app.main import create_app
 from tests.dealer.factories import (
-    allocate,
     make_admin,
     make_dealer,
     make_priced_unit,
     make_staff,
-    make_unit,
     new_serial,
 )
 
@@ -63,7 +60,6 @@ def test_dashboard_separates_dealer_and_customer_registrations(client, db, admin
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     registration.register(
         db,
         staff=staff,
@@ -110,47 +106,6 @@ def test_analytics_returns_a_dense_series_with_no_gaps(client, db, admin_headers
     assert all({"date", "dealer", "customer_self"} <= set(p) for p in body["series"])
     dates = [p["date"] for p in body["series"]]
     assert dates == sorted(dates)
-
-
-def test_allocation_preview_writes_nothing_but_reports_what_upload_would_do(
-    client, db, admin_headers
-):
-    make_dealer(db, code="D001")
-    serial = new_serial()
-    make_unit(db, serial)  # a real manufactured unit
-    bad_dealer_serial = new_serial()
-    make_unit(db, bad_dealer_serial)
-    db.commit()
-    # Second row names a dealer that does not exist, so it is rejected for that
-    # reason rather than for a missing unit.
-    csv = (f"serial,dealer_code\n{serial},D001\n{bad_dealer_serial},NOPE\n").encode()
-
-    preview = client.post(
-        "/api/v1/dealer-admin/allocations/preview",
-        headers=admin_headers,
-        files={"file": ("despatch.csv", csv, "text/csv")},
-    )
-    assert preview.status_code == 200, preview.text
-    p = preview.json()
-    assert p["created_count"] == 1
-    assert len(p["errors"]) == 1
-
-    assert db.query(Allocation).count() == 0, "a dry run must write nothing"
-    from app.dealer.models.allocation import AllocationBatch
-
-    assert db.query(AllocationBatch).count() == 0, "not even the batch row"
-
-    # The real upload must agree with what the preview promised.
-    upload = client.post(
-        "/api/v1/dealer-admin/allocations/upload",
-        headers=admin_headers,
-        files={"file": ("despatch.csv", csv, "text/csv")},
-    )
-    assert upload.status_code in (200, 201), upload.text
-    u = upload.json()
-    assert u["created_count"] == p["created_count"]
-    assert len(u["errors"]) == len(p["errors"])
-    assert db.query(Allocation).count() == 1
 
 
 def test_dealer_token_cannot_reach_the_admin_dashboard(client, db):

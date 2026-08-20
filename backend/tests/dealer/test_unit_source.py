@@ -56,13 +56,12 @@ def test_a_voided_label_cannot_be_registered(db):
 
     from app.core.errors import AppError
     from app.dealer.services import registration
-    from tests.dealer.factories import allocate, make_dealer, make_priced_unit, make_staff
+    from tests.dealer.factories import make_dealer, make_priced_unit, make_staff
 
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
     serial = new_serial()
     unit, _ = make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     unit.status = "void"
     db.commit()
 

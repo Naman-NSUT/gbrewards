@@ -13,7 +13,6 @@ from app.core.deps import get_db, get_redis
 from app.core.security import create_access_token
 from app.main import create_app
 from tests.dealer.factories import (
-    allocate,
     make_dealer,
     make_priced_unit,
     make_staff,
@@ -50,7 +49,6 @@ def scenario(db):  # type: ignore[no-untyped-def]
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     db.commit()
     token = create_access_token(str(staff.id), "dealer")
     return {
@@ -169,10 +167,9 @@ def test_a_dealer_token_cannot_reach_admin_scoped_state(client, scenario):
 
 def test_preview_allows_a_unit_allocated_to_another_dealer(client, db, scenario):
     """Open scanning: an allocation elsewhere is not a reason to refuse."""
-    other = make_dealer(db, code="D999", name="Other Shop")
+    make_dealer(db, code="D999", name="Other Shop")
     other_serial = new_serial()
     make_priced_unit(db, other_serial, 50)
-    allocate(db, other_serial, other)
     db.commit()
 
     resp = client.get(f"/api/v1/dealer/units/{other_serial}/preview", headers=scenario["headers"])

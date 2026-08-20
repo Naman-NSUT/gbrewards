@@ -44,7 +44,6 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer
 from app.dealer.models.product import DealerProduct as Product
 from app.dealer.models.unit import DealerUnit as Unit
@@ -101,28 +100,14 @@ def attribute_dealer(
 ) -> Dealer | None:
     """Which shop should answer for this unregistered sale.
 
-    Two sources, in order of strength:
+    The customer's own statement is the only source. Stock is not scoped to
+    shops, so nothing else in the system knows who sold a given unit — and the
+    buyer naming the shop they bought from is good evidence anyway.
 
-    1. An allocation, if the brand happens to have recorded one. Allocations no
-       longer gate registration, so most serials will not have one.
-    2. What the CUSTOMER said. With open scanning this is usually the only
-       attribution available — and it is arguably better evidence anyway: the
-       buyer naming the shop they bought from is a direct statement, where an
-       allocation was only ever a guess about where stock ended up.
-
-    Returns None when neither is available, which is honest: the approval queue
-    then shows an unattributed self-registration rather than blaming a shop
+    Returns None when the customer did not say, which is honest: the approval
+    queue then shows an unattributed self-registration rather than blaming a shop
     picked by inference.
     """
-    allocation = session.execute(
-        select(Allocation).where(
-            Allocation.serial == serial,
-            Allocation.status.in_(("allocated", "registered")),
-        )
-    ).scalar_one_or_none()
-    if allocation is not None:
-        return session.get(Dealer, allocation.dealer_id)
-
     hint = (dealer_hint or "").strip()
     if not hint:
         return None
@@ -139,11 +124,6 @@ def attribute_dealer(
     # Only attribute on an UNAMBIGUOUS match. Two "Sharma Beds" in one city must
     # not have one of them blamed by coin flip.
     return matches[0] if len(matches) == 1 else None
-
-
-# Kept for callers that only have a serial.
-def allocated_dealer(session: Session, serial: str) -> Dealer | None:
-    return attribute_dealer(session, serial)
 
 
 def submit(

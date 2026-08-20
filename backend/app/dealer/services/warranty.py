@@ -13,7 +13,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.ledger_entry import LedgerEntry
 from app.dealer.models.warranty import Warranty, WarrantyEvent
 from app.dealer.services import ledger
@@ -68,7 +67,6 @@ def void(
     actor_type: str = "admin",
     actor_id: uuid.UUID | None = None,
     clawback: bool = True,
-    free_serial: bool = True,
 ) -> int:
     """Void a warranty, optionally reversing the points it paid.
 
@@ -77,6 +75,9 @@ def void(
     The clawback is a compensating DEBIT, never an edit of the original credit,
     so "this dealer earned 50 then had it reversed" stays visible instead of
     becoming "this dealer never earned anything".
+
+    Voiding also frees the serial for a legitimate re-sale: the partial unique
+    index only counts live warranties, so a voided one stops occupying it.
 
     Balance is allowed to go negative. The alternative — refusing to claw back
     from a dealer who has already spent the points — makes registering fake sales
@@ -121,19 +122,6 @@ def void(
     warranty.status = "voided"
     warranty.voided_at = datetime.now(UTC)
     warranty.void_reason = reason
-
-    if free_serial:
-        # Release the allocation so a returned mattress can legitimately be sold
-        # again. The partial unique index already permits a new warranty once
-        # this one is voided; this keeps the allocation side consistent.
-        allocation = session.execute(
-            select(Allocation).where(
-                Allocation.serial == warranty.serial,
-                Allocation.status == "registered",
-            )
-        ).scalar_one_or_none()
-        if allocation is not None:
-            allocation.status = "allocated"
 
     _event(
         session,
