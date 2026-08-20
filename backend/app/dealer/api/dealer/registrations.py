@@ -20,7 +20,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.deps import client_ip, get_current_staff, get_db, get_redis, idempotency_key
 from app.core.errors import AppError
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import DealerStaff
 from app.dealer.models.product import DealerProduct as Product
 from app.dealer.models.unit import DealerUnit as Unit
@@ -33,7 +32,7 @@ from app.dealer.schemas.registration import (
     WarrantyOut,
 )
 from app.dealer.services import idempotency, ledger, ratelimit, registration, sms
-from app.dealer.services.unitsource import UnitSourceUnavailable, get_unit_source, normalise_serial
+from app.dealer.services.unitsource import normalise_serial
 
 
 def _unit_warranty_months(db: Session, unit: Unit | None) -> int:
@@ -69,9 +68,9 @@ def preview_unit(
 ) -> UnitPreviewOut:
     """Answer 'can I sell this?' immediately after the scan.
 
-    Deliberately tolerant: a preview that fails because upstream is down would
-    stop the dealer before they even start typing, so every failure path here
-    still returns `registerable` based on the allocation alone.
+    Open scanning: any registered dealer may register any manufactured label, so
+    the only reasons a unit is not registerable are that it does not exist, its
+    label was voided, or somebody already registered it.
     """
     ratelimit.enforce(redis, f"preview:{staff.id}", limit=120, window_s=60, fail_open=True)
     serial = normalise_serial(raw_serial)
@@ -85,21 +84,7 @@ def preview_unit(
         )
     ).scalar_one_or_none()
 
-    allocation = db.execute(
-        select(Allocation).where(
-            Allocation.serial == serial, Allocation.status.in_(("allocated", "registered"))
-        )
-    ).scalar_one_or_none()
-
     unit = db.execute(select(Unit).where(Unit.token == serial)).scalar_one_or_none()
-    if unit is None:
-        try:
-            facts = get_unit_source(db).get(serial)
-            if facts is not None:
-                db.commit()
-                unit = db.execute(select(Unit).where(Unit.token == serial)).scalar_one_or_none()
-        except UnitSourceUnavailable:
-            pass  # The allocation still decides; upstream is a nicety here.
 
     if existing is not None:
         mine = existing.dealer_id == staff.dealer_id
@@ -111,30 +96,35 @@ def preview_unit(
             already_registered=True,
             reason=(
                 "You already registered this unit"
+                # Deliberately does NOT name the other shop. With open scanning a
+                # dealer will hit this whenever someone else got there first, and
+                # naming them turns a queue into a dispute at the counter.
                 if mine
-                else "This unit is already registered by another dealer"
+                else "This unit has already been registered"
             ),
         )
-    if allocation is None:
+
+    if unit is None:
         return UnitPreviewOut(
             serial=serial,
-            model_name=_unit_model_name(db, unit) if unit else None,
-            warranty_months=_unit_warranty_months(db, unit),
+            model_name=None,
+            warranty_months=settings.default_warranty_months,
             registerable=False,
-            reason="This unit is not allocated to any dealer",
+            reason="No mattress found for this code. Check the number under the QR.",
         )
-    if allocation.dealer_id != staff.dealer_id:
+
+    if unit.status == "void":
         return UnitPreviewOut(
             serial=serial,
-            model_name=_unit_model_name(db, unit) if unit else None,
+            model_name=_unit_model_name(db, unit),
             warranty_months=_unit_warranty_months(db, unit),
             registerable=False,
-            reason="This unit is allocated to a different dealer",
+            reason="This label has been cancelled. Contact GoodBed before selling this unit.",
         )
 
     return UnitPreviewOut(
         serial=serial,
-        model_name=_unit_model_name(db, unit) if unit else None,
+        model_name=_unit_model_name(db, unit),
         warranty_months=_unit_warranty_months(db, unit),
         registerable=True,
     )

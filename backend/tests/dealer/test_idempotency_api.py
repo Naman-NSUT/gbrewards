@@ -129,10 +129,10 @@ def test_failed_registration_frees_the_key_so_a_real_retry_works(client, scenari
     key = str(uuid.uuid4())
     headers = {**scenario["headers"], "Idempotency-Key": key}
 
-    # Unallocated serial → the registration fails.
+    # A serial that was never manufactured → the registration fails.
     bad = client.post("/api/v1/dealer/registrations", json=_body(new_serial()), headers=headers)
-    assert bad.status_code == 403
-    assert bad.json()["error"]["code"] == "not_allocated"
+    assert bad.status_code == 404
+    assert bad.json()["error"]["code"] == "invalid_serial"
 
     from app.dealer.models.idempotency import IdempotencyKey
 
@@ -167,7 +167,8 @@ def test_a_dealer_token_cannot_reach_admin_scoped_state(client, scenario):
     assert resp.json()["error"]["code"] == "invalid_token"
 
 
-def test_preview_reports_a_cross_dealer_unit_as_not_registerable(client, db, scenario):
+def test_preview_allows_a_unit_allocated_to_another_dealer(client, db, scenario):
+    """Open scanning: an allocation elsewhere is not a reason to refuse."""
     other = make_dealer(db, code="D999", name="Other Shop")
     other_serial = new_serial()
     make_priced_unit(db, other_serial, 50)
@@ -176,5 +177,11 @@ def test_preview_reports_a_cross_dealer_unit_as_not_registerable(client, db, sce
 
     resp = client.get(f"/api/v1/dealer/units/{other_serial}/preview", headers=scenario["headers"])
     assert resp.status_code == 200
+    assert resp.json()["registerable"] is True
+
+
+def test_preview_refuses_a_serial_that_does_not_exist(client, scenario):
+    resp = client.get(f"/api/v1/dealer/units/{new_serial()}/preview", headers=scenario["headers"])
+    assert resp.status_code == 200
     assert resp.json()["registerable"] is False
-    assert "different dealer" in resp.json()["reason"]
+    assert "No mattress found" in resp.json()["reason"]

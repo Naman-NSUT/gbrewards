@@ -126,32 +126,55 @@ def test_database_rejects_a_second_live_warranty_even_if_service_logic_is_bypass
 # --- Cross-dealer registration --------------------------------------------
 
 
-def test_dealer_cannot_register_a_serial_allocated_to_someone_else(db):
+def test_any_registered_dealer_may_register_any_label(db):
+    """Open scanning: stock is not scoped to shops.
+
+    Allocation no longer gates anything, so a dealer with no allocation at all
+    registers just as well as one who has it.
+    """
     dealer_a = make_dealer(db, code="D001")
     dealer_b = make_dealer(db, code="D002", name="Shop Two")
     staff_b = make_staff(db, dealer_b, phone="+919000000002")
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer_a)  # allocated to A, B tries to register
+    allocate(db, serial, dealer_a)  # allocated to A; B scans it anyway
 
-    with pytest.raises(AppError) as exc:
-        _register(db, staff_b, serial)
-    assert exc.value.code == "not_your_unit"
-    assert exc.value.status_code == 403
-    assert ledger.balance(db, dealer_b.id) == 0
+    result = _register(db, staff_b, serial)
+    assert result.warranty.dealer_id == dealer_b.id
+    assert ledger.balance(db, dealer_b.id) == 50
+    assert ledger.balance(db, dealer_a.id) == 0
 
 
-def test_dealer_cannot_register_an_unallocated_serial(db):
-    """A serial photographed off someone else's stock is worth nothing."""
+def test_a_label_with_no_allocation_registers_fine(db):
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
     serial = new_serial()
-    make_priced_unit(db, serial, 50)  # exists upstream, but allocated to nobody
+    make_priced_unit(db, serial, 50)  # never allocated to anyone
+
+    result = _register(db, staff, serial)
+    assert result.warranty.status == "active"
+    assert ledger.balance(db, dealer.id) == 50
+
+
+def test_first_scanner_wins_and_the_second_is_refused(db):
+    """The cost of open scanning, pinned so it is a known property rather than a
+    surprise: whoever scans first is paid, and the shop that actually sold it is
+    then refused."""
+    dealer_a = make_dealer(db, code="D001")
+    dealer_b = make_dealer(db, code="D002", name="Shop Two")
+    staff_a = make_staff(db, dealer_a, phone="+919000000001")
+    staff_b = make_staff(db, dealer_b, phone="+919000000002")
+    serial = new_serial()
+    make_priced_unit(db, serial, 50)
+
+    _register(db, staff_a, serial)
 
     with pytest.raises(AppError) as exc:
-        _register(db, staff, serial)
-    assert exc.value.code == "not_allocated"
-    assert ledger.balance(db, dealer.id) == 0
+        _register(db, staff_b, serial)
+    assert exc.value.code == "already_registered"
+    # the label still paid exactly once, no matter who got it
+    assert ledger.balance(db, dealer_a.id) == 50
+    assert ledger.balance(db, dealer_b.id) == 0
 
 
 # --- Backdating ------------------------------------------------------------
