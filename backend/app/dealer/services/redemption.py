@@ -181,6 +181,13 @@ def create(
 ) -> Redemption:
     """Request a reward. Places the hold; writes no ledger row. Caller commits."""
     dealer = _lock_dealer(session, staff.dealer_id)
+    if dealer.status == "pending":
+        raise AppError(
+            "dealer_pending_approval",
+            403,
+            "Your shop is still being verified by GoodBed. You can keep registering "
+            "sales — your points are safe and redemption opens once you are approved.",
+        )
     if dealer.status != "active":
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 

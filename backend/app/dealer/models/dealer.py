@@ -1,5 +1,10 @@
 """Dealers are business entities; staff are the humans who log in beneath one.
 
+Shops sign themselves up: the first person to register creates the dealership and
+becomes its owner. Nothing is written until they prove they hold the phone —
+see api/dealer/auth.py, which stages the details in Redis and only creates rows
+after the OTP is verified.
+
 Two levels, not one. The compliance metric the client opens every morning is
 per-dealership ("this shop was allocated 40 units and registered 6"), while
 attribution for abuse investigation has to be per-person ("all 34 of the
@@ -24,7 +29,7 @@ from app.dealer.models.mixins import TimestampMixin, UUIDPkMixin
 class Dealer(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "dealers"
     __table_args__ = (
-        CheckConstraint("status in ('active','suspended','closed')", name="status_valid"),
+        CheckConstraint("status in ('pending','active','suspended','closed')", name="status_valid"),
         Index("ix_dealers_status", "status"),
     )
 
@@ -39,6 +44,10 @@ class Dealer(UUIDPkMixin, TimestampMixin, Base):
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
     pincode: Mapped[str | None] = mapped_column(String(10), nullable=True)
     gst_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # 'pending' is where a self-signed-up shop starts. A pending shop can log in
+    # and register sales immediately — capturing the sale record is the point of
+    # the product and must not wait on anyone — but it cannot REDEEM until an
+    # admin has approved it once. Points accrue; money does not leave.
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'active'"))
 
     staff: Mapped[list["DealerStaff"]] = relationship(back_populates="dealer")

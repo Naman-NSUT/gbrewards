@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     # a 9pm sale in India must not book as tomorrow.
     business_timezone: str = "Asia/Kolkata"
 
+    # Shops sign themselves up. False means a new shop lands in 'pending': it can
+    # register sales immediately, but cannot redeem until an admin approves it
+    # once — so a fake signup never reaches a payout. True skips that review.
+    dealer_signup_auto_approve: bool = False
+
     registrations_per_hour_per_staff: int = 60
     registrations_per_day_per_dealer: int = 400
     public_lookup_per_min_per_ip: int = 20

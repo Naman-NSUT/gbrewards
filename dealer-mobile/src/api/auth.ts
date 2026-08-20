@@ -3,14 +3,39 @@ import type { TokenPair } from './types';
 
 export interface OtpRequestOut {
   resend_in: number;
+  /** True when the code will finish creating a new shop rather than sign in. */
+  is_new_account?: boolean;
+}
+
+export interface SignupInput {
+  phone: string;
+  /** The person signing up; they become the shop's owner. */
+  name: string;
+  shop_name: string;
+  city?: string;
+  address?: string;
+  pincode?: string;
+  gst_number?: string;
+}
+
+/**
+ * Start creating a shop account.
+ *
+ * The details are held server-side against the code and only become a real
+ * dealership once verifyOtp succeeds — so abandoning this screen leaves nothing
+ * behind. 409 means the number already has an account and should sign in.
+ */
+export async function signup(input: SignupInput): Promise<OtpRequestOut> {
+  const resp = await api.post<OtpRequestOut>('/dealer/auth/signup', input);
+  return resp.data;
 }
 
 /**
  * Ask for a login code.
  *
  * Always succeeds for a well-formed number, whether or not it belongs to a
- * dealer — the backend refuses to leak which numbers are provisioned. The
- * "we don't know this number" message therefore appears at verify time.
+ * dealer — the backend refuses to leak which numbers have accounts. A number
+ * with no account is told so at verify time, and offered signup.
  */
 export async function requestOtp(phone: string): Promise<OtpRequestOut> {
   const resp = await api.post<OtpRequestOut>('/dealer/auth/otp/request', { phone });

@@ -259,6 +259,38 @@ def suspend_dealer(
     return dealer
 
 
+@router.post("/dealers/{dealer_id}/approve", response_model=DealerDetailOut)
+def approve_dealer(
+    dealer_id: uuid.UUID,
+    request: Request,
+    admin: Admin = Depends(require_admin_write),
+    db: Session = Depends(get_db),
+) -> DealerDetailOut:
+    """Verify a shop that signed itself up.
+
+    A pending shop has been registering sales all along — that is the point, and
+    it must not wait on anyone. What approval unlocks is REDEMPTION: the moment
+    money can leave, a human has looked at the shop at least once.
+    """
+    dealer = _get_dealer(db, dealer_id)
+    if dealer.status not in ("pending", "suspended"):
+        raise AppError("not_pending", 409, "This dealership is already active")
+
+    previous = dealer.status
+    dealer.status = "active"
+    record_audit(
+        db,
+        action="approve_dealer",
+        entity_type="dealer",
+        entity_id=dealer.id,
+        actor_id=admin.id,
+        metadata={"from": previous, "code": dealer.code, "name": dealer.name},
+        ip=client_ip(request),
+    )
+    db.commit()
+    return get_dealer(dealer_id=dealer_id, _=admin, db=db)
+
+
 @router.post("/dealers/{dealer_id}/reactivate", response_model=DealerOut)
 def reactivate_dealer(
     dealer_id: uuid.UUID,
