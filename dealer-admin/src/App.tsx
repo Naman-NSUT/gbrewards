@@ -36,6 +36,9 @@ const RedemptionsPage = lazy(() =>
 const SmsLogPage = lazy(() =>
   import('./pages/SmsLogPage').then((m) => ({ default: m.SmsLogPage })),
 );
+const ProductsPage = lazy(() =>
+  import('./pages/ProductsPage').then((m) => ({ default: m.ProductsPage })),
+);
 const PointsPage = lazy(() =>
   import('./pages/PointsPage').then((m) => ({ default: m.PointsPage })),
 );
@@ -72,6 +75,7 @@ export default function App() {
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="redemptions" element={<RedemptionsPage />} />
           <Route path="sms" element={<SmsLogPage />} />
+          <Route path="products" element={<ProductsPage />} />
           <Route path="points" element={<PointsPage />} />
           <Route path="audit" element={<AuditPage />} />
         </Route>
