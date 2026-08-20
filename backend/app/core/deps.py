@@ -108,7 +108,11 @@ def get_current_staff(
     # A suspended dealership must stop earning immediately, not when its staff
     # tokens happen to expire.
     dealer = db.get(Dealer, staff.dealer_id)
-    if dealer is None or dealer.status != "active":
+    # 'pending' shops are allowed through on purpose: a shop that just signed
+    # itself up must be able to record sales straight away, because the warranty
+    # record is the product. What it cannot do is redeem — see
+    # services/redemption.py.
+    if dealer is None or dealer.status not in ("active", "pending"):
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     now = datetime.now(UTC)

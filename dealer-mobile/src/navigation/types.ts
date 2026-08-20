@@ -6,7 +6,8 @@ import type { RegisterBody, UnitPreviewOut } from '../api/types';
 
 export type AuthStackParamList = {
   Phone: undefined;
-  Otp: { phone: string; resendIn: number };
+  Signup: undefined;
+  Otp: { phone: string; resendIn?: number; isNewAccount?: boolean };
 };
 
 export type AuthStackScreenProps<T extends keyof AuthStackParamList> = NativeStackScreenProps<

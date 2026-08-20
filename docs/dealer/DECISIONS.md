@@ -419,3 +419,41 @@ matters if there had been some.
 
 **To reverse.** Revert 0009 and the commit that removed the module. Everything
 was deleted together rather than left half-wired, so it comes back as a unit.
+
+
+## 11. Dealers sign themselves up
+
+**Decision.** Shops create their own accounts in the app: name, shop name,
+mobile, city, optional GST. The first person to sign up owns the dealership.
+Nobody is provisioned by an admin.
+
+**Nothing is written before the phone is proven.** The typed details are staged
+in Redis against the OTP; the dealer and staff rows are created by `/otp/verify`.
+This is a direct lesson from the worker programme next door, which creates or
+UPDATES its user row on the OTP *request* — so anyone who knows a registered
+number can overwrite that user's name and address with no authentication at all.
+Staging costs one Redis key and avoids inheriting the hole.
+
+**New shops start `pending`.** A pending shop logs in and registers sales
+immediately — capturing the sale record is the product and must not wait on
+anyone — but it **cannot redeem**. Points accrue; money does not leave until an
+admin has approved the shop once, from Dealers → Approve.
+
+That is the whole mitigation for what this decision costs, and it is worth being
+explicit about the exposure. Combined with §9 and §10, the chain is now:
+
+    anyone with a phone signs up  →  scans any label they can photograph
+                                  →  earns points  →  redeems
+
+The bounds that remain: a label pays exactly once
+(`uq_warranties_live_serial`), voided labels are unregistrable, velocity limits
+cap a single account, and — because of `pending` — a brand-new account cannot
+cash out at all without a human looking at it.
+
+Set `DEALER_SIGNUP_AUTO_APPROVE=true` to skip the review and let signups redeem
+straight away. That removes the last preventive control; do it only if the
+approval click proves to be real friction.
+
+**Dealer codes** are generated (`D0001`, `D0002`) rather than random, because
+staff read them down the phone. Uniqueness is guaranteed by the constraint, not
+by the counter.

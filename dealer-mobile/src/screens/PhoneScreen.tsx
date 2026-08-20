@@ -73,9 +73,13 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
           />
 
           <View style={styles.note}>
-            <Text style={styles.noteText}>
-              Only numbers GoodBed has registered for your shop can sign in. If yours does not
-              work, ask your GoodBed representative to add it.
+            <Text style={styles.noteText}>New to GoodBed Dealer?</Text>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate('Signup')}
+              accessibilityRole="button"
+            >
+              Create your shop account
             </Text>
           </View>
         </ScrollView>
@@ -111,6 +115,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.accentSoft,
     borderRadius: 12,
+  },
+  link: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.accent,
+    marginTop: 6,
+    paddingVertical: 6,
   },
   noteText: { fontSize: 13, color: colors.text, lineHeight: 19 },
 });

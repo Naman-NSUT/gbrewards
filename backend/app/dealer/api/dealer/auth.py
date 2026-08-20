@@ -17,6 +17,8 @@ from app.dealer.models.admin import DealerAdmin
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.schemas.common import Base, PhoneMixin
 from app.dealer.services import otp, ratelimit
+from app.dealer.services import signup as signup_svc
+from app.dealer.services.audit import record_audit
 
 router = APIRouter(prefix="/auth", tags=["dealer-auth"])
 
@@ -27,6 +29,19 @@ class OtpRequestIn(PhoneMixin, Base):
 
 class OtpRequestOut(Base):
     resend_in: int
+    # Tells the app which screen comes after the code: a returning staff member
+    # goes to the dealer app, a new shop finishes creating its account.
+    is_new_account: bool = False
+
+
+class SignupIn(PhoneMixin, Base):
+    phone: str = Field(min_length=6, max_length=20)
+    name: str = Field(min_length=1, max_length=200, description="The person signing up")
+    shop_name: str = Field(min_length=1, max_length=200)
+    city: str | None = Field(default=None, max_length=100)
+    address: str | None = Field(default=None, max_length=400)
+    pincode: str | None = Field(default=None, max_length=10)
+    gst_number: str | None = Field(default=None, max_length=20)
 
 
 class OtpVerifyIn(PhoneMixin, Base):
@@ -94,9 +109,51 @@ def otp_request(
     return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
 
 
+@router.post("/signup", response_model=OtpRequestOut)
+def signup(
+    body: SignupIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    redis: redis_lib.Redis = Depends(get_redis),
+) -> OtpRequestOut:
+    """Start creating a dealership. Writes NOTHING until the code is verified.
+
+    The typed details are staged in Redis against the OTP; the dealer and staff
+    rows are created by /otp/verify once the phone is proven. Staging rather than
+    inserting is deliberate — see services/signup.py.
+    """
+    ratelimit.enforce(redis, f"signup:ip:{client_ip(request)}", limit=10, window_s=3600)
+
+    existing = db.execute(
+        select(DealerStaff).where(DealerStaff.phone == body.phone)
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise AppError(
+            "already_registered",
+            409,
+            "This number already has an account. Sign in instead.",
+        )
+
+    signup_svc.stage(
+        redis,
+        signup_svc.PendingSignup(
+            phone=body.phone,
+            name=body.name,
+            shop_name=body.shop_name,
+            city=body.city,
+            address=body.address,
+            pincode=body.pincode,
+            gst_number=body.gst_number,
+        ),
+    )
+    otp.issue(db, redis, body.phone)
+    return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds, is_new_account=True)
+
+
 @router.post("/otp/verify", response_model=TokenPair)
 def otp_verify(
     body: OtpVerifyIn,
+    request: Request,
     db: Session = Depends(get_db),
     redis: redis_lib.Redis = Depends(get_redis),
 ) -> TokenPair:
@@ -105,14 +162,42 @@ def otp_verify(
     staff = db.execute(
         select(DealerStaff).where(DealerStaff.phone == body.phone)
     ).scalar_one_or_none()
-    if staff is None or not staff.is_active:
+
+    if staff is None:
+        # No account yet — this is the second half of a signup. The rows are
+        # created HERE, now that the phone is proven, and not a moment earlier.
+        pending = signup_svc.take(redis, body.phone)
+        if pending is None:
+            raise AppError(
+                "account_not_found",
+                403,
+                "No account for this number. Create one to get started.",
+            )
+        dealer, staff = signup_svc.create_from_signup(
+            db, pending, auto_approve=settings.dealer_signup_auto_approve
+        )
+        record_audit(
+            db,
+            action="dealer_self_signup",
+            entity_type="dealer",
+            entity_id=dealer.id,
+            actor_type="dealer_staff",
+            actor_id=staff.id,
+            metadata={"code": dealer.code, "shop": dealer.name, "status": dealer.status},
+            ip=client_ip(request),
+        )
+        db.commit()
+        return _issue_pair(staff, dealer)
+
+    if not staff.is_active:
         raise AppError("account_not_found", 403, "No active dealer account for this number")
 
-    dealer = db.get(Dealer, staff.dealer_id)
-    if dealer is None or dealer.status != "active":
+    existing_dealer = db.get(Dealer, staff.dealer_id)
+    # A pending shop signs in fine; what it cannot do is redeem.
+    if existing_dealer is None or existing_dealer.status not in ("active", "pending"):
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
-    return _issue_pair(staff, dealer)
+    return _issue_pair(staff, existing_dealer)
 
 
 def _issue_pair(staff: DealerStaff, dealer: Dealer) -> TokenPair:

@@ -42,11 +42,13 @@ function messageFor(error: unknown): string {
 }
 
 export function OtpScreen({ route, navigation }: AuthStackScreenProps<'Otp'>) {
-  const { phone, resendIn } = route.params;
+  const { phone, resendIn, isNewAccount } = route.params;
   const { signIn } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(resendIn);
+  // A signup arrives without a cooldown; fall back to the server default so
+  // the resend timer still behaves.
+  const [cooldown, setCooldown] = useState(resendIn ?? 30);
   const verifyMutation = useVerifyOtp();
   const resendMutation = useRequestOtp();
 
