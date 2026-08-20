@@ -1,12 +1,17 @@
-// Deliberately the SAME keys the worker panel uses.
+// Deliberately DIFFERENT keys from the worker panel.
 //
-// Both panels authenticate the same `admins` row with the same aud='admin'
-// token, and both are served from one origin, so sharing the keys means
-// switching panels carries the session instead of dumping the operator at a
-// second login. Using the worker panel's existing names (rather than a new
-// shared one) means no admin currently signed in gets logged out by this.
-const ACCESS_KEY = 'sr_admin_access';
-const REFRESH_KEY = 'sr_admin_refresh';
+// These once matched, back when both panels authenticated the same `admins`
+// row with one aud='admin' token. The programmes now have separate operator
+// tables and separate audiences: the worker panel mints aud='admin', this one
+// mints aud='dealer_admin', and each API rejects the other's token outright.
+//
+// Both panels are served from one origin, so shared keys meant the panel
+// switcher handed each panel a token its own API would 401 on — and because
+// ProtectedRoute only checks that a token EXISTS, you were let in and every
+// request failed after. Separate keys let both sessions live side by side, so
+// switching panels lands you signed in to whichever you actually signed in to.
+const ACCESS_KEY = 'dr_admin_access';
+const REFRESH_KEY = 'dr_admin_refresh';
 // Display-only cache of who is signed in; dealer-panel specific, so it keeps
 // its own key.
 const PROFILE_KEY = 'dr_admin_profile';
