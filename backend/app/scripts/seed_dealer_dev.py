@@ -14,7 +14,6 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.product import DealerProduct
 from app.dealer.models.reward import Reward
@@ -94,27 +93,6 @@ def main() -> int:
             dealers.append(dealer)
         db.flush()
 
-        # Split the unallocated serials between the two shops, leaving a few
-        # spare so the compliance screen has something to show.
-        free = list(
-            db.execute(
-                select(DealerUnit)
-                .where(
-                    DealerUnit.status == "active",
-                    DealerUnit.token.notin_(select(Allocation.serial)),
-                )
-                .limit(12)
-            ).scalars()
-        )
-        for i, unit in enumerate(free):
-            db.add(
-                Allocation(
-                    serial=unit.token,
-                    dealer_id=dealers[i % len(dealers)].id,
-                    status="allocated",
-                )
-            )
-
         if db.execute(select(Reward)).first() is None:
             db.add_all(
                 [
@@ -125,11 +103,7 @@ def main() -> int:
             )
         db.commit()
 
-        sample = db.execute(
-            select(DealerUnit.token)
-            .join(Allocation, Allocation.serial == DealerUnit.token)
-            .limit(1)
-        ).scalar_one_or_none()
+        sample = db.execute(select(DealerUnit.token).limit(1)).scalar_one_or_none()
 
         print("  Dealer Rewards — dev data ready")
         print("  " + "-" * 60)

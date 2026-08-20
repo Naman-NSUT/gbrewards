@@ -26,7 +26,6 @@ from app.dealer.schemas.admin import (
     SelfRegistrationOut,
     StaffActivityOut,
     StaffBrief,
-    UnregisteredUnitOut,
 )
 from app.dealer.services import compliance as compliance_svc
 
@@ -50,8 +49,6 @@ def dealer_compliance(
 ) -> ComplianceOut:
     """Every dealer's registration behaviour, worst offenders first.
 
-    With no date window this is the true all-time rate. With one, allocations
-    and registrations are counted independently inside it — a unit despatched in
     March and registered in April falls in two different windows — so a windowed
     rate is a trend, not an exact ratio.
     """
@@ -103,8 +100,6 @@ def dealer_drilldown(
     summary = compliance_svc.dealer_summary(db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts)
     if summary is None:  # pragma: no cover - the dealer row was just loaded
         raise AppError("dealer_not_found", 404, "No such dealer")
-
-    unregistered = compliance_svc.unregistered_units(db, dealer_id=dealer_id, limit=limit)
     self_regs = compliance_svc.self_registrations(
         db, dealer_id=dealer_id, from_ts=from_ts, to_ts=to_ts, limit=limit
     )
@@ -121,7 +116,6 @@ def dealer_drilldown(
         summary=ComplianceRowOut.model_validate(summary),
         date_from=date_from,
         date_to=date_to,
-        unregistered_units=[UnregisteredUnitOut.model_validate(u) for u in unregistered],
         self_registrations=[
             SelfRegistrationOut(
                 warranty_id=row.warranty_id,

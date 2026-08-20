@@ -16,13 +16,11 @@ from app.core.security import create_access_token
 from app.dealer.services import ledger, registration
 from app.main import create_app
 from tests.dealer.factories import (
-    allocate,
     make_admin,
     make_dealer,
     make_priced_unit,
     make_product,
     make_staff,
-    make_unit,
     new_serial,
 )
 
@@ -75,7 +73,6 @@ def _sell(db, *, dealer=None, staff=None, points=50, serial=None):
     staff = staff or make_staff(db, dealer)
     serial = serial or new_serial()
     make_priced_unit(db, serial, points)
-    allocate(db, serial, dealer)
     result = registration.register(
         db,
         staff=staff,
@@ -210,62 +207,6 @@ def test_products_mint_serials_and_render_a_label_sheet(client, db, h):
     assert patched.json()["is_active"] is False
 
 
-# --- allocations -----------------------------------------------------------
-
-
-def test_allocation_upload_reports_each_bad_row(client, db, h):
-    make_dealer(db, code="D001")
-    good = new_serial()
-    make_unit(db, good)
-    unknown = new_serial()  # no unit row -> never manufactured
-    db.commit()
-
-    # a real unit, but a dealer code that does not exist — so this row fails the
-    # DEALER check rather than the unit check (the unit check runs first)
-    bad_dealer = new_serial()
-    make_unit(db, bad_dealer)
-    db.commit()
-
-    csv = (f"serial,dealer_code\n{good},D001\n{unknown},D001\n{bad_dealer},NOPE\n").encode()
-    resp = client.post(
-        f"{PREFIX}/allocations/upload", headers=h, files={"file": ("d.csv", csv, "text/csv")}
-    )
-    assert resp.status_code in (200, 201), resp.text
-    body = resp.json()
-    assert body["created_count"] == 1
-    reasons = {e["reason"] for e in body["errors"]}
-    assert any("manufactured" in r for r in reasons)
-    assert any("dealer" in r.lower() for r in reasons)
-
-    listed = client.get(f"{PREFIX}/allocations", headers=h).json()
-    assert listed["total"] == 1
-    batches = client.get(f"{PREFIX}/allocations/batches", headers=h).json()
-    assert batches["total"] == 1
-    detail = client.get(f"{PREFIX}/allocations/batches/{batches['items'][0]['id']}", headers=h)
-    assert detail.status_code == 200
-
-
-def test_revoking_an_allocation_needs_a_reason(client, db, h):
-    dealer = make_dealer(db)
-    serial = new_serial()
-    make_unit(db, serial)
-    alloc = allocate(db, serial, dealer)
-    db.commit()
-
-    assert client.post(
-        f"{PREFIX}/allocations/{alloc.id}/revoke", headers=h, json={"reason": ""}
-    ).status_code in (400, 422)
-    ok = client.post(
-        f"{PREFIX}/allocations/{alloc.id}/revoke",
-        headers=h,
-        json={"reason": "Stock returned to the factory"},
-    )
-    assert ok.status_code == 200, ok.text
-
-
-# --- warranties ------------------------------------------------------------
-
-
 def test_warranty_search_detail_void_and_customer_edit(client, db, h):
     dealer, _, result = _sell(db)
     wid = str(result.warranty.id)
@@ -313,7 +254,6 @@ def test_backdate_lands_in_approvals_and_pays_only_once_approved(client, db, h):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = registration.register(
         db,
         staff=staff,
@@ -348,7 +288,6 @@ def test_rejecting_an_approval_voids_it_and_pays_nobody(client, db, h):
     staff = make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = registration.register(
         db,
         staff=staff,
@@ -374,38 +313,63 @@ def test_rejecting_an_approval_voids_it_and_pays_nobody(client, db, h):
 # --- compliance, dashboard, lookup, audit ---------------------------------
 
 
-def test_compliance_ranks_the_worst_shop_first(client, db, h):
+def test_compliance_ranks_the_shop_customers_had_to_register_for(client, db, h):
+    """Without allocations the ranking runs on what a shop DID or failed to do.
+
+    A customer registering their own warranty is direct evidence a shop did not,
+    and it needs no allocation to mean something.
+    """
+    from app.dealer.models.customer import Customer
+    from app.dealer.models.warranty import Warranty
+    from app.dealer.services.warranty_dates import business_today
+
     good = make_dealer(db, code="GOOD", name="Diligent Beds")
     bad = make_dealer(db, code="BAD", name="Silent Beds")
     good_staff = make_staff(db, good, phone="+919000000011")
     make_staff(db, bad, phone="+919000000012")
 
-    # the diligent shop registers what it was given; the other registers nothing
     for i in range(2):
-        s = new_serial()
-        make_priced_unit(db, s, 50)
-        allocate(db, s, good)
+        serial = new_serial()
+        make_priced_unit(db, serial, 50)
         registration.register(
             db,
             staff=good_staff,
-            raw_serial=s,
+            raw_serial=serial,
             customer_phone=f"+91981234{i:04d}",
             customer_name="C",
             invoice_ref=f"I{i}",
         )
-    for _ in range(4):
-        s = new_serial()
-        make_unit(db, s)
-        allocate(db, s, bad)
+
+    # two customers had to register their own purchases, and named this shop
+    customer = Customer(phone="+919812349999", name="Self Registrant")
+    db.add(customer)
+    db.flush()
+    for _ in range(2):
+        db.add(
+            Warranty(
+                serial=new_serial(),
+                warranty_months=60,
+                dealer_id=bad.id,
+                customer_id=customer.id,
+                warranty_start_date=business_today(),
+                warranty_end_date=business_today().replace(year=business_today().year + 5),
+                status="pending_review",
+                source="customer_self",
+            )
+        )
     db.commit()
 
     rows = client.get(f"{PREFIX}/compliance", headers=h).json()["items"]
     codes = [r["dealer_code"] for r in rows]
-    assert codes.index("BAD") < codes.index("GOOD"), "worst shop must sort first"
+    assert codes.index("BAD") < codes.index("GOOD"), "the shop customers registered for ranks first"
 
     bad_row = next(r for r in rows if r["dealer_code"] == "BAD")
-    assert bad_row["units_allocated"] == 4
+    assert bad_row["self_registrations"] == 2
     assert bad_row["warranties_registered"] == 0
+
+    good_row = next(r for r in rows if r["dealer_code"] == "GOOD")
+    assert good_row["warranties_registered"] == 2
+    assert good_row["self_registrations"] == 0
 
     drill = client.get(f"{PREFIX}/compliance/dealers/{bad.id}", headers=h)
     assert drill.status_code == 200, drill.text
@@ -415,7 +379,6 @@ def test_serial_lookup_answers_everything_in_one_response(client, db, h):
     dealer, _, result = _sell(db)
     body = client.get(f"{PREFIX}/lookup/{result.warranty.serial}", headers=h).json()
     assert body["unit"]["known"] is True
-    assert body["allocation"]["dealer_code"] == dealer.code
     assert body["current_warranty"] is not None
     assert body["events"], "support works from the event timeline"
     assert body["warranties"], "every warranty ever on this serial, not just the live one"

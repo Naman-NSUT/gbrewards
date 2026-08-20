@@ -10,7 +10,6 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.point_rate import PointRate
 from app.dealer.models.product import DealerProduct
@@ -81,13 +80,6 @@ def make_priced_unit(
     unit = make_unit(db, serial, product=product)
     make_rate(db, points, product=product)
     return unit, product
-
-
-def allocate(db: Session, serial: str, dealer: Dealer) -> Allocation:
-    allocation = Allocation(serial=serial, dealer_id=dealer.id, status="allocated")
-    db.add(allocation)
-    db.flush()
-    return allocation
 
 
 def new_serial() -> str:

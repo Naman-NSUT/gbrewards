@@ -9,7 +9,6 @@ app, `dealer_units.token` for the dealer app. The two serials are unrelated.
 """
 
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.allocation import Allocation, AllocationBatch
 from app.dealer.models.audit_log import DealerAuditLog
 from app.dealer.models.claim import Claim
 from app.dealer.models.customer import Customer
@@ -24,8 +23,6 @@ from app.dealer.models.unit import DealerQrBatch, DealerUnit
 from app.dealer.models.warranty import Warranty, WarrantyEvent
 
 __all__ = [
-    "Allocation",
-    "AllocationBatch",
     "Claim",
     "Customer",
     "Dealer",

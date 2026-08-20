@@ -12,7 +12,6 @@ from app.dealer.models.warranty import WarrantyEvent
 from app.dealer.services import ledger, registration
 from app.dealer.services import warranty as warranty_svc
 from tests.dealer.factories import (
-    allocate,
     make_admin,
     make_dealer,
     make_priced_unit,
@@ -27,7 +26,6 @@ def _register(db, *, dealer=None, staff=None):
     staff = staff or make_staff(db, dealer)
     serial = new_serial()
     make_priced_unit(db, serial, 50)
-    allocate(db, serial, dealer)
     result = registration.register(
         db,
         staff=staff,

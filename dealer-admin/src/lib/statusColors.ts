@@ -16,10 +16,7 @@ const COLORS: Record<string, string> = {
   pending_confirmation: brand.warning,
   pending_review: brand.warning,
   pending_backdate: brand.warning,
-  // allocation
-  allocated: brand.accent,
   registered: brand.success,
-  revoked: brand.textFaint,
   returned: brand.textFaint,
   // claim
   open: brand.warning,

@@ -15,7 +15,6 @@ import {
   SearchOutlined,
   ShopOutlined,
   TrophyOutlined,
-  UploadOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Dropdown, Layout, Menu, Tooltip } from 'antd';
@@ -51,7 +50,6 @@ const NAV: NavItem[] = [
   { key: '/lookup', icon: <BarcodeOutlined />, label: 'Serial Lookup', group: 'Operations' },
   { key: '/claims', icon: <FileProtectOutlined />, label: 'Claims', group: 'Operations' },
   { key: '/products', icon: <QrcodeOutlined />, label: 'Products & QR', group: 'Operations' },
-  { key: '/allocations', icon: <UploadOutlined />, label: 'Allocations', group: 'Operations' },
   { key: '/dealers', icon: <ShopOutlined />, label: 'Dealers', group: 'Operations' },
   { key: '/rewards', icon: <GiftOutlined />, label: 'Rewards', group: 'Rewards' },
   { key: '/redemptions', icon: <TrophyOutlined />, label: 'Redemptions', group: 'Rewards' },

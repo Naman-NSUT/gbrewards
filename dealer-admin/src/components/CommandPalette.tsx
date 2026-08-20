@@ -14,7 +14,6 @@ import {
   ShopOutlined,
   ToolOutlined,
   TrophyOutlined,
-  UploadOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { Modal } from 'antd';
@@ -52,7 +51,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       { id: 'warranties', label: 'Warranties', group: 'Navigate', icon: <SafetyCertificateOutlined />, run: go('/warranties') },
       { id: 'lookup', label: 'Serial Lookup', group: 'Navigate', icon: <BarcodeOutlined />, keywords: 'qr serial support', run: go('/lookup') },
       { id: 'claims', label: 'Claims', group: 'Navigate', icon: <FileProtectOutlined />, run: go('/claims') },
-      { id: 'allocations', label: 'Allocations', group: 'Navigate', icon: <UploadOutlined />, run: go('/allocations') },
       { id: 'dealers', label: 'Dealers', group: 'Navigate', icon: <ShopOutlined />, run: go('/dealers') },
       { id: 'rewards', label: 'Rewards', group: 'Navigate', icon: <GiftOutlined />, run: go('/rewards') },
       { id: 'redemptions', label: 'Redemptions', group: 'Navigate', icon: <TrophyOutlined />, run: go('/redemptions') },
@@ -65,13 +63,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         group: 'Actions',
         icon: <PlusOutlined />,
         run: go('/dealers?new=1'),
-      },
-      {
-        id: 'upload-alloc',
-        label: 'Upload allocation CSV',
-        group: 'Actions',
-        icon: <UploadOutlined />,
-        run: go('/allocations?upload=1'),
       },
       {
         id: 'adjust',

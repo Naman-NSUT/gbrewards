@@ -241,7 +241,7 @@ export function DealersPage() {
               label="Dealer code"
               style={{ width: 180 }}
               rules={[{ required: true, message: 'The code is what CSV uploads key on' }]}
-              extra="Used by allocation uploads"
+              extra="The shop's own reference code"
             >
               <Input className="mono" placeholder="GB-DLR-014" disabled={editing !== null} />
             </Form.Item>

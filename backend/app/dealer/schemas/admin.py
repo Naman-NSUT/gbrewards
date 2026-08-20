@@ -121,8 +121,6 @@ class PointsSummaryOut(Base):
 
 
 class DealerStatsOut(Base):
-    units_allocated: int
-    units_unregistered: int
     warranties_registered: int
     warranties_voided: int
     self_registrations: int
@@ -162,58 +160,6 @@ class DealerDetailOut(Base):
 
 
 # --- Allocations -----------------------------------------------------------
-
-
-class AllocationOut(Base):
-    id: uuid.UUID
-    serial: str
-    dealer_id: uuid.UUID
-    dealer_code: str | None = None
-    dealer_name: str | None = None
-    batch_id: uuid.UUID | None
-    status: str
-    dispatch_ref: str | None
-    allocated_at: datetime
-    revoked_at: datetime | None
-    revoke_reason: str | None
-    model_name: str | None = None
-    warranty_id: uuid.UUID | None = None
-
-
-class BatchRowErrorOut(Base):
-    """One rejected CSV line, quoted back with its file line number.
-
-    The whole point of the batch upload UI: '23 rows failed' is unactionable,
-    'line 47, serial …, dealer D014 does not exist' is a five-second fix.
-    """
-
-    line: int
-    serial: str | None
-    dealer_code: str | None
-    reason: str
-
-
-class AllocationBatchOut(Base):
-    id: uuid.UUID
-    filename: str | None
-    uploaded_by_admin_id: uuid.UUID
-    row_count: int
-    ok_count: int
-    error_count: int
-    created_at: datetime
-    errors: list[BatchRowErrorOut] = []
-
-
-class AllocationUploadOut(Base):
-    batch: AllocationBatchOut
-    created_count: int
-    # Rows that were already allocated to the SAME dealer. Re-uploading a
-    # despatch file has to be safe, so these are successes, not errors.
-    unchanged_count: int
-    errors: list[BatchRowErrorOut]
-
-
-# --- Warranties ------------------------------------------------------------
 
 
 class WarrantyListItem(Base):
@@ -294,7 +240,6 @@ class WarrantyDetailOut(Base):
     customer: CustomerOut
     dealer: DealerBrief | None
     staff: StaffBrief | None
-    allocation: AllocationOut | None
     events: list[WarrantyEventOut]
     ledger_entries: list[LedgerEntryOut]
     claims: list[ClaimBrief]
@@ -371,13 +316,9 @@ class ComplianceRowOut(Base):
     dealer_name: str
     city: str | None
     dealer_status: str
-    units_allocated: int
     warranties_registered: int
-    unregistered_units: int
-    registration_rate: float | None
     self_registrations: int
     backdated_registrations: int
-    avg_days_to_register: float | None
     last_registration_at: datetime | None
     days_since_last_registration: int | None
     non_compliance_score: float
@@ -385,11 +326,8 @@ class ComplianceRowOut(Base):
 
 class ComplianceTotalsOut(Base):
     dealers: int
-    units_allocated: int
     warranties_registered: int
-    unregistered_units: int
     self_registrations: int
-    registration_rate: float | None
 
 
 class ComplianceOut(Base):
@@ -401,20 +339,6 @@ class ComplianceOut(Base):
     date_to: date | None
     sort: str
     totals: ComplianceTotalsOut
-
-
-class UnregisteredUnitOut(Base):
-    """Allocated stock with no warranty of any kind against it.
-
-    Narrower than the row's `unregistered_units` count, which is allocated minus
-    DEALER-registered and therefore still counts a unit the customer registered.
-    """
-
-    serial: str
-    model_name: str | None
-    dispatch_ref: str | None
-    allocated_at: datetime
-    days_held: int
 
 
 class SelfRegistrationOut(Base):
@@ -439,7 +363,6 @@ class DealerComplianceDetailOut(Base):
     summary: ComplianceRowOut
     date_from: date | None
     date_to: date | None
-    unregistered_units: list[UnregisteredUnitOut]
     self_registrations: list[SelfRegistrationOut]
     staff_activity: list[StaffActivityOut]
 
@@ -694,8 +617,6 @@ class SerialLookupOut(Base):
 
     serial: str
     unit: UnitOut
-    allocation: AllocationOut | None
-    allocation_history: list[AllocationOut]
     current_warranty: WarrantyDetailOut | None
     warranties: list[WarrantyListItem]
     claims: list[ClaimListItem]

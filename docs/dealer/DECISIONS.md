@@ -380,3 +380,42 @@ inference.
 allocation lookup and the two `not_allocated` / `not_your_unit` errors, and
 turning the preview's reasons back on. The allocations table, its CSV upload and
 its admin screens were all kept, so the data path still exists.
+
+
+## 10. Allocations removed entirely
+
+**Decision.** The allocations table, its CSV upload, its admin page and every
+column derived from it are gone (migration 0009). Nothing scopes stock to shops.
+
+**Why now.** §9 removed the gate but kept the data as optional planning input.
+That left an upload page for data that changed nothing, and a compliance screen
+whose headline column — allocated versus registered — could only ever read zero.
+A screen that always says zero is worse than no screen.
+
+**What the compliance screen measures now.** Only things a shop did or failed to
+do, none of which need stock to be scoped:
+
+| Column | Meaning |
+|---|---|
+| `warranties_registered` | sales it recorded in the window |
+| `self_registrations` | customers who had to register for themselves |
+| `backdated_registrations` | sales recorded late enough to need a date |
+| `days_since_last_registration` | how long it has been silent |
+
+`non_compliance_score` is weighted self-registrations plus a penalty that grows
+with silence, capped so one very quiet shop cannot outrank a shop actively
+generating self-registrations.
+
+**Attribution.** A customer self-registration names a shop because the CUSTOMER
+named it (`dealer_hint`). That is the only attribution left, and it is the
+stronger evidence: the buyer stating where they bought is a fact, where an
+allocation was a guess about where stock ended up. An ambiguous shop-name match
+attributes to nobody rather than blaming one by inference.
+
+**Safe because production was empty.** Zero allocations and zero allocation
+batches existed when 0009 ran — the gate was removed before anyone uploaded any.
+The downgrade recreates the tables empty; rows are not recoverable, which only
+matters if there had been some.
+
+**To reverse.** Revert 0009 and the commit that removed the module. Everything
+was deleted together rather than left half-wired, so it comes back as a unit.

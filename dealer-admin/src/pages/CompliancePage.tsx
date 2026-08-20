@@ -9,24 +9,19 @@ import type { ComplianceQuery, ComplianceSort } from '../api/compliance';
 import type { ComplianceRow, DealerStatus } from '../api/types';
 import { DataTable } from '../components/DataTable';
 import { PageHeader } from '../components/PageHeader';
-import { RateBar } from '../components/RateBar';
-import { rateTone } from '../lib/rate';
 import { SpotlightCard } from '../components/SpotlightCard';
 import { StatusTag } from '../components/StatusDot';
 import { useCompliance } from '../hooks/useCompliance';
 import { isoDate, lastDays, type DateRange } from '../lib/dates';
-import { downloadBlob, formatNumber, formatPercent, toCsv } from '../lib/format';
+import { downloadBlob, formatNumber, toCsv } from '../lib/format';
 import { brand } from '../theme';
 import { ComplianceDrawer } from './ComplianceDrawer';
 
 /** The keys services/compliance._SORTS accepts — anything else is a 400. */
 const SORTS: { label: string; value: ComplianceSort }[] = [
   { label: 'Worst overall', value: 'worst' },
-  { label: 'Worst rate', value: 'rate' },
-  { label: 'Most unregistered', value: 'unregistered' },
   { label: 'Longest silent', value: 'quietest' },
   { label: 'Most self-registered', value: 'self_registrations' },
-  { label: 'Slowest to register', value: 'slowest' },
 ];
 
 const PAGE_SIZE = 50;
@@ -67,6 +62,9 @@ export function CompliancePage() {
 
   const compliance = useCompliance(params);
   const rows = compliance.data?.items ?? [];
+  // A shop that has stopped registering is the clearest signal left now that
+  // stock is not scoped and there is no allocated-versus-registered ratio.
+  const quietCount = rows.filter((r) => (r.days_since_last_registration ?? 999) >= 30).length;
   const totals = compliance.data?.totals;
 
   const exportCsv = () => {
@@ -80,13 +78,9 @@ export function CompliancePage() {
         dealer: r.dealer_name,
         city: r.city ?? '',
         status: r.dealer_status,
-        units_allocated: r.units_allocated,
         warranties_registered: r.warranties_registered,
-        unregistered_units: r.unregistered_units,
-        rate: r.registration_rate === null ? '' : (r.registration_rate * 100).toFixed(1),
         self_registrations: r.self_registrations,
         backdated_registrations: r.backdated_registrations,
-        avg_days_to_register: r.avg_days_to_register ?? '',
         days_since_last: r.days_since_last_registration ?? '',
       })),
       [
@@ -94,13 +88,9 @@ export function CompliancePage() {
         'dealer',
         'city',
         'status',
-        'units_allocated',
         'warranties_registered',
-        'unregistered_units',
-        'rate',
         'self_registrations',
         'backdated_registrations',
-        'avg_days_to_register',
         'days_since_last',
       ],
     );
@@ -150,19 +140,6 @@ export function CompliancePage() {
       align: 'right',
       width: 105,
       render: (v: number) => <span className="tnum">{formatNumber(v)}</span>,
-    },
-    {
-      title: 'Registration rate',
-      dataIndex: 'registration_rate',
-      width: 190,
-      render: (rate: number | null, r) => (
-        <RateBar
-          rate={rate}
-          registered={r.warranties_registered}
-          allocated={r.units_allocated}
-          width={170}
-        />
-      ),
     },
     {
       title: (
@@ -284,25 +261,25 @@ export function CompliancePage() {
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={12} lg={6}>
           <Headline
-            label="Programme rate"
-            value={formatPercent(totals?.registration_rate, 1)}
-            hint={`${formatNumber(totals?.warranties_registered ?? 0)} of ${formatNumber(totals?.units_allocated ?? 0)} allocated units`}
-            tone={rateTone(totals?.registration_rate ?? 0)}
+            label="Registered"
+            value={formatNumber(totals?.warranties_registered ?? 0)}
+            hint="Sales the shops recorded in this window"
+            tone="ok"
           />
         </Col>
         <Col xs={12} lg={6}>
           <Headline
-            label="Unregistered units"
-            value={formatNumber(totals?.unregistered_units ?? 0)}
-            hint="Stock sitting in shops, unrecorded"
-            tone={(totals?.unregistered_units ?? 0) > 0 ? 'critical' : 'good'}
+            label="Shops gone quiet"
+            value={formatNumber(quietCount)}
+            hint="No registration in 30 days or more"
+            tone={quietCount > 0 ? 'critical' : 'good'}
           />
         </Col>
         <Col xs={12} lg={6}>
           <Headline
             label="Dealers in view"
             value={formatNumber(totals?.dealers ?? 0)}
-            hint={withStockOnly ? 'With stock allocated' : 'Every dealer on the programme'}
+            hint="Every dealer on the programme"
             tone="ok"
           />
         </Col>
@@ -358,14 +335,14 @@ export function CompliancePage() {
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
         emptyText="No dealers in this window"
-        emptyHint="Every dealer with an allocation in the selected dates appears here."
+        emptyHint="Every dealer on the programme appears here."
         emptyIcon={<WarningOutlined />}
         rowClassName={(r) => {
           const base = 'dr-row-clickable';
-          if (r.registration_rate === null) return base;
-          const tone = rateTone(r.registration_rate);
-          if (tone === 'critical') return `${base} dr-row-critical`;
-          if (tone === 'warn') return `${base} dr-row-warn`;
+          // Tint on the two things that still mean something: a customer having
+          // to register their own warranty, and a shop that has gone silent.
+          if (r.self_registrations > 0) return `${base} dr-row-critical`;
+          if ((r.days_since_last_registration ?? 0) >= 30) return `${base} dr-row-warn`;
           return base;
         }}
         onRow={(r) => ({ onClick: () => setOpenDealer(r.dealer_id) })}

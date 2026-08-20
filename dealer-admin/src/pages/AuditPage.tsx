@@ -21,7 +21,6 @@ const HIGH_STAKES = new Set([
   'approve_backdate',
   'reject_backdate',
   'edit_customer',
-  'revoke_allocation',
   'suspend_dealer',
   'reject_self_registration',
 ]);

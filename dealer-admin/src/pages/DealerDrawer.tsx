@@ -19,7 +19,6 @@ import { apiErrorMessage } from '../api/client';
 import type { Dealer, StaffInput, StaffRow } from '../api/types';
 import { ConfirmWithReason } from '../components/ConfirmWithReason';
 import { EmptyState } from '../components/EmptyState';
-import { RateBar } from '../components/RateBar';
 import { DetailSkeleton } from '../components/skeletons';
 import { StatusTag } from '../components/StatusDot';
 import {
@@ -74,12 +73,6 @@ export function DealerDrawer({
   const d = detailData?.dealer;
   const stats = detailData?.stats;
   const points = detailData?.points;
-  // The dealer record has no rate of its own; the ratio the drawer shows is the
-  // one the detail endpoint's own counters imply, for this dealer, all time.
-  const rate =
-    stats && stats.units_allocated > 0
-      ? stats.warranties_registered / stats.units_allocated
-      : null;
 
   const doSuspend = async (reason: string) => {
     if (!dealerId) return;
@@ -177,16 +170,19 @@ export function DealerDrawer({
                   background: brand.surface,
                 }}
               >
-                <div style={{ fontSize: 12.5, color: brand.textDim, marginBottom: 10 }}>
-                  Registered {formatNumber(stats.warranties_registered)} of{' '}
-                  {formatNumber(stats.units_allocated)} units ever allocated
+                <div style={{ fontSize: 12.5, color: brand.textDim }}>
+                  Registered {formatNumber(stats.warranties_registered)}{' '}
+                  {stats.warranties_registered === 1 ? 'sale' : 'sales'} in total
+                  {stats.self_registrations > 0 && (
+                    <>
+                      {' · '}
+                      <span style={{ color: brand.danger }}>
+                        {formatNumber(stats.self_registrations)} registered by the customer
+                        instead
+                      </span>
+                    </>
+                  )}
                 </div>
-                <RateBar
-                  rate={rate}
-                  registered={stats.warranties_registered}
-                  allocated={stats.units_allocated}
-                  width={640}
-                />
               </div>
             </Col>
             <Col xs={8}>
@@ -202,9 +198,6 @@ export function DealerDrawer({
                   stats.last_registration_at ? relativeTime(stats.last_registration_at) : 'never'
                 }
               />
-            </Col>
-            <Col xs={8}>
-              <Metric label="Unregistered" value={formatNumber(stats.units_unregistered)} />
             </Col>
             <Col xs={8}>
               <Metric label="Self-registered" value={formatNumber(stats.self_registrations)} />

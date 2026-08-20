@@ -32,13 +32,12 @@ export function useVoidWarranty() {
     mutationFn: ({ id, reason, clawback }: { id: string; reason: string; clawback: boolean }) =>
       voidWarranty(id, { reason, clawback }),
     onSuccess: (_data, { id }) => {
-      // A void writes a compensating debit and frees the allocation, so points,
+      // A void writes a compensating debit and frees the serial, so points,
       // compliance and the serial's own record all move with it.
       void qc.invalidateQueries({ queryKey: qk.warranties });
       void qc.invalidateQueries({ queryKey: qk.warrantyDetail(id) });
       void qc.invalidateQueries({ queryKey: qk.dashboard });
       void qc.invalidateQueries({ queryKey: qk.compliance });
-      void qc.invalidateQueries({ queryKey: qk.allocations });
       void qc.invalidateQueries({ queryKey: qk.points });
       void qc.invalidateQueries({ queryKey: qk.dealers });
       void qc.invalidateQueries({ queryKey: qk.audit });

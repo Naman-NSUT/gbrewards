@@ -18,7 +18,6 @@ from app.core.deps import client_ip, get_current_dealer_admin, get_db, require_a
 from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, count_of, like, pagination
 from app.dealer.models.admin import DealerAdmin as Admin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.dealer import Dealer, DealerStaff
 from app.dealer.models.ledger_entry import LedgerEntry
 from app.dealer.models.warranty import Warranty
@@ -160,16 +159,6 @@ def get_dealer(
         ).scalars()
     )
 
-    allocated = db.execute(
-        select(func.count(Allocation.id)).where(
-            Allocation.dealer_id == dealer.id, Allocation.status != "revoked"
-        )
-    ).scalar_one()
-    unregistered = db.execute(
-        select(func.count(Allocation.id)).where(
-            Allocation.dealer_id == dealer.id, Allocation.status == "allocated"
-        )
-    ).scalar_one()
     registered, voided, last_at = db.execute(
         select(
             func.count(Warranty.id).filter(Warranty.status != "voided"),
@@ -177,15 +166,12 @@ def get_dealer(
             func.max(Warranty.registered_at),
         ).where(Warranty.dealer_id == dealer.id)
     ).one()
-    # Self-registrations against stock this dealer holds — the non-compliance
-    # signal, repeated here so the dealer page tells the same story as the
-    # compliance screen.
+    # Self-registrations the CUSTOMER attributed to this shop — the
+    # non-compliance signal, repeated here so the dealer page tells the same
+    # story as the compliance screen.
     self_registered = db.execute(
-        select(func.count(Warranty.id))
-        .select_from(Warranty)
-        .join(Allocation, Allocation.serial == Warranty.serial)
-        .where(
-            Allocation.dealer_id == dealer.id,
+        select(func.count(Warranty.id)).where(
+            Warranty.dealer_id == dealer.id,
             Warranty.source == "customer_self",
             Warranty.status != "voided",
         )
@@ -201,8 +187,6 @@ def get_dealer(
             total_earned=ledger.total_earned(db, dealer.id),
         ),
         stats=DealerStatsOut(
-            units_allocated=int(allocated),
-            units_unregistered=int(unregistered),
             warranties_registered=int(registered),
             warranties_voided=int(voided),
             self_registrations=int(self_registered),

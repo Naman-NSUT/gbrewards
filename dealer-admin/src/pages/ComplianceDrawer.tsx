@@ -1,11 +1,10 @@
 import { ArrowRightOutlined } from '@ant-design/icons';
-import { Col, Divider, Drawer, Empty, Row, Tag } from 'antd';
+import { Col, Divider, Drawer, Empty, Row } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 import type { ComplianceDetail } from '../api/types';
 import { EmptyState } from '../components/EmptyState';
 import { Mono } from '../components/Mono';
-import { RateBar } from '../components/RateBar';
 import { DetailSkeleton } from '../components/skeletons';
 import { StatusTag } from '../components/StatusDot';
 import { useComplianceDetail } from '../hooks/useCompliance';
@@ -87,16 +86,8 @@ function Body({ detail: d }: { detail: ComplianceDetail }) {
                 {d.date_to ? ` – ${formatDate(d.date_to)}` : ''}
               </span>
             </div>
-            <RateBar
-              rate={s.registration_rate}
-              registered={s.warranties_registered}
-              allocated={s.units_allocated}
-              width={640}
-            />
+
           </div>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Metric label="Allocated" value={formatNumber(s.units_allocated)} />
         </Col>
         <Col xs={12} sm={6}>
           <Metric
@@ -107,9 +98,13 @@ function Body({ detail: d }: { detail: ComplianceDetail }) {
         </Col>
         <Col xs={12} sm={6}>
           <Metric
-            label="Never registered"
-            value={formatNumber(s.unregistered_units)}
-            tone={s.unregistered_units > 0 ? brand.danger : brand.textDim}
+            label="Days quiet"
+            value={
+              s.days_since_last_registration === null
+                ? 'never registered'
+                : formatNumber(s.days_since_last_registration)
+            }
+            tone={(s.days_since_last_registration ?? 999) >= 30 ? brand.danger : brand.textDim}
           />
         </Col>
         <Col xs={12} sm={6}>
@@ -122,19 +117,9 @@ function Body({ detail: d }: { detail: ComplianceDetail }) {
       </Row>
 
       <div style={{ marginTop: 12, fontSize: 12.5, color: brand.textDim }}>
-        {s.avg_days_to_register !== null ? (
-          <>
-            Typically registers{' '}
-            <strong style={{ color: brand.text }}>
-              {s.avg_days_to_register < 1
-                ? 'the same day'
-                : `${s.avg_days_to_register.toFixed(1)} days`}
-            </strong>{' '}
-            after the unit was allocated.
-          </>
-        ) : (
-          'No registration in this window to time.'
-        )}
+        {s.warranties_registered === 0
+          ? 'No registrations in this window.'
+          : `${formatNumber(s.warranties_registered)} registered in this window.`}
         {s.backdated_registrations > 0 && (
           <>
             {' · '}
@@ -144,57 +129,6 @@ function Body({ detail: d }: { detail: ComplianceDetail }) {
           </>
         )}
       </div>
-
-      <Divider style={{ margin: '20px 0 14px' }} />
-      <SectionTitle>
-        Sitting on {formatNumber(d.unregistered_units.length)} unregistered{' '}
-        {d.unregistered_units.length === 1 ? 'unit' : 'units'}
-      </SectionTitle>
-      {d.unregistered_units.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Everything allocated is registered"
-        />
-      ) : (
-        <div style={{ maxHeight: 260, overflowY: 'auto', display: 'grid', gap: 6 }}>
-          {d.unregistered_units.map((a) => (
-            <div
-              key={a.serial}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                padding: '8px 12px',
-                border: `1px solid ${brand.border}`,
-                borderRadius: 8,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <Mono value={a.serial} chars={16} />
-                {a.model_name && (
-                  <div style={{ fontSize: 11.5, color: brand.textFaint }}>{a.model_name}</div>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {a.dispatch_ref && (
-                  <span style={{ fontSize: 11.5, color: brand.textFaint }}>{a.dispatch_ref}</span>
-                )}
-                <Tag
-                  style={{
-                    marginInlineEnd: 0,
-                    color: a.days_held > 60 ? brand.danger : brand.textDim,
-                    background: 'transparent',
-                    borderColor: brand.border,
-                  }}
-                >
-                  held {a.days_held}d
-                </Tag>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       <Divider style={{ margin: '20px 0 14px' }} />
       <SectionTitle>Staff</SectionTitle>

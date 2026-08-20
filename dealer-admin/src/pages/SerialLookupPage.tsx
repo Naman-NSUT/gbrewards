@@ -47,7 +47,6 @@ export function SerialLookupPage() {
   const nothingKnown =
     data !== undefined &&
     !data.unit.known &&
-    data.allocation === null &&
     data.warranties.length === 0;
 
   return (
@@ -101,7 +100,7 @@ export function SerialLookupPage() {
         <SpotlightCard style={{ padding: 24 }}>
           <EmptyState
             title="No record of this serial"
-            hint="It has never been allocated to a dealer and no warranty exists on it. Check for a typo, then check with GB Rewards that the unit was manufactured."
+            hint="No warranty exists on it and no such label was ever printed. Check for a typo, then check the label was generated in Products & QR."
             height={220}
           />
         </SpotlightCard>
@@ -151,8 +150,7 @@ function LookupResult({ data }: { data: SerialLookup }) {
             </div>
           ) : (
             <div style={{ marginTop: 14, color: brand.textDim, fontSize: 13.5 }}>
-              This unit has no live warranty. It has{' '}
-              {data.allocation ? 'been allocated but never registered' : 'never been allocated'}.
+              This unit has no live warranty — nobody has registered a sale on it yet.
             </div>
           )}
         </SpotlightCard>
@@ -197,7 +195,7 @@ function LookupResult({ data }: { data: SerialLookup }) {
                   span: 2,
                   children: data.unit.unverified ? (
                     <span style={{ color: brand.warning }}>
-                      No — this row was invented by an allocation upload
+                      No — no product record
                     </span>
                   ) : (
                     'Yes'
@@ -210,55 +208,8 @@ function LookupResult({ data }: { data: SerialLookup }) {
               type="warning"
               showIcon
               message="Not in the unit mirror"
-              description="We have no product record for this serial. The allocation alone authorised any registration on it."
+              description="We have no product record for this serial."
             />
-          )}
-        </SpotlightCard>
-
-        <SpotlightCard style={{ padding: 20, marginBottom: 16 }}>
-          <SectionTitle>Allocation</SectionTitle>
-          {data.allocation ? (
-            <Descriptions
-              column={2}
-              size="small"
-              colon={false}
-              styles={descStyles}
-              items={[
-                {
-                  key: 'dealer',
-                  label: 'Dealer',
-                  children: `${data.allocation.dealer_name ?? 'Unknown'} (${data.allocation.dealer_code ?? data.allocation.dealer_id.slice(0, 8)})`,
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  children: <StatusTag status={data.allocation.status} />,
-                },
-                {
-                  key: 'when',
-                  label: 'Allocated',
-                  children: formatDateTime(data.allocation.allocated_at),
-                },
-                { key: 'ref', label: 'Dispatch ref', children: data.allocation.dispatch_ref ?? '—' },
-                ...(data.allocation.revoke_reason
-                  ? [
-                      {
-                        key: 'revoked',
-                        label: 'Revoked',
-                        span: 2,
-                        children: `${formatDateTime(data.allocation.revoked_at)} — ${data.allocation.revoke_reason}`,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Never allocated to a dealer" />
-          )}
-          {data.allocation_history.length > 1 && (
-            <div style={{ marginTop: 12, fontSize: 12, color: brand.textFaint }}>
-              {data.allocation_history.length} allocations recorded on this serial in total.
-            </div>
           )}
         </SpotlightCard>
 

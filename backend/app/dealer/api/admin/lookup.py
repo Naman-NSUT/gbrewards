@@ -22,8 +22,6 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_dealer_admin, get_db
 from app.core.errors import AppError
 from app.dealer.api.admin._common import (
-    allocation_select,
-    to_allocation_out,
     to_warranty_item,
     warranty_select,
 )
@@ -31,7 +29,6 @@ from app.dealer.api.admin.claims import claim_select, to_claim_item
 from app.dealer.api.admin.sms import to_sms_out
 from app.dealer.api.admin.warranties import build_warranty_detail, resolve_actor_names
 from app.dealer.models.admin import DealerAdmin as Admin
-from app.dealer.models.allocation import Allocation
 from app.dealer.models.claim import Claim
 from app.dealer.models.product import DealerProduct as Product
 from app.dealer.models.sms_message import SmsMessage
@@ -105,16 +102,6 @@ def lookup_serial(
 
     unit = _unit_out(db, serial)
 
-    allocation_rows = db.execute(
-        allocation_select()
-        .where(Allocation.serial == serial)
-        .order_by(Allocation.allocated_at.desc())
-    ).all()
-    allocations = [to_allocation_out(row) for row in allocation_rows]
-    current_allocation = next(
-        (a for a in allocations if a.status in ("allocated", "registered")), None
-    )
-
     warranty_rows = db.execute(
         warranty_select().where(Warranty.serial == serial).order_by(Warranty.registered_at.desc())
     ).all()
@@ -131,8 +118,6 @@ def lookup_serial(
     return SerialLookupOut(
         serial=serial,
         unit=unit,
-        allocation=current_allocation,
-        allocation_history=allocations,
         current_warranty=current,
         warranties=warranties,
         claims=claims,
