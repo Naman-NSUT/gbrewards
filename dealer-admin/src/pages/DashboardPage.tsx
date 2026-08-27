@@ -38,7 +38,7 @@ export function DashboardPage() {
   const analytics = useDashboardAnalytics(days);
   // The dashboard has no compliance or activity payload of its own; both panels
   // read the same endpoints the dedicated screens do, so they can never drift.
-  const worst = useCompliance({ sort: 'worst', with_stock_only: true, limit: 8, offset: 0 });
+  const worst = useCompliance({ sort: 'worst', limit: 8, offset: 0 });
   const activity = useAudit({ limit: 12, offset: 0 });
 
   const s = stats.data;
@@ -147,7 +147,7 @@ export function DashboardPage() {
               {series.length === 0 ? (
                 <EmptyState
                   title="No registrations in this window"
-                  hint="Widen the window, or check that dealers have stock allocated to them."
+                  hint="Widen the window, or check that dealers are scanning at the point of sale."
                   height={280}
                 />
               ) : (
@@ -163,7 +163,7 @@ export function DashboardPage() {
           ) : (
             <ChartCard
               title="Worst compliance"
-              subtitle="Allocated stock they have not registered"
+              subtitle="Sales their customers registered instead of them"
               extra={
                 <a onClick={() => navigate('/compliance')} style={{ fontSize: 12.5 }}>
                   All dealers <ArrowRightOutlined style={{ fontSize: 10 }} />
