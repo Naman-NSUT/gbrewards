@@ -239,7 +239,7 @@ def test_the_served_type_comes_from_the_bytes_not_from_the_uploader(uploads):
 
 
 def test_a_lost_file_is_its_own_error_not_no_proof_attached(uploads):
-    """"The row survived, the file did not" must never read as "the customer
+    """ "The row survived, the file did not" must never read as "the customer
     attached nothing" — that is an approver rejecting a genuine warranty for a
     failure of ours."""
     stored = storage.save_upload(_upload(PNG))
@@ -364,9 +364,7 @@ def test_a_lost_file_does_not_masquerade_as_a_missing_one_over_http(client, h, d
 
 
 def test_an_unknown_warranty_is_not_a_missing_proof(client, h, uploads):
-    resp = client.get(
-        f"{PREFIX}/warranties/00000000-0000-0000-0000-000000000000/proof", headers=h
-    )
+    resp = client.get(f"{PREFIX}/warranties/00000000-0000-0000-0000-000000000000/proof", headers=h)
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "warranty_not_found"
 
