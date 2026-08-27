@@ -388,7 +388,13 @@ export interface AllocationUploadResult {
 
 // ------------------------------------------------------------ dealers ------
 
-export type DealerStatus = 'active' | 'suspended' | 'closed';
+/**
+ * 'pending' is where EVERY self-signed-up shop starts, so it cannot be left out
+ * — omitting it made the panel unable to tell a shop awaiting verification from
+ * one that had been suspended, and offered it a "Reactivate" button for a state
+ * it had never been in. Mirrors the CHECK constraint on dealers.status.
+ */
+export type DealerStatus = 'pending' | 'active' | 'suspended' | 'closed';
 
 /** DealerOut — the plain dealer record, with no derived counters. */
 export interface Dealer {

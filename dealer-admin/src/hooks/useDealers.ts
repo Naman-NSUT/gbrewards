@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   adjustDealerPoints,
+  approveDealer,
   createDealer,
   createDealerStaff,
   getDealer,
@@ -94,6 +95,20 @@ export function useSuspendDealer() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => suspendDealer(id, { reason }),
     onSuccess: (_d, { id }) => {
+      void qc.invalidateQueries({ queryKey: qk.dealers });
+      void qc.invalidateQueries({ queryKey: qk.dealerDetail(id) });
+      void qc.invalidateQueries({ queryKey: qk.compliance });
+      void qc.invalidateQueries({ queryKey: qk.dashboard });
+      void qc.invalidateQueries({ queryKey: qk.audit });
+    },
+  });
+}
+
+export function useApproveDealer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => approveDealer(id),
+    onSuccess: (_d, id) => {
       void qc.invalidateQueries({ queryKey: qk.dealers });
       void qc.invalidateQueries({ queryKey: qk.dealerDetail(id) });
       void qc.invalidateQueries({ queryKey: qk.compliance });

@@ -192,6 +192,7 @@ export function CompliancePage() {
                 setStatus(v);
               }}
               options={[
+                { label: 'Pending', value: 'pending' },
                 { label: 'Active', value: 'active' },
                 { label: 'Suspended', value: 'suspended' },
                 { label: 'Closed', value: 'closed' },

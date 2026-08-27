@@ -46,6 +46,23 @@ export async function suspendDealer(id: string, body: { reason: string }): Promi
   return resp.data;
 }
 
+/**
+ * Verify a shop that signed itself up.
+ *
+ * Distinct from reactivate, which is for a shop that WAS active and was
+ * suspended. Both end at status 'active', but they are different events and the
+ * append-only audit log records them under different actions — calling
+ * reactivate on a pending shop would file "reactivate_dealer" for a shop that
+ * had never been active.
+ *
+ * A pending shop can already sign in and register sales; what approval unlocks
+ * is redemption.
+ */
+export async function approveDealer(id: string): Promise<Dealer> {
+  const resp = await api.post<Dealer>(`/dealer-admin/dealers/${id}/approve`);
+  return resp.data;
+}
+
 /** Reactivate, not "reinstate" — the server's word, so logs and UI agree. */
 export async function reactivateDealer(id: string): Promise<Dealer> {
   const resp = await api.post<Dealer>(`/dealer-admin/dealers/${id}/reactivate`);

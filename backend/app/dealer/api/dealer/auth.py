@@ -17,7 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.dealer import Dealer, DealerStaff
+from app.dealer.models.dealer import SIGNED_IN_STATUSES, Dealer, DealerStaff
 from app.dealer.schemas.common import Base, PhoneMixin
 from app.dealer.services import otp, ratelimit
 from app.dealer.services import signup as signup_svc
@@ -225,7 +225,7 @@ def otp_verify(
 
     existing_dealer = db.get(Dealer, staff.dealer_id)
     # A pending shop signs in fine; what it cannot do is redeem.
-    if existing_dealer is None or existing_dealer.status not in ("active", "pending"):
+    if existing_dealer is None or existing_dealer.status not in SIGNED_IN_STATUSES:
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     return _issue_pair(staff, existing_dealer)
@@ -257,7 +257,11 @@ def refresh_token(
     if staff is None or not staff.is_active:
         raise AppError("invalid_token", 401, "Unknown or disabled account")
     dealer = db.get(Dealer, staff.dealer_id)
-    if dealer is None or dealer.status != "active":
+    # Same rule as sign-in and as get_current_staff. Demanding 'active' here
+    # while both of those accept 'pending' meant a self-signed-up shop was
+    # logged out every time its hour-long access token expired, and had to redo
+    # the OTP to carry on selling.
+    if dealer is None or dealer.status not in SIGNED_IN_STATUSES:
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     # Rotate: the presented refresh token is burned as it is exchanged.
