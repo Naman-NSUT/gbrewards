@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 import { clearTokens, loadTokens, saveTokens, type StoredTokens } from '../auth/tokenStore';
 import { API_BASE_URL, API_PREFIX } from '../config';
@@ -105,8 +105,53 @@ function toApiError(error: unknown): ApiRequestError {
   return new ApiRequestError('http_error', error.message || `Request failed (${status})`, status, {});
 }
 
+/**
+ * Refuse a 2xx whose body is not JSON, loudly.
+ *
+ * This panel is one of three apps served from a single Vercel origin whose last
+ * rewrite in the root vercel.json is `{"source": "/(.*)", "destination":
+ * "/index.html"}`; the panel itself is served by the rule above it,
+ * `/dealer/(.*)` -> `/dealer/index.html`. Every path that is not a built asset
+ * therefore answers 200 text/html with a SPA shell. API_BASE_URL defaults to the
+ * literal 'http://localhost:8000', so a production deploy that forgets
+ * VITE_API_BASE_URL either hits nothing at all or, once someone "helpfully"
+ * points it at the panel's own URL, hits that catch-all.
+ *
+ * axios makes that quieter than fetch does, not louder: with silentJSONParsing
+ * on (the default) it tries JSON.parse itself, swallows the SyntaxError and hands
+ * the raw HTML through as `response.data`. Nothing throws. `resp.data
+ * .access_token` is undefined, the string "undefined" is stored as the token,
+ * every later request goes out as `Bearer undefined`, and the panel loops between
+ * the dashboard and the login screen without ever showing an error. Catching it
+ * here turns that into one sentence naming the cause.
+ *
+ * Blob downloads (the printable label sheet) legitimately are not JSON, hence the
+ * responseType check; a 204 arrives as an empty string and is not a failure.
+ */
+function assertJson(response: AxiosResponse): AxiosResponse {
+  const expectsJson = !response.config.responseType || response.config.responseType === 'json';
+  if (!expectsJson || typeof response.data !== 'string' || response.data === '') return response;
+
+  const contentType = String(response.headers?.['content-type'] ?? 'unknown');
+  const url = `${response.config.baseURL ?? ''}${response.config.url ?? ''}`;
+  const diagnosis =
+    `Expected JSON from ${url} but got ${contentType} (HTTP ${response.status}). ` +
+    'VITE_API_BASE_URL is probably unset or pointing at the panel itself instead of ' +
+    "the API, so the site's own index.html came back.";
+  // The operator gets the sentence from apiErrorMessage(); the console keeps the
+  // diagnosis, because only whoever deployed the panel can fix this.
+  console.error(`[api] ${diagnosis}`, String(response.data).slice(0, 200));
+  throw new ApiRequestError('invalid_response', diagnosis, response.status, {
+    contentType,
+    url,
+  });
+}
+
 api.interceptors.response.use(
-  (r) => r,
+  // Throwing from the success handler skips the rejection handler beside it —
+  // axios chains them as one then(fulfilled, rejected) — so an ApiRequestError
+  // raised here reaches the caller as-is rather than being re-wrapped.
+  (r) => assertJson(r),
   async (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(toApiError(error));
 
@@ -131,7 +176,15 @@ api.interceptors.response.use(
   },
 );
 
+// The diagnosis on the error is written for whoever is reading the console. This
+// is what the operator staring at the screen needs: what is broken and who fixes it.
+const INVALID_RESPONSE_MESSAGE =
+  'This panel is talking to the website instead of the API, so nothing can load. ' +
+  'The deployment is missing VITE_API_BASE_URL — send this to whoever deployed it. ' +
+  'The browser console has the details.';
+
 export function apiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (apiErrorCode(error) === 'invalid_response') return INVALID_RESPONSE_MESSAGE;
   if (error instanceof ApiRequestError) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return fallback;

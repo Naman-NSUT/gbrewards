@@ -1,3 +1,5 @@
+import secrets
+
 import redis as redis_lib
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -11,6 +13,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.dealer.models.admin import DealerAdmin
@@ -21,6 +24,21 @@ from app.dealer.services import signup as signup_svc
 from app.dealer.services.audit import record_audit
 
 router = APIRouter(prefix="/auth", tags=["dealer-auth"])
+
+# Something for /admin/login to verify against when the email is unknown, so that
+# answer costs the same as a real one. Argon2 is ~50-100ms by design; a row that is
+# not there costs a database round trip and nothing else, so
+# `admin is None or not verify_password(...)` short-circuits and replies in ~1ms.
+# That gap is an order of magnitude wider than network jitter, which turns the
+# endpoint into a directory of the client's back-office staff: type an address,
+# time the 401, learn whether the person works here. The 10-per-5-minutes IP limit
+# below slows a sweep down; it does not stop one, and it does nothing about a
+# single targeted "does my counterpart at the distributor have an account?".
+#
+# Hashed ONCE, at import. Generating a throwaway hash per miss would pay argon2 on
+# the miss path too, but hashing is slower than verifying — the gap would reopen
+# pointing the other way, and unknown emails would become the slow ones.
+_DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 
 class OtpRequestIn(PhoneMixin, Base):
@@ -271,7 +289,13 @@ def dealer_admin_login(
     admin = db.execute(
         select(DealerAdmin).where(DealerAdmin.email == body.email.lower().strip())
     ).scalar_one_or_none()
-    if admin is None or not verify_password(body.password, admin.password_hash):
+    # Unconditional, and before the `admin is None` test: an unknown email must do
+    # the same argon2 work as a known one. See _DUMMY_PASSWORD_HASH.
+    password_ok = verify_password(
+        body.password,
+        admin.password_hash if admin is not None else _DUMMY_PASSWORD_HASH,
+    )
+    if admin is None or not password_ok:
         raise AppError("invalid_credentials", 401, "Incorrect email or password")
     if not admin.is_active:
         raise AppError("admin_disabled", 403, "This account has been disabled")

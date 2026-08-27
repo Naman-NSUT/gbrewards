@@ -1,3 +1,5 @@
+from sqlalchemy.exc import IntegrityError
+
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.security import hash_secret
@@ -29,5 +31,11 @@ def ensure_bootstrap_admin() -> None:
                 role="owner",
             )
         )
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another instance won the race at the same boot. Correct outcome,
+            # but an unhandled error here would crash this instance on startup.
+            db.rollback()
+            return
         logger.info("bootstrap admin created: %s", settings.bootstrap_admin_email)

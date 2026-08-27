@@ -21,6 +21,7 @@ What can NEVER be edited by a dealer, in or out of the window: the serial, the
 dates, or which dealer owns the registration. Only who the customer is.
 """
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Request
@@ -56,7 +57,15 @@ class CorrectionOut(Base):
 
 @router.patch("/registrations/{warranty_id}/customer", response_model=CorrectionOut)
 def correct_customer(
-    warranty_id: str,
+    # uuid.UUID, not str: a junk path segment typed as a string is handed
+    # straight to db.get(), where psycopg raises "invalid input syntax for type
+    # uuid" — a 500 with the request's transaction already dead, over a fat
+    # finger. It also breaks the defence three lines below: that 404 exists to
+    # give "no such registration" and "another dealer's registration" the same
+    # answer, and a crash on a malformed id is a third, handler-level answer for
+    # a prober to sort ids by. Typed as a UUID the id is rejected by validation
+    # before any lookup, so it says nothing about what is in the database.
+    warranty_id: uuid.UUID,
     body: CorrectionIn,
     request: Request,
     staff: DealerStaff = Depends(get_current_staff),

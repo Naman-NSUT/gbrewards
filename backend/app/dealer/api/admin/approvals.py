@@ -7,8 +7,11 @@ from the same person, and because together they ARE the non-compliance report:
                     clock they asked for is recorded, honoured only on approval.
   pending_review    the CUSTOMER registered the unit because the dealer never
                     did. Nobody is paid for these — the dealer did not do the
-                    work — but the selling dealer is named anyway, inferred from
-                    who holds the allocation, because that name is the point.
+                    work — but the shop the customer NAMED is carried on the
+                    row, because that name is the point. When the customer named
+                    nobody the row stays unattributed: a queue that guesses a
+                    seller is a queue that accuses a shop of someone else's
+                    miss.
 
 Rejecting voids with NO clawback: a warranty that never reached 'active' was
 never credited, so a reversal would debit points that were never paid.
@@ -19,7 +22,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import Select, func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import get_current_dealer_admin, get_db, require_admin_write
@@ -50,16 +53,19 @@ router = APIRouter(tags=["admin-approvals"])
 PENDING = ("pending_backdate", "pending_review")
 
 
-def _queue_select() -> Select[tuple[Warranty, Customer, Dealer, Dealer, DealerStaff]]:
+def _queue_select() -> Select[tuple[Warranty, Customer, Dealer, DealerStaff]]:
     """The queue with its evidence, in one query.
 
-    The second dealer join is the interesting one: a self-registration carries
-    no dealer_id, so the seller is inferred from the allocation on that serial.
-    LATERAL-free because a serial has at most one open allocation (enforced by
+    Everything the approver needs hangs off the warranty row itself: the
+    customer who owns it, the shop it is attributed to, the person who
+    registered it. Dealer and staff are OUTER joins because a self-registration
+    has neither a staff member (nobody at the shop touched it) nor, when the
+    customer did not say where they bought the mattress, a shop. Those rows must
+    survive the query unattributed — dropping them would hide a miss, and
+    attaching any dealer to them would invent one.
     """
-    holder = aliased(Dealer)
     return (
-        select(Warranty, Customer, Dealer, holder, DealerStaff)
+        select(Warranty, Customer, Dealer, DealerStaff)
         .join(Customer, Customer.id == Warranty.customer_id)
         .outerjoin(Dealer, Dealer.id == Warranty.dealer_id)
         .outerjoin(DealerStaff, DealerStaff.id == Warranty.staff_id)
@@ -71,10 +77,8 @@ def _to_item(
     warranty: Warranty,
     customer: Customer,
     dealer: Dealer | None,
-    holder: Dealer | None,
     staff: DealerStaff | None,
 ) -> ApprovalItem:
-    seller = dealer or holder
     registered_at = warranty.registered_at
     if registered_at.tzinfo is None:  # pragma: no cover - column is timestamptz
         registered_at = registered_at.replace(tzinfo=UTC)
@@ -99,16 +103,19 @@ def _to_item(
         customer=CustomerBrief(id=customer.id, name=customer.name, phone=customer.phone),
         dealer=(
             DealerBrief(
-                id=seller.id,
-                code=seller.code,
-                name=seller.name,
-                status=seller.status,
-                city=seller.city,
+                id=dealer.id,
+                code=dealer.code,
+                name=dealer.name,
+                status=dealer.status,
+                city=dealer.city,
             )
-            if seller
+            if dealer
             else None
         ),
-        dealer_source=("warranty" if dealer else "allocation" if holder else None),
+        # The warranty row is now the only thing that can name a shop, so this
+        # is 'warranty' or nothing. Kept because the panel shows the operator
+        # whether anyone is answerable for the row at all.
+        dealer_source=("warranty" if dealer else None),
         staff=(
             StaffBrief(id=staff.id, name=staff.name, phone=staff.phone, role=staff.role)
             if staff
@@ -129,9 +136,9 @@ def list_approvals(
     if status:
         stmt = stmt.where(Warranty.status == status)
     if dealer_id:
-        # Matches either the registering dealer or the dealer who held the
-        # allocation, so filtering by a dealer also shows the sales they DIDN'T
-        # record — which is the whole reason this queue exists.
+        # The shop on the warranty, whether it registered the sale or was named
+        # by the customer who did. So filtering by a dealer also shows the sales
+        # they DIDN'T record — which is the whole reason this queue exists.
         stmt = stmt.where(Warranty.dealer_id == dealer_id)
 
     total = count_of(db, stmt)
@@ -234,8 +241,9 @@ def reject(
 
     Nothing was ever credited — points are withheld until a pending warranty
     becomes active — so a clawback would debit points that were never paid.
-    Voiding also releases the allocation, so the dealer can register the sale
-    properly with a truthful date.
+    Voiding also frees the serial — the unique index counts only live
+    warranties — so the dealer can register the sale properly with a truthful
+    date.
     """
     warranty = _get_pending(db, warranty_id)
     previous = warranty.status
