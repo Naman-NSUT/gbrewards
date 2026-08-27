@@ -25,6 +25,13 @@ append-only: there is no row to lock, and SELECT FOR UPDATE cannot lock the
 absence of rows that a concurrent INSERT is about to create. One row per
 dealership, held for the length of one short transaction, serialises exactly the
 dealership whose money is at stake and nobody else's.
+
+Reward STOCK is a third thing and needs its own lock. It is a counter shared
+between every dealership, so the dealer lock says nothing about it: two admins
+approving requests from two DIFFERENT shops against the last unit are not
+contending for any dealer row, and both would read stock=1. `approve` therefore
+takes SELECT ... FOR UPDATE on the reward as well — dealer first, then reward,
+always in that order so two approvals can never deadlock each other.
 """
 
 import uuid
@@ -234,6 +241,7 @@ def approve(
     redemption: Redemption,
     admin_id: uuid.UUID,
     note: str | None = None,
+    ip: str | None = None,
 ) -> Redemption:
     """Approve a pending request: debit the ledger, take the stock. Caller commits.
 
@@ -242,24 +250,33 @@ def approve(
     have been voided and clawed back, and paying out of a balance that no longer
     exists is how a dealer registers fake sales, redeems fast and leaves the
     brand holding the loss.
+
+    The check is against the BALANCE, not against balance-minus-other-holds.
+    Other pending requests are requests, not commitments: a dealer left with 70
+    points and two 60-point requests queued — which is what a clawback landing
+    after both were made looks like — must be able to have ONE approved. Netting
+    the other hold off would refuse both and wedge the queue until an admin
+    rejected something. The second approval then fails honestly against the
+    balance the first one left behind, so neither rule can go negative; this one
+    just does not strand points the dealer really has. The other holds are still
+    REPORTED below, because the admin deciding this request needs to know what
+    else is queued against the same balance.
     """
     if redemption.status != "pending":
         raise AppError("not_pending", 409, f"This request has already been {redemption.status}")
 
     _lock_dealer(session, redemption.dealer_id)
     balance = ledger.balance(session, redemption.dealer_id)
-    other_holds = _holds_excluding(
-        session, dealer_id=redemption.dealer_id, redemption_id=redemption.id
-    )
-    spendable = balance - other_holds
-    if spendable < redemption.points:
+    if balance < redemption.points:
         raise AppError(
             "insufficient_points",
             409,
-            "This dealer's balance no longer covers the request",
+            "This dealer no longer has enough points for this reward",
             {
                 "balance": balance,
-                "other_holds": other_holds,
+                "other_pending_holds": _holds_excluding(
+                    session, dealer_id=redemption.dealer_id, redemption_id=redemption.id
+                ),
                 "required": redemption.points,
             },
         )
@@ -275,7 +292,7 @@ def approve(
                 raise AppError("out_of_stock", 409, f"{reward.name} is out of stock")
             reward.stock -= 1
 
-    # The one ledger row this whole flow produces. uq_ledger_redemption_debit
+    # The one ledger row this whole flow produces. uq_dealer_ledger_redemption_debit
     # makes a second one physically impossible even if this code is wrong.
     ledger.add_entry(
         session,
@@ -302,6 +319,7 @@ def approve(
         entity_id=redemption.id,
         actor_id=admin_id,
         reason=note,
+        ip=ip,
         metadata={
             "dealer_id": str(redemption.dealer_id),
             "points": redemption.points,
@@ -318,6 +336,7 @@ def reject(
     redemption: Redemption,
     admin_id: uuid.UUID,
     reason: str,
+    ip: str | None = None,
 ) -> Redemption:
     """Refuse a pending request. Releases the hold; writes no ledger row.
 
@@ -342,6 +361,56 @@ def reject(
         entity_id=redemption.id,
         actor_id=admin_id,
         reason=reason,
+        ip=ip,
+        metadata={
+            "dealer_id": str(redemption.dealer_id),
+            "points": redemption.points,
+            "reward": redemption.reward_name,
+        },
+    )
+    session.flush()
+    return redemption
+
+
+def fulfil(
+    session: Session,
+    *,
+    redemption: Redemption,
+    admin_id: uuid.UUID,
+    note: str | None = None,
+    ip: str | None = None,
+) -> Redemption:
+    """The goods physically went out. Points were already debited on approval.
+
+    Deliberately does NOT touch processed_by_admin_id or processed_at. Those
+    record who AUTHORISED the spend and when — the fact an auditor asks about
+    when a payout is queried. A dispatch clerk typing a courier docket a week
+    later is not the person who approved paying it out, and overwriting the
+    approver with the packer would quietly erase the only record of who did.
+    """
+    if redemption.status != "approved":
+        raise AppError(
+            "not_approved",
+            409,
+            "Only an approved redemption can be marked fulfilled",
+            {"status": redemption.status},
+        )
+
+    redemption.status = "fulfilled"
+    if note and note.strip():
+        # Where the courier docket number goes — APPENDED, because the dealer's
+        # "send it to the Andheri branch" lives in this same column and is the
+        # instruction the dispatch note is answering.
+        redemption.note = _append_note(redemption.note, note.strip())
+
+    record_audit(
+        session,
+        action="fulfil_redemption",
+        entity_type="redemption",
+        entity_id=redemption.id,
+        actor_id=admin_id,
+        reason=note,
+        ip=ip,
         metadata={
             "dealer_id": str(redemption.dealer_id),
             "points": redemption.points,

@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseOutlined, FileImageOutlined, WarningOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, WarningOutlined } from '@ant-design/icons';
 import { App, Badge, Button, Pagination, Radio, Tabs, Tooltip } from 'antd';
 import { useMemo, useState } from 'react';
 
@@ -8,6 +8,7 @@ import { ConfirmWithReason } from '../components/ConfirmWithReason';
 import { EmptyState } from '../components/EmptyState';
 import { Mono } from '../components/Mono';
 import { PageHeader } from '../components/PageHeader';
+import { ProofPreview } from '../components/ProofPreview';
 import { DetailSkeleton } from '../components/skeletons';
 import { SpotlightCard } from '../components/SpotlightCard';
 import { StatusTag } from '../components/StatusDot';
@@ -376,33 +377,7 @@ function ApprovalCard({
               >
                 Proof of purchase
               </div>
-              {/* The API returns the object-store KEY, not a fetchable URL, so
-                  there is nothing honest to render as an image here. */}
-              <div
-                style={{
-                  marginTop: 6,
-                  minHeight: 88,
-                  display: 'grid',
-                  placeItems: 'center',
-                  border: `1px dashed ${brand.border}`,
-                  borderRadius: 8,
-                  color: item.proof_file_key ? brand.textDim : brand.textFaint,
-                  fontSize: 12,
-                  gap: 4,
-                  padding: 10,
-                  textAlign: 'center',
-                  overflowWrap: 'anywhere',
-                }}
-              >
-                <FileImageOutlined />
-                {item.proof_file_key ? (
-                  <span className="mono" style={{ fontSize: 11 }}>
-                    {item.proof_file_key}
-                  </span>
-                ) : (
-                  'No proof attached'
-                )}
-              </div>
+              <ProofPreview key={item.id} warrantyId={item.id} />
             </div>
           )}
 

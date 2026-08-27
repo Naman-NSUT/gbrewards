@@ -30,6 +30,33 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A 200 that is not JSON, explained instead of thrown away.
+ *
+ * All three front ends ship from ONE Vercel origin, and the last rule in the
+ * root vercel.json is `{"source": "/(.*)", "destination": "/index.html"}` — any
+ * path that is not a built asset answers 200 text/html with a SPA shell. This
+ * site's API_BASE_URL defaults to '' ("same origin"), so a deploy that forgets
+ * VITE_API_BASE_URL sends every request into that catch-all and gets this very
+ * page back: `response.ok` is true and the body is HTML.
+ *
+ * The unguarded `response.json()` this replaced threw a raw SyntaxError. A
+ * SyntaxError is not an ApiError, so friendlyMessage() failed its instanceof
+ * check and every screen showed "Something went wrong. Please try again." — the
+ * one sentence that gives nobody, customer or engineer, anything to act on.
+ */
+function invalidResponse(response: Response, body: string): ApiError {
+  const contentType = response.headers.get('content-type') ?? 'unknown';
+  const diagnosis =
+    `Expected JSON from ${response.url || 'the API'} but got ${contentType} ` +
+    `(HTTP ${response.status}). VITE_API_BASE_URL is probably unset or pointing at ` +
+    `this site instead of the API, so the site's own index.html came back.`;
+  // The customer gets the sentence in friendlyMessage(); the console keeps the
+  // diagnosis, because this is a deploy fault and only an engineer can fix it.
+  console.error(`[api] ${diagnosis}`, body.slice(0, 200));
+  return new ApiError('invalid_response', response.status, diagnosis, { contentType });
+}
+
 async function parseError(response: Response): Promise<ApiError> {
   let body: unknown = null;
   try {
@@ -73,7 +100,15 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
 
   if (!response.ok) throw await parseError(response);
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+
+  // Read as text and parse here rather than calling response.json(), so a body
+  // that is not JSON leaves as an ApiError the UI understands. See invalidResponse.
+  const body = await response.text();
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw invalidResponse(response, body);
+  }
 }
 
 export function getJson<T>(path: string): Promise<T> {
@@ -114,6 +149,14 @@ export function friendlyMessage(error: unknown, fallback = 'Something went wrong
       return 'You have tried a few times in quick succession. Please wait a minute and try again.';
     case 'rate_limit_unavailable':
       return 'Our service is busy right now. Please try again in a minute.';
+    case 'invalid_response':
+      // A misconfigured deploy, not anything the customer did or can retry away.
+      // Say so plainly and point at the phone number rather than inviting a
+      // fourth attempt at a form that cannot possibly submit.
+      return (
+        'This page cannot reach GoodBed right now. Please try again later, or contact ' +
+        'GoodBed support if it keeps happening.'
+      );
     case 'validation_error':
       return firstValidationMessage(error) ?? 'Please check the details you entered.';
     default:

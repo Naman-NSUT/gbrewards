@@ -1,4 +1,10 @@
-import { EditOutlined, PlusOutlined, StopOutlined, UndoOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  EditOutlined,
+  PlusOutlined,
+  StopOutlined,
+  UndoOutlined,
+} from '@ant-design/icons';
 import {
   App,
   Button,
@@ -27,6 +33,7 @@ import {
   useDealerLedger,
   useDealerStaff,
   useReactivateDealer,
+  useApproveDealer,
   useSuspendDealer,
   useUpdateDealerStaff,
 } from '../hooks/useDealers';
@@ -62,6 +69,7 @@ export function DealerDrawer({
   const ledger = useDealerLedger(dealerId, { limit: 15, offset: 0 });
   const suspend = useSuspendDealer();
   const reactivate = useReactivateDealer();
+  const approve = useApproveDealer();
   const createStaff = useCreateDealerStaff();
   const updateStaff = useUpdateDealerStaff();
 
@@ -82,6 +90,16 @@ export function DealerDrawer({
       setSuspending(false);
     } catch (e) {
       message.error(apiErrorMessage(e, 'Could not suspend that dealer'));
+    }
+  };
+
+  const doApprove = async () => {
+    if (!dealerId) return;
+    try {
+      await approve.mutateAsync(dealerId);
+      message.success('Shop verified. They can now redeem the points they have earned.');
+    } catch (e) {
+      message.error(apiErrorMessage(e, 'Could not approve that dealer'));
     }
   };
 
@@ -143,11 +161,22 @@ export function DealerDrawer({
             <Button icon={<EditOutlined />} onClick={() => onEdit(d)}>
               Edit
             </Button>
-            {d.status === 'active' ? (
+            {d.status === 'active' && (
               <Button danger icon={<StopOutlined />} onClick={() => setSuspending(true)}>
                 Suspend
               </Button>
-            ) : (
+            )}
+            {d.status === 'pending' && (
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                loading={approve.isPending}
+                onClick={doApprove}
+              >
+                Approve shop
+              </Button>
+            )}
+            {(d.status === 'suspended' || d.status === 'closed') && (
               <Button icon={<UndoOutlined />} loading={reactivate.isPending} onClick={doReactivate}>
                 Reactivate
               </Button>

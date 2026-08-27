@@ -1,3 +1,5 @@
+import secrets
+
 import redis as redis_lib
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -11,16 +13,32 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.dealer import Dealer, DealerStaff
+from app.dealer.models.dealer import SIGNED_IN_STATUSES, Dealer, DealerStaff
 from app.dealer.schemas.common import Base, PhoneMixin
 from app.dealer.services import otp, ratelimit
 from app.dealer.services import signup as signup_svc
 from app.dealer.services.audit import record_audit
 
 router = APIRouter(prefix="/auth", tags=["dealer-auth"])
+
+# Something for /admin/login to verify against when the email is unknown, so that
+# answer costs the same as a real one. Argon2 is ~50-100ms by design; a row that is
+# not there costs a database round trip and nothing else, so
+# `admin is None or not verify_password(...)` short-circuits and replies in ~1ms.
+# That gap is an order of magnitude wider than network jitter, which turns the
+# endpoint into a directory of the client's back-office staff: type an address,
+# time the 401, learn whether the person works here. The 10-per-5-minutes IP limit
+# below slows a sweep down; it does not stop one, and it does nothing about a
+# single targeted "does my counterpart at the distributor have an account?".
+#
+# Hashed ONCE, at import. Generating a throwaway hash per miss would pay argon2 on
+# the miss path too, but hashing is slower than verifying — the gap would reopen
+# pointing the other way, and unknown emails would become the slow ones.
+_DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 
 class OtpRequestIn(PhoneMixin, Base):
@@ -207,7 +225,7 @@ def otp_verify(
 
     existing_dealer = db.get(Dealer, staff.dealer_id)
     # A pending shop signs in fine; what it cannot do is redeem.
-    if existing_dealer is None or existing_dealer.status not in ("active", "pending"):
+    if existing_dealer is None or existing_dealer.status not in SIGNED_IN_STATUSES:
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     return _issue_pair(staff, existing_dealer)
@@ -239,7 +257,11 @@ def refresh_token(
     if staff is None or not staff.is_active:
         raise AppError("invalid_token", 401, "Unknown or disabled account")
     dealer = db.get(Dealer, staff.dealer_id)
-    if dealer is None or dealer.status != "active":
+    # Same rule as sign-in and as get_current_staff. Demanding 'active' here
+    # while both of those accept 'pending' meant a self-signed-up shop was
+    # logged out every time its hour-long access token expired, and had to redo
+    # the OTP to carry on selling.
+    if dealer is None or dealer.status not in SIGNED_IN_STATUSES:
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     # Rotate: the presented refresh token is burned as it is exchanged.
@@ -271,7 +293,13 @@ def dealer_admin_login(
     admin = db.execute(
         select(DealerAdmin).where(DealerAdmin.email == body.email.lower().strip())
     ).scalar_one_or_none()
-    if admin is None or not verify_password(body.password, admin.password_hash):
+    # Unconditional, and before the `admin is None` test: an unknown email must do
+    # the same argon2 work as a known one. See _DUMMY_PASSWORD_HASH.
+    password_ok = verify_password(
+        body.password,
+        admin.password_hash if admin is not None else _DUMMY_PASSWORD_HASH,
+    )
+    if admin is None or not password_ok:
         raise AppError("invalid_credentials", 401, "Incorrect email or password")
     if not admin.is_active:
         raise AppError("admin_disabled", 403, "This account has been disabled")

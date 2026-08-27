@@ -11,7 +11,7 @@ from app.core.errors import AppError
 from app.core.security import decode_token
 from app.db.session import SessionLocal
 from app.dealer.models.admin import DealerAdmin
-from app.dealer.models.dealer import Dealer, DealerStaff
+from app.dealer.models.dealer import SIGNED_IN_STATUSES, Dealer, DealerStaff
 from app.models.admin import Admin
 from app.models.user import User
 
@@ -112,7 +112,7 @@ def get_current_staff(
     # itself up must be able to record sales straight away, because the warranty
     # record is the product. What it cannot do is redeem — see
     # services/redemption.py.
-    if dealer is None or dealer.status not in ("active", "pending"):
+    if dealer is None or dealer.status not in SIGNED_IN_STATUSES:
         raise AppError("dealer_inactive", 403, "This dealership is not active")
 
     now = datetime.now(UTC)

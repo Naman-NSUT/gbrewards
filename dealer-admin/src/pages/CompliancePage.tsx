@@ -1,5 +1,5 @@
 import { DownloadOutlined, WarningOutlined } from '@ant-design/icons';
-import { App, Checkbox, Col, DatePicker, Input, Row, Segmented, Select, Tooltip } from 'antd';
+import { App, Col, DatePicker, Input, Row, Segmented, Select, Tooltip } from 'antd';
 import type { TableColumnsType } from 'antd';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
@@ -33,7 +33,6 @@ export function CompliancePage() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<ComplianceSort>('worst');
   const [status, setStatus] = useState<DealerStatus | undefined>(undefined);
-  const [withStockOnly, setWithStockOnly] = useState(true);
   const [page, setPage] = useState(1);
 
   const openDealer = searchParams.get('dealer');
@@ -52,12 +51,11 @@ export function CompliancePage() {
       date_to: isoDate(range[1]),
       q: q || undefined,
       status,
-      with_stock_only: withStockOnly,
       sort,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     }),
-    [range, q, status, withStockOnly, sort, page],
+    [range, q, status, sort, page],
   );
 
   const compliance = useCompliance(params);
@@ -128,13 +126,6 @@ export function CompliancePage() {
       ),
     },
     {
-      title: 'Allocated',
-      dataIndex: 'units_allocated',
-      align: 'right',
-      width: 100,
-      render: (v: number) => <span className="tnum">{formatNumber(v)}</span>,
-    },
-    {
       title: 'Registered',
       dataIndex: 'warranties_registered',
       align: 'right',
@@ -153,21 +144,6 @@ export function CompliancePage() {
       render: (v: number) => (
         <span className="tnum" style={{ color: v > 0 ? brand.danger : brand.textFaint }}>
           {v}
-        </span>
-      ),
-    },
-    {
-      title: (
-        <Tooltip title="Average days between a unit being allocated and its warranty being registered.">
-          <span style={{ borderBottom: `1px dotted ${brand.textFaint}` }}>Avg days</span>
-        </Tooltip>
-      ),
-      dataIndex: 'avg_days_to_register',
-      align: 'right',
-      width: 100,
-      render: (v: number | null) => (
-        <span className="tnum" style={{ fontSize: 12.5, color: brand.textDim }}>
-          {v === null ? '—' : v.toFixed(1)}
         </span>
       ),
     },
@@ -194,7 +170,7 @@ export function CompliancePage() {
     <>
       <PageHeader
         title="Dealer Compliance"
-        subtitle="Who is registering the stock they were sent — worst first."
+        subtitle="Whose customers are registering their own warranties — worst first."
         extra={
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Input.Search
@@ -216,6 +192,7 @@ export function CompliancePage() {
                 setStatus(v);
               }}
               options={[
+                { label: 'Pending', value: 'pending' },
                 { label: 'Active', value: 'active' },
                 { label: 'Suspended', value: 'suspended' },
                 { label: 'Closed', value: 'closed' },
@@ -296,24 +273,13 @@ export function CompliancePage() {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           gap: 12,
           marginBottom: 12,
           flexWrap: 'wrap',
         }}
       >
-        <Checkbox
-          checked={withStockOnly}
-          onChange={(e) => {
-            setPage(1);
-            setWithStockOnly(e.target.checked);
-          }}
-        >
-          <span style={{ fontSize: 13, color: brand.textDim }}>
-            Only dealers who were sent stock
-          </span>
-        </Checkbox>
         <Segmented
           options={SORTS}
           value={sort}

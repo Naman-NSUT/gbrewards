@@ -141,17 +141,34 @@ def confirm_warranty(
             "This warranty has been cancelled. Contact GoodBed support if that is unexpected.",
         )
 
+    # Snapshot BEFORE the service call, which is what sets confirmed_at. Read
+    # afterwards it is always true, and the guard below never fires.
+    already_acknowledged = warranty.confirmed_at is not None
+
     # Activates and credits the dealer when the warranty was waiting on this
     # confirmation; a no-op in every other state.
     warranty_svc.confirm(db, warranty=warranty, actor_type="customer")
 
     # REQUIRE_CUSTOMER_CONFIRMATION is off by default, so most warranties are
-    # already 'active' when the customer taps confirm and the call above does
-    # nothing. The acknowledgement is still worth recording: is_phone_verified is
-    # the difference between "a dealer typed this number" and "the person holding
-    # it agreed", which is exactly what a disputed claim turns on years later.
-    if warranty.status == "active" and not warranty.customer.is_phone_verified:
-        warranty.customer.is_phone_verified = True
+    # already 'active' when the customer taps confirm and the call above moves no
+    # status. The acknowledgement is still worth recording: it is the difference
+    # between "a dealer typed this number" and "the person holding it agreed",
+    # which is exactly what a disputed claim turns on years later. This event and
+    # its source IP are what the admin timeline shows for that.
+    #
+    # Keyed on confirmed_at, which lives on the WARRANTY and is set once, by the
+    # call above. Two things follow, and both are the point:
+    #   * it is per warranty, so a repeat buyer's SECOND mattress records its own
+    #     acknowledgement. Keying on customer.is_phone_verified instead would
+    #     look equivalent and silently record nothing from that customer ever
+    #     again — the flag is per CUSTOMER and set for life by their first tap.
+    #   * `is not None` afterwards proves confirm() actually ACCEPTED the tap. It
+    #     refuses any status outside pending_confirmation/active, so a claimed or
+    #     pending_review warranty leaves confirmed_at unset and records nothing,
+    #     rather than banking evidence for an acknowledgement that never landed.
+    #
+    # is_phone_verified is not set here: warranty_svc.confirm owns it.
+    if not already_acknowledged and warranty.confirmed_at is not None:
         db.add(
             WarrantyEvent(
                 warranty_id=warranty.id,

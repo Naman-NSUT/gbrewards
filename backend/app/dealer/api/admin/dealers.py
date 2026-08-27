@@ -159,12 +159,23 @@ def get_dealer(
         ).scalars()
     )
 
+    # source == 'dealer' is what makes this page agree with the compliance
+    # screen, and the filter is not cosmetic. A customer self-registration
+    # carries this dealer's id too — the customer named the shop they bought
+    # from — but the shop did NOT record it; that row is the evidence they
+    # failed to. Counting it here credits the shop for the very registration
+    # that indicts it, and an account manager phoning them ends up quoting a
+    # number the compliance screen contradicts. Mirrors the win_reg / last_reg
+    # CTEs in services/compliance.py; the two must be changed together.
     registered, voided, last_at = db.execute(
         select(
             func.count(Warranty.id).filter(Warranty.status != "voided"),
             func.count(Warranty.id).filter(Warranty.status == "voided"),
-            func.max(Warranty.registered_at),
-        ).where(Warranty.dealer_id == dealer.id)
+            # Voided sales excluded as well: a shop whose only recent activity
+            # was reversed has gone quiet, and 'last registration' is the signal
+            # that says so.
+            func.max(Warranty.registered_at).filter(Warranty.status != "voided"),
+        ).where(Warranty.dealer_id == dealer.id, Warranty.source == "dealer")
     ).one()
     # Self-registrations the CUSTOMER attributed to this shop — the
     # non-compliance signal, repeated here so the dealer page tells the same

@@ -176,6 +176,7 @@ export function DealersPage() {
               style={{ width: 140 }}
               value={status}
               options={[
+                { label: 'Pending', value: 'pending' },
                 { label: 'Active', value: 'active' },
                 { label: 'Suspended', value: 'suspended' },
                 { label: 'Closed', value: 'closed' },

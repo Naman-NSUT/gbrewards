@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Build BOTH admin panels into one output directory, served from one origin.
 #
-# Why one origin: the panels share a login. Both authenticate the same `admins`
-# row with the same aud='admin' token and read it from the same localStorage
-# keys — and localStorage is scoped per origin. Two Vercel projects would mean
-# two domains, two storage buckets, and an operator logging in twice to use the
-# switch button. So:
+# Why one origin: the switch button. The two panels no longer share a login —
+# the programmes have separate operator tables and separate token audiences
+# (aud='admin' vs aud='dealer_admin'), and each API rejects the other's token,
+# so they keep their own localStorage keys (sr_admin_* and dr_admin_*). What one
+# origin still buys is that switching panels is a link rather than a different
+# domain, and that both sessions can be live at once in the same browser. So:
 #
 #   /          worker programme  (admin-web/)
 #   /dealer/   dealer programme  (dealer-admin/, vite base=/dealer/)

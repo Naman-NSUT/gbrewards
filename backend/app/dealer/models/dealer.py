@@ -25,6 +25,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.dealer.models.mixins import TimestampMixin, UUIDPkMixin
 
+# Statuses whose staff may hold a session at all.
+#
+# 'pending' is in here on purpose. A shop that has just signed itself up must be
+# able to record sales immediately — the warranty record IS the product, and a
+# customer standing at the counter cannot wait on a back-office approval. What
+# approval unlocks is REDEMPTION, gated separately in services/redemption.py.
+#
+# Defined once because it was previously spelled out at each sign-in path and
+# one of them disagreed: refresh demanded 'active', so a pending shop signed in
+# fine and was then thrown out an hour later when its access token expired, with
+# no way for an admin to approve it. Add a status here and every path agrees.
+SIGNED_IN_STATUSES: tuple[str, ...] = ("active", "pending")
+
 
 class Dealer(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "dealers"

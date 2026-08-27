@@ -11,7 +11,6 @@ compensating entry anyone can forget to write.
 """
 
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import Select, select
@@ -38,6 +37,7 @@ from app.dealer.schemas.admin import (
 )
 from app.dealer.schemas.common import Ok
 from app.dealer.services import ledger
+from app.dealer.services import redemption as redemption_svc
 from app.dealer.services.audit import record_audit
 
 router = APIRouter(tags=["admin-rewards"])
@@ -239,6 +239,13 @@ def _load_for_decision(db: Session, redemption_id: uuid.UUID) -> tuple[Redemptio
     # Lock the DEALER row, not the redemption: it serialises every point-moving
     # decision for this dealer, so two admins approving two different requests
     # at the same moment cannot both pass the balance check.
+    #
+    # This lock says NOTHING about reward stock. Stock is one counter shared by
+    # every dealership, so two admins approving for two different shops take two
+    # different dealer locks, contend for nothing, and both read the last unit as
+    # available. Guarding that is redemption.approve's SELECT ... FOR UPDATE on
+    # the reward row, which is one more reason this endpoint delegates rather
+    # than re-deciding anything here.
     dealer = db.execute(
         select(Dealer).where(Dealer.id == redemption.dealer_id).with_for_update()
     ).scalar_one()
@@ -254,6 +261,22 @@ def _summary(db: Session, dealer_id: uuid.UUID) -> PointsSummaryOut:
     )
 
 
+def _decision(db: Session, redemption: Redemption, dealer: Dealer) -> RedemptionDecisionOut:
+    """The one response shape all three decisions return.
+
+    Built in one place so approve, reject and fulfil cannot drift into returning
+    three subtly different objects to the same admin screen.
+    """
+    staff = (
+        db.get(DealerStaff, redemption.requested_by_staff_id)
+        if redemption.requested_by_staff_id
+        else None
+    )
+    return RedemptionDecisionOut(
+        redemption=_out(redemption, dealer, staff), points=_summary(db, dealer.id)
+    )
+
+
 @router.post("/redemptions/{redemption_id}/approve", response_model=RedemptionDecisionOut)
 def approve_redemption(
     redemption_id: uuid.UUID,
@@ -264,82 +287,23 @@ def approve_redemption(
 ) -> RedemptionDecisionOut:
     """Approve and debit, in one transaction.
 
-    The balance is re-checked HERE and not trusted from request time: points may
-    have been clawed back by a void since the dealer asked, and approving into a
-    balance that no longer exists would create points from nothing.
-
-    The check is against the BALANCE, not against available. Other pending
-    requests are requests, not commitments — a dealer with 70 points who asked
-    for two 60-point rewards must be able to have one approved, and counting the
-    other hold would deadlock the queue until an admin rejected something. The
-    second approval then fails honestly on the balance the first one left.
+    Every rule lives in redemption.approve — the balance re-check against a
+    clawback that landed after the request, the SELECT ... FOR UPDATE on the
+    reward that stops two shops being sold the same last unit, and appending the
+    admin's note instead of overwriting the dealer's delivery instruction. This
+    endpoint used to carry its own copy of that logic, which is how it ended up
+    with neither the stock lock nor the note append.
     """
     redemption, dealer = _load_for_decision(db, redemption_id)
-    if redemption.status != "pending":
-        raise AppError("not_pending", 409, f"This redemption is already '{redemption.status}'")
-
-    balance = ledger.balance(db, dealer.id)
-    if balance < redemption.points:
-        raise AppError(
-            "insufficient_points",
-            409,
-            "This dealer no longer has enough points for this reward",
-            {
-                "balance": balance,
-                "other_pending_holds": ledger.pending(db, dealer.id) - redemption.points,
-                "required": redemption.points,
-            },
-        )
-
-    reward = db.get(Reward, redemption.reward_id) if redemption.reward_id else None
-    if reward is not None and reward.stock is not None:
-        if reward.stock <= 0:
-            raise AppError("out_of_stock", 409, f"'{reward.name}' is out of stock")
-        # Decremented on APPROVAL, never on request: a queue of requests must not
-        # be able to reserve away stock that is never actually issued.
-        reward.stock -= 1
-
-    redemption.status = "approved"
-    redemption.processed_by_admin_id = admin.id
-    redemption.processed_at = datetime.now(UTC)
-    if body.note:
-        redemption.note = body.note
-
-    ledger.add_entry(
+    redemption_svc.approve(
         db,
-        dealer_id=dealer.id,
-        staff_id=redemption.requested_by_staff_id,
-        amount=-redemption.points,
-        type=ledger.REDEMPTION_DEBIT,
-        redemption_id=redemption.id,
+        redemption=redemption,
         admin_id=admin.id,
-        reason=body.note,
-        metadata={"reward": redemption.reward_name},
-    )
-    record_audit(
-        db,
-        action="approve_redemption",
-        entity_type="redemption",
-        entity_id=redemption.id,
-        actor_id=admin.id,
-        reason=body.note,
+        note=body.note,
         ip=client_ip(request),
-        metadata={
-            "dealer_id": str(dealer.id),
-            "points": redemption.points,
-            "reward": redemption.reward_name,
-        },
     )
     db.commit()
-
-    staff = (
-        db.get(DealerStaff, redemption.requested_by_staff_id)
-        if redemption.requested_by_staff_id
-        else None
-    )
-    return RedemptionDecisionOut(
-        redemption=_out(redemption, dealer, staff), points=_summary(db, dealer.id)
-    )
+    return _decision(db, redemption, dealer)
 
 
 @router.post("/redemptions/{redemption_id}/reject", response_model=RedemptionDecisionOut)
@@ -357,34 +321,15 @@ def reject_redemption(
     the two would eventually disagree.
     """
     redemption, dealer = _load_for_decision(db, redemption_id)
-    if redemption.status != "pending":
-        raise AppError("not_pending", 409, f"This redemption is already '{redemption.status}'")
-
-    redemption.status = "rejected"
-    redemption.note = body.reason
-    redemption.processed_by_admin_id = admin.id
-    redemption.processed_at = datetime.now(UTC)
-
-    record_audit(
+    redemption_svc.reject(
         db,
-        action="reject_redemption",
-        entity_type="redemption",
-        entity_id=redemption.id,
-        actor_id=admin.id,
+        redemption=redemption,
+        admin_id=admin.id,
         reason=body.reason,
         ip=client_ip(request),
-        metadata={"dealer_id": str(dealer.id), "points": redemption.points},
     )
     db.commit()
-
-    staff = (
-        db.get(DealerStaff, redemption.requested_by_staff_id)
-        if redemption.requested_by_staff_id
-        else None
-    )
-    return RedemptionDecisionOut(
-        redemption=_out(redemption, dealer, staff), points=_summary(db, dealer.id)
-    )
+    return _decision(db, redemption, dealer)
 
 
 @router.post("/redemptions/{redemption_id}/mark-fulfilled", response_model=RedemptionDecisionOut)
@@ -397,36 +342,12 @@ def mark_fulfilled(
 ) -> RedemptionDecisionOut:
     """The reward physically went out. Points were already debited on approval."""
     redemption, dealer = _load_for_decision(db, redemption_id)
-    if redemption.status != "approved":
-        raise AppError(
-            "not_approved",
-            409,
-            "Only an approved redemption can be marked fulfilled",
-            {"status": redemption.status},
-        )
-
-    redemption.status = "fulfilled"
-    if body.note:
-        # Where the courier docket number goes.
-        redemption.note = body.note
-
-    record_audit(
+    redemption_svc.fulfil(
         db,
-        action="fulfil_redemption",
-        entity_type="redemption",
-        entity_id=redemption.id,
-        actor_id=admin.id,
-        reason=body.note,
+        redemption=redemption,
+        admin_id=admin.id,
+        note=body.note,
         ip=client_ip(request),
-        metadata={"dealer_id": str(dealer.id), "points": redemption.points},
     )
     db.commit()
-
-    staff = (
-        db.get(DealerStaff, redemption.requested_by_staff_id)
-        if redemption.requested_by_staff_id
-        else None
-    )
-    return RedemptionDecisionOut(
-        redemption=_out(redemption, dealer, staff), points=_summary(db, dealer.id)
-    )
+    return _decision(db, redemption, dealer)

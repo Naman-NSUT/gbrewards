@@ -1,15 +1,21 @@
 import { api } from './client';
 import type { CompliancePage, ComplianceDetail, DealerStatus } from './types';
 
-/** The sort keys the server actually accepts — services/compliance._SORTS. */
+/**
+ * The sort keys the server actually accepts — services/compliance._SORTS.
+ *
+ * Kept in step with that dict deliberately: an unknown key is not ignored, it is
+ * a 400 invalid_sort, so a value that exists only here ships a broken dropdown.
+ * 'rate', 'unregistered', 'slowest' and 'allocated' were removed when stock
+ * stopped being scoped to shops — there is no allocated-versus-registered ratio
+ * left to rank on.
+ */
 export type ComplianceSort =
   | 'worst'
-  | 'rate'
   | 'self_registrations'
-  | 'unregistered'
   | 'quietest'
-  | 'slowest'
-  | 'allocated'
+  | 'registrations'
+  | 'backdated'
   | 'registered'
   | 'name'
   | 'code';
@@ -19,8 +25,6 @@ export interface ComplianceQuery {
   date_to?: string;
   status?: DealerStatus;
   q?: string;
-  /** Hides dealers who were never sent anything — they cannot have a rate. */
-  with_stock_only?: boolean;
   /** Server-side so paging stays correct: page 3 of "worst first" must be real. */
   sort?: ComplianceSort;
   limit?: number;
