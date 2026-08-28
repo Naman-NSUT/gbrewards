@@ -24,12 +24,23 @@ import {
   type DealerProduct,
   type DealerProductInput,
 } from '../api/products';
-import { apiErrorMessage } from '../api/client';
+import { listProductRates, setPointRate } from '../api/points';
+import { apiErrorCode, apiErrorMessage } from '../api/client';
 import { Mono } from '../components/Mono';
 import { PageHeader } from '../components/PageHeader';
 import { brand } from '../theme';
 
 const PAGE_SIZE = 20;
+
+/**
+ * The create form carries the rate as well as the product.
+ *
+ * A product with no rate registers sales perfectly and pays the dealer NOTHING,
+ * silently — no error, no warning at the counter. Setting it here, at the only
+ * moment anyone is thinking about this product, is what stops that. The rate is
+ * still a separate versioned record on the server, so history stays intact.
+ */
+type ProductFormValues = DealerProductInput & { points_per_registration?: number | null };
 
 export function ProductsPage() {
   const qc = useQueryClient();
@@ -37,7 +48,7 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<DealerProduct | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [batchFor, setBatchFor] = useState<DealerProduct | null>(null);
-  const [form] = Form.useForm<DealerProductInput>();
+  const [form] = Form.useForm<ProductFormValues>();
   const [batchForm] = Form.useForm<{ quantity: number; label?: string }>();
 
   const products = useQuery({
@@ -45,14 +56,57 @@ export function ProductsPage() {
     queryFn: () => listProducts({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
   });
 
+  // Rates live on their own versioned endpoint, so they are fetched alongside
+  // and joined by product id rather than being a field on the product.
+  const rates = useQuery({ queryKey: ['dealer-product-rates'], queryFn: listProductRates });
+  const rateFor = (productId: string): number | null =>
+    rates.data?.find((r) => r.product_id === productId)?.points_per_registration ?? null;
+
   const save = useMutation({
-    mutationFn: (body: DealerProductInput) =>
-      editing ? updateProduct(editing.id, body) : createProduct(body),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['dealer-products'] });
-      setFormOpen(false);
-      message.success(editing ? 'Product updated' : 'Product added');
+    mutationFn: async (values: ProductFormValues) => {
+      const { points_per_registration: points, ...body } = values;
+      const product = editing
+        ? await updateProduct(editing.id, body)
+        : await createProduct(body);
+
+      // Only when it actually changed: every call opens a NEW rate version, and
+      // an unchanged save would otherwise fill the rate history with duplicates
+      // that say nothing happened.
+      const unchanged = points == null || points === rateFor(product.id);
+      if (unchanged) return { product, rateSet: false, rateRefused: false };
+
+      try {
+        await setPointRate({
+          product_id: product.id,
+          points_per_registration: points,
+          note: editing ? 'Changed from the product form' : 'Set when the product was added',
+        });
+        return { product, rateSet: true, rateRefused: false };
+      } catch (e) {
+        // Setting a rate is owner-only — it is the one lever that decides what
+        // the programme costs. A manager saving a product must still keep the
+        // product; they just cannot price it, and they need telling which half
+        // of this actually happened.
+        if (apiErrorCode(e) === 'forbidden') {
+          return { product, rateSet: false, rateRefused: true };
+        }
+        throw e;
+      }
     },
+    onSuccess: ({ rateSet, rateRefused }) => {
+      void qc.invalidateQueries({ queryKey: ['dealer-products'] });
+      void qc.invalidateQueries({ queryKey: ['dealer-product-rates'] });
+      setFormOpen(false);
+      if (rateRefused) {
+        message.warning(
+          `${editing ? 'Product updated' : 'Product added'}, but only an owner can set the points. Ask an owner to price it — until then a dealer earns nothing for it.`,
+        );
+        return;
+      }
+      const what = editing ? 'Product updated' : 'Product added';
+      message.success(rateSet ? `${what}, and the points are set` : what);
+    },
+    onError: (e) => message.error(apiErrorMessage(e, 'Could not save that product')),
   });
 
   const mint = useMutation({
@@ -93,6 +147,26 @@ export function ProductsPage() {
       render: (m: number) => <span className="tnum">{m} months</span>,
     },
     {
+      title: 'Points',
+      width: 150,
+      render: (_: unknown, r) => {
+        const points = rateFor(r.id);
+        if (points === null) {
+          return r.is_active ? (
+            <Tag color="warning">not set</Tag>
+          ) : (
+            <span style={{ color: brand.textFaint }}>—</span>
+          );
+        }
+        return (
+          <span className="tnum" style={{ fontWeight: 600 }}>
+            {points.toLocaleString()}
+            <span style={{ color: brand.textFaint, fontWeight: 400 }}> / sale</span>
+          </span>
+        );
+      },
+    },
+    {
       title: 'Labels minted',
       dataIndex: 'units_generated',
       width: 140,
@@ -126,7 +200,7 @@ export function ProductsPage() {
             size="small"
             onClick={() => {
               setEditing(r);
-              form.setFieldsValue(r);
+              form.setFieldsValue({ ...r, points_per_registration: rateFor(r.id) });
               setFormOpen(true);
             }}
           >
@@ -203,6 +277,13 @@ export function ProductsPage() {
             extra="Frozen onto each warranty at the moment of sale — changing it later never rewrites warranties already sold."
           >
             <InputNumber min={1} max={600} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            name="points_per_registration"
+            label="Points per registration"
+            extra="What the dealer earns each time this product's warranty is registered. Leave empty and the sale still records — the dealer just earns nothing for it. Changing this never reprices sales already made."
+          >
+            <InputNumber min={0} max={100000} style={{ width: '100%' }} placeholder="e.g. 120" />
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={2} maxLength={500} showCount />
