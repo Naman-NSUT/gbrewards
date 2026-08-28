@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 
 import { AppLogo } from '../components/AppLogo';
 import { useQueue } from '../offline/useQueue';
+import { HomeScreen } from '../screens/HomeScreen';
 import { PointsScreen } from '../screens/PointsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { RegistrationsScreen } from '../screens/RegistrationsScreen';
@@ -15,6 +16,7 @@ import type { AppTabParamList } from './types';
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
 const ICONS: Record<keyof AppTabParamList, string> = {
+  Home: '🏠',
   Scan: '📷',
   Registrations: '🧾',
   Points: '⭐',
@@ -23,6 +25,7 @@ const ICONS: Record<keyof AppTabParamList, string> = {
 };
 
 const TITLES: Record<keyof AppTabParamList, string> = {
+  Home: 'Home',
   Scan: 'Scan',
   Registrations: 'Sales',
   Points: 'Points',
@@ -38,7 +41,7 @@ export function AppTabs() {
 
   return (
     <Tab.Navigator
-      initialRouteName="Scan"
+      initialRouteName="Home"
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
@@ -55,8 +58,10 @@ export function AppTabs() {
         ),
       })}
     >
-      {/* The scanner is the home screen and owns the whole viewport: a header
-          above a camera would push the frame under the dealer's thumb. */}
+      <Tab.Screen name="Home" component={HomeScreen} />
+      {/* The scanner owns the whole viewport: a header above a camera would push
+          the frame under the dealer's thumb. It is one tap from Home, and Home
+          leads with a scan button, so the counter flow is still two taps. */}
       <Tab.Screen name="Scan" component={ScanScreen} options={{ headerShown: false }} />
       <Tab.Screen
         name="Registrations"

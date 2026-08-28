@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 
 import type { RedemptionStatus } from '../api/types';
 import type { QueuedRegistration } from '../offline/queue';
-import { colors, radius, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 import type { DisplayStatus } from '../utils/format';
 
 export type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -76,10 +76,12 @@ export function StatusPill({
 
 const styles = StyleSheet.create({
   pill: {
-    borderRadius: radius.sm,
+    // Matched to the worker app's pill so a status reads identically in both:
+    // same corner, same padding, same weight.
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 2,
     alignSelf: 'flex-start',
   },
-  text: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  text: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
 });

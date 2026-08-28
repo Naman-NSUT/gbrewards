@@ -1,28 +1,39 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme';
 
+// Wordmark aspect ratio is 720:103 — the same asset the worker app ships.
+const ASPECT = 720 / 103;
+
 /**
- * Wordmark set in type rather than shipped as a bitmap: the header is the only
- * place it appears, and a text mark stays sharp on every density without adding
- * an asset that has to be kept in sync with the brand's own logo files.
+ * The GoodBed wordmark, with a "Dealer" suffix.
+ *
+ * The real bitmap rather than type: this header sits at the top of every screen
+ * and is the first thing that tells a dealer which product they are in. Hand-set
+ * type approximates a logo, it never matches it, and the two apps are meant to
+ * read as one family.
+ *
+ * The suffix stays as text beside it. Both apps are GoodBed, but they are
+ * different apps with different accounts, and someone holding both needs to see
+ * at a glance which one is open.
  */
-export function AppLogo({ size = 18 }: { size?: number }) {
+export function AppLogo({ height = 22 }: { height?: number }) {
   return (
     <View style={styles.row}>
-      <Text style={[styles.good, { fontSize: size }]}>Good</Text>
-      <Text style={[styles.bed, { fontSize: size }]}>Bed</Text>
+      <Image
+        source={require('../../assets/logo-wordmark.png')}
+        resizeMode="contain"
+        style={{ height, width: height * ASPECT }}
+      />
       <View style={styles.divider} />
-      <Text style={[styles.suffix, { fontSize: size - 4 }]}>Dealer</Text>
+      <Text style={[styles.suffix, { fontSize: Math.max(11, height - 8) }]}>Dealer</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  good: { color: colors.primary, fontWeight: '800', letterSpacing: -0.3 },
-  bed: { color: colors.accent, fontWeight: '800', letterSpacing: -0.3 },
   divider: {
     width: 1,
     height: 14,

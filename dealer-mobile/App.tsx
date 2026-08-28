@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AnimatedSplash } from './src/components/AnimatedSplash';
 import { AuthProvider } from './src/auth/AuthContext';
 import { useQueueQuerySync } from './src/hooks/useDealerData';
 import { useQueueRuntime } from './src/offline/useQueue';
@@ -28,14 +29,23 @@ function Shell() {
 }
 
 export default function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Shell />
-        </AuthProvider>
-      </QueryClientProvider>
+      {/* Held ahead of the providers, as in the worker app: the queue runtime
+          and the auth restore both start work on mount, and running them behind
+          the splash means the first real screen is already settled. */}
+      {!splashDone ? (
+        <AnimatedSplash onDone={() => setSplashDone(true)} />
+      ) : (
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Shell />
+          </AuthProvider>
+        </QueryClientProvider>
+      )}
     </SafeAreaProvider>
   );
 }

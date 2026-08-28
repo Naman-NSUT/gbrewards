@@ -51,7 +51,7 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
           contentContainerStyle={[styles.inner, { paddingTop: insets.top + spacing.xl }]}
           keyboardShouldPersistTaps="handled"
         >
-          <AppLogo size={24} />
+          <AppLogo height={30} />
           <Text style={styles.title}>Register a sale in seconds</Text>
           <Text style={styles.subtitle}>
             Scan the mattress QR at the counter, add the customer, and the warranty starts on

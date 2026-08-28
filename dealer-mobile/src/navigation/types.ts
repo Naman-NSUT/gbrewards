@@ -16,6 +16,7 @@ export type AuthStackScreenProps<T extends keyof AuthStackParamList> = NativeSta
 >;
 
 export type AppTabParamList = {
+  Home: undefined;
   Scan: undefined;
   Registrations: undefined;
   Points: undefined;
