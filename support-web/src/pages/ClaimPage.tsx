@@ -92,7 +92,10 @@ export function ClaimPage() {
 
     void claim.run(() =>
       submitClaim({
-        serial: selected.serial,
+        // The reference, not the serial: newer warranties have no serial, and
+        // the claim endpoint matches either. Sending null would fail the lookup
+        // for every customer who bought after the change.
+        serial: selected.reference,
         phone: normalisePhone(phone) as string,
         issueType,
         description: description.trim(),

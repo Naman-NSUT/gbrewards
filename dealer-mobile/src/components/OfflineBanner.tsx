@@ -30,7 +30,7 @@ export function OfflineBanner({ onPress }: { onPress?: () => void }) {
     if (!online) tone = styles.warning;
   } else {
     tone = styles.warning;
-    text = 'No connection. You can keep scanning — sales are saved on this phone.';
+    text = 'No connection. You can keep registering sales — they are saved on this phone.';
   }
 
   return (

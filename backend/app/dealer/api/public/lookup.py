@@ -24,7 +24,7 @@ import uuid
 
 import redis as redis_lib
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -72,12 +72,27 @@ def _by_phone(db: Session, phone: str) -> list[Warranty]:
     return list(db.execute(stmt).scalars())
 
 
-def _by_serial(db: Session, raw_serial: str) -> list[Warranty]:
-    serial = normalise_serial(raw_serial)
-    if not serial:
+def _by_reference(db: Session, raw: str) -> list[Warranty]:
+    """Find one warranty by the reference a customer actually has.
+
+    That is a SERIAL for anything bought before registration moved to product +
+    invoice, and an INVOICE NUMBER for everything since — those rows have no
+    serial at all. Matching only serials would tell a recent customer their
+    warranty does not exist.
+
+    The serial is normalised (the printed form has dashes and case); the invoice
+    is compared case-insensitively, matching the uniqueness index that issued it.
+    """
+    typed = (raw or "").strip()
+    if not typed:
         return []
+    serial = normalise_serial(typed)
+    matches = or_(
+        Warranty.serial == serial,
+        func.lower(Warranty.invoice_ref) == typed.lower(),
+    )
     live = db.execute(
-        select(Warranty).where(Warranty.serial == serial, Warranty.status.in_(LIVE_STATUSES))
+        select(Warranty).where(matches, Warranty.status.in_(LIVE_STATUSES)).limit(1)
     ).scalar_one_or_none()
     if live is not None:
         return [live]
@@ -85,10 +100,7 @@ def _by_serial(db: Session, raw_serial: str) -> list[Warranty]:
     # warranty was cancelled deserves to see that it was, rather than being told
     # nothing exists and re-registering it.
     voided = db.execute(
-        select(Warranty)
-        .where(Warranty.serial == serial)
-        .order_by(Warranty.created_at.desc())
-        .limit(1)
+        select(Warranty).where(matches).order_by(Warranty.created_at.desc()).limit(1)
     ).scalar_one_or_none()
     return [voided] if voided is not None else []
 
@@ -112,7 +124,7 @@ def lookup(
         fail_open=False,
     )
 
-    warranties = _by_phone(db, body.phone) if body.phone else _by_serial(db, body.serial or "")
+    warranties = _by_phone(db, body.phone) if body.phone else _by_reference(db, body.serial or "")
 
     if not warranties:
         # Not a 404: "we found nothing" is a normal answer on a support site, and

@@ -52,6 +52,27 @@ def is_expired(warranty: Warranty, today: date | None = None) -> bool:
     return warranty.warranty_end_date < ref
 
 
+def customer_reference(warranty: Warranty) -> str:
+    """What to call this warranty when speaking to the customer.
+
+    Every warranty used to carry a serial, because a sale could only be recorded
+    by scanning the label on the mattress. Registration is now by product and
+    invoice number, so new warranties have no serial at all and `serial[:12]`
+    raises TypeError on a None.
+
+    The invoice number is the honest successor: it is the reference the customer
+    has on the bill in their hand, and the one the dealer typed. Historic rows
+    still lead with their serial, because that is what was printed on their box
+    and what support will be asked about. The warranty id is the last resort so
+    this can never return an empty string into the middle of an SMS.
+    """
+    if warranty.serial:
+        return warranty.serial[:12]
+    if warranty.invoice_ref:
+        return warranty.invoice_ref
+    return str(warranty.id)[:8]
+
+
 def display_status(warranty: Warranty) -> str:
     """What a human should be told. Folds derived expiry into the stored status."""
     if warranty.status == "active" and is_expired(warranty):

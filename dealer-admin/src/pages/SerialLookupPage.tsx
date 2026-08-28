@@ -53,7 +53,7 @@ export function SerialLookupPage() {
     <>
       <PageHeader
         title="Serial Lookup"
-        subtitle="Paste a serial from the QR sticker, the invoice or the customer's SMS."
+        subtitle="For warranties old enough to have a serial. Paste it from the label, the invoice or the customer's SMS."
       />
 
       <SpotlightCard style={{ padding: 20, marginBottom: 16 }}>
@@ -80,9 +80,22 @@ export function SerialLookupPage() {
         <SpotlightCard style={{ padding: 24 }}>
           <EmptyState
             title="Nothing looked up yet"
-            hint="Serials are case-insensitive and a pasted QR link works too — the server takes the last segment."
+            hint={
+              <>
+                Serials are case-insensitive and a pasted QR link works too — the server takes
+                the last segment.
+                {/* Support reaches for this screen first. It has to say, before
+                    a fruitless search, that most warranties are no longer
+                    findable this way at all. */}
+                <div style={{ marginTop: 10, color: brand.textFaint }}>
+                  Only warranties registered before dealers moved to picking a product have a
+                  serial. Newer ones are not on any label — find those in Warranties, by
+                  customer, dealer or invoice number.
+                </div>
+              </>
+            }
             icon={<BarcodeOutlined />}
-            height={220}
+            height={260}
           />
         </SpotlightCard>
       ) : lookup.isLoading ? (
@@ -100,7 +113,7 @@ export function SerialLookupPage() {
         <SpotlightCard style={{ padding: 24 }}>
           <EmptyState
             title="No record of this serial"
-            hint="No warranty exists on it and no such label was ever printed. Check for a typo, then check the label was generated in Products & QR."
+            hint="No warranty exists on it and no such label was ever printed. Check for a typo — and note that a sale registered since dealers stopped scanning has no serial to find, so look it up in Warranties by customer, dealer or invoice number instead."
             height={220}
           />
         </SpotlightCard>

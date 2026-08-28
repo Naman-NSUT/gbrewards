@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import { getPointsSummary, listLedger } from '../api/points';
-import { listRegistrations, previewUnit } from '../api/registrations';
+import { listProducts } from '../api/products';
+import { listRegistrations } from '../api/registrations';
 import { cancelRedemption, listRedemptions, listRewards, redeemReward } from '../api/rewards';
-import type { UnitPreviewOut } from '../api/types';
 import { useQueue } from '../offline/useQueue';
 
 export const QUERY_KEYS = {
   registrations: ['registrations'] as const,
+  products: ['products'] as const,
   points: ['points'] as const,
   ledger: ['ledger'] as const,
   rewards: ['rewards'] as const,
@@ -19,6 +20,22 @@ export function useRegistrations() {
   return useQuery({
     queryKey: QUERY_KEYS.registrations,
     queryFn: () => listRegistrations(200, 0),
+  });
+}
+
+/**
+ * The dropdown the registration form is built on.
+ *
+ * Kept fresh for an hour rather than on every mount: the catalogue changes a few
+ * times a year, and a counter that refetches it between customers is spending a
+ * shop's data allowance to learn nothing. `listProducts` falls back to the copy
+ * on disk, so this resolves offline too.
+ */
+export function useProducts() {
+  return useQuery({
+    queryKey: QUERY_KEYS.products,
+    queryFn: listProducts,
+    staleTime: 60 * 60_000,
   });
 }
 
@@ -57,12 +74,6 @@ export function useCancelRedemption() {
       void qc.invalidateQueries({ queryKey: QUERY_KEYS.points });
       void qc.invalidateQueries({ queryKey: QUERY_KEYS.redemptions });
     },
-  });
-}
-
-export function usePreviewUnit() {
-  return useMutation<UnitPreviewOut, unknown, string>({
-    mutationFn: (serial: string) => previewUnit(serial),
   });
 }
 

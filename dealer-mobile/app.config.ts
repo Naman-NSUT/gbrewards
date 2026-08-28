@@ -28,18 +28,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
-    [
-      'expo-camera',
-      {
-        cameraPermission:
-          'GoodBed Dealer uses the camera to scan the QR code on a mattress label.',
-        // This app only ever reads a QR code. Asking a shopkeeper for microphone
-        // access to register a mattress is the kind of thing that gets an app
-        // uninstalled, so the default RECORD_AUDIO permission is dropped.
-        recordAudioAndroid: false,
-        microphonePermission: false,
-      },
-    ],
+    // No expo-camera. Registration is a form now, and the scanner was its only
+    // user — leaving the plugin in would keep asking a shopkeeper for camera
+    // access the app never uses, which is exactly how an app gets uninstalled.
     'expo-secure-store',
     [
       'expo-build-properties',

@@ -1,4 +1,5 @@
 import {
+  AppstoreOutlined,
   AuditOutlined,
   BarcodeOutlined,
   CheckSquareOutlined,
@@ -11,7 +12,6 @@ import {
   MenuUnfoldOutlined,
   MessageOutlined,
   SafetyCertificateOutlined,
-  QrcodeOutlined,
   SearchOutlined,
   ShopOutlined,
   TrophyOutlined,
@@ -49,7 +49,7 @@ const NAV: NavItem[] = [
   { key: '/warranties', icon: <SafetyCertificateOutlined />, label: 'Warranties', group: 'Operations' },
   { key: '/lookup', icon: <BarcodeOutlined />, label: 'Serial Lookup', group: 'Operations' },
   { key: '/claims', icon: <FileProtectOutlined />, label: 'Claims', group: 'Operations' },
-  { key: '/products', icon: <QrcodeOutlined />, label: 'Products & QR', group: 'Operations' },
+  { key: '/products', icon: <AppstoreOutlined />, label: 'Products', group: 'Operations' },
   { key: '/dealers', icon: <ShopOutlined />, label: 'Dealers', group: 'Operations' },
   { key: '/rewards', icon: <GiftOutlined />, label: 'Rewards', group: 'Rewards' },
   { key: '/redemptions', icon: <TrophyOutlined />, label: 'Redemptions', group: 'Rewards' },

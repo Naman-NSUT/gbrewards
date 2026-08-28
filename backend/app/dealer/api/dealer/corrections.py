@@ -38,6 +38,7 @@ from app.dealer.models.warranty import Warranty, WarrantyEvent
 from app.dealer.schemas.common import Base, PhoneMixin
 from app.dealer.schemas.registration import WarrantyOut
 from app.dealer.services import sms
+from app.dealer.services import warranty as warranty_svc
 from app.dealer.services.audit import record_audit
 
 router = APIRouter(tags=["dealer-corrections"])
@@ -159,7 +160,7 @@ def correct_customer(
                 "name": warranty.customer.name,
                 "model": warranty.model_name or "your GoodBed mattress",
                 "end_date": warranty.warranty_end_date.strftime("%d-%m-%Y"),
-                "serial": warranty.serial[:12],
+                "reference": warranty_svc.customer_reference(warranty),
                 "link": f"{settings.public_base_url}/w/{warranty.id}",
             },
             warranty_id=warranty.id,

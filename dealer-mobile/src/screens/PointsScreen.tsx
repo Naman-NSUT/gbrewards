@@ -9,7 +9,6 @@ import { useLedger, usePointsSummary } from '../hooks/useDealerData';
 import type { AppTabScreenProps } from '../navigation/types';
 import { colors, radius, spacing } from '../theme';
 import { formatDateTime, formatPoints, LEDGER_LABEL } from '../utils/format';
-import { shortSerial } from '../utils/serial';
 
 export function PointsScreen({ navigation }: AppTabScreenProps<'Points'>) {
   const summary = usePointsSummary();
@@ -56,8 +55,8 @@ export function PointsScreen({ navigation }: AppTabScreenProps<'Points'>) {
               icon="🎯"
               title="No points yet"
               body="Every sale you register at the counter earns points for your shop."
-              actionLabel="Scan a mattress"
-              onAction={() => navigation.navigate('Tabs', { screen: 'Scan' })}
+              actionLabel="Register a warranty"
+              onAction={() => navigation.navigate('Register')}
             />
           ) : null
         }
@@ -87,9 +86,10 @@ function LedgerRow({ entry }: { entry: LedgerEntryOut }) {
     <View style={styles.row}>
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle}>{LEDGER_LABEL[entry.type] ?? 'Points adjustment'}</Text>
-        {entry.serial ? (
-          <Text style={styles.rowMeta}>{shortSerial(entry.serial)}</Text>
-        ) : null}
+        {/* The serial this row came from is no longer shown: sales registered
+            since the dropdown replaced the scanner do not have one, and on the
+            ones that do it is a code the dealer can no longer look up anywhere
+            in this app. The label and date are what identify the entry now. */}
         {entry.reason ? <Text style={styles.rowMeta}>{entry.reason}</Text> : null}
         <Text style={styles.rowDate}>{formatDateTime(entry.created_at)}</Text>
       </View>

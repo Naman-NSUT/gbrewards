@@ -9,17 +9,19 @@ import {
   View,
 } from 'react-native';
 
+import { errorMessage } from '../api/client';
 import type { RegisterBody } from '../api/types';
 import { Button } from '../components/Button';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { ProductPicker } from '../components/ProductPicker';
 import { ScreenBackground } from '../components/ScreenBackground';
-import { StatusPill } from '../components/StatusPill';
 import { TextField } from '../components/TextField';
+import { useProducts } from '../hooks/useDealerData';
 import { enqueue, replace } from '../offline/queue';
 import type { MainStackScreenProps } from '../navigation/types';
 import { colors, radius, spacing } from '../theme';
 import { formatDateInput, parseDateInput, todayIso } from '../utils/format';
 import { digitsOf, normalisePhone } from '../utils/phone';
-import { shortSerial } from '../utils/serial';
 
 /** Mirrors the server's BACKDATE_GRACE_DAYS default. Used only to warn the
  *  dealer early — the server decides, and disagreement costs a warning, not a
@@ -39,12 +41,24 @@ function daysBefore(today: string, iso: string): number {
   return Math.round((a.getTime() - b.getTime()) / 86_400_000);
 }
 
-export function CustomerDetailsScreen({
-  route,
-  navigation,
-}: MainStackScreenProps<'CustomerDetails'>) {
-  const { serial, preview, draft, retryOf } = route.params;
+/**
+ * The whole registration flow, on one screen.
+ *
+ * There is nothing to scan any more, so this form is the entire product: the
+ * dealer says what was sold, who bought it, and which bill it was on. It is
+ * reached from Home in one tap and submits to the offline queue, never straight
+ * to the network — the sale is recorded on this phone before anything else.
+ */
+export function RegisterScreen({ route, navigation }: MainStackScreenProps<'Register'>) {
+  // A correction arrives with the rejected body; a fresh sale arrives with nothing.
+  const draft = route.params?.draft;
+  const retryOf = route.params?.retryOf;
 
+  const products = useProducts();
+
+  // `?? null` and not just `draft?.product_id`: a sale queued by the version that
+  // scanned labels has a `serial` and no product, and lands here to be given one.
+  const [productId, setProductId] = useState<string | null>(draft?.product_id ?? null);
   const [name, setName] = useState(draft?.customer_name ?? '');
   const [phone, setPhone] = useState(digitsOf(draft?.customer_phone ?? '').slice(-10));
   const [invoiceRef, setInvoiceRef] = useState(draft?.invoice_ref ?? '');
@@ -57,6 +71,7 @@ export function CustomerDetailsScreen({
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {};
+    if (!productId) next.product = 'Choose the product you sold.';
     if (!name.trim()) next.name = "Enter the customer's name.";
     if (!normalisePhone(phone)) next.phone = 'Enter a valid 10-digit mobile number.';
     if (!invoiceRef.trim()) next.invoiceRef = 'Enter the invoice or bill number.';
@@ -64,7 +79,7 @@ export function CustomerDetailsScreen({
       next.invoiceDate = 'Use DD/MM/YYYY.';
     }
     return next;
-  }, [name, phone, invoiceRef, invoiceDate]);
+  }, [productId, name, phone, invoiceRef, invoiceDate]);
 
   const parsedDate = parseDateInput(invoiceDate);
   const today = todayIso();
@@ -85,15 +100,15 @@ export function CustomerDetailsScreen({
     if (Object.keys(errors).length > 0) return;
 
     const normalisedPhone = normalisePhone(phone);
-    if (!normalisedPhone) return;
+    if (!normalisedPhone || !productId) return;
 
     const body: RegisterBody = {
-      // The RAW scanned value: the backend owns the QR payload format and
-      // normalises it. A client that pre-parses it breaks silently the day that
-      // format changes.
-      serial,
+      product_id: productId,
       customer_name: name.trim(),
       customer_phone: normalisedPhone,
+      // Trimmed to match the server, which strips before comparing: a trailing
+      // space would otherwise slip past the one-warranty-per-invoice rule and be
+      // a second, paid copy of the same sale.
       invoice_ref: invoiceRef.trim(),
       invoice_date: parsedDate,
       customer_address: address.trim() || null,
@@ -105,6 +120,14 @@ export function CustomerDetailsScreen({
     navigation.replace('Confirmation', { queueId });
   };
 
+  const catalogue = products.data ?? [];
+  // Only a hard failure — no list from the server AND nothing cached on this
+  // phone — is worth a message. `listProducts` falls back to the cache silently.
+  const loadError =
+    products.isError && catalogue.length === 0
+      ? errorMessage(products.error, 'Could not load your product list.')
+      : null;
+
   return (
     <ScreenBackground>
       <KeyboardAvoidingView
@@ -112,19 +135,17 @@ export function CustomerDetailsScreen({
         style={styles.flex}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        <OfflineBanner />
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.unitCard}>
-            <View style={styles.unitHeader}>
-              <Text style={styles.unitModel} numberOfLines={1}>
-                {preview?.model_name ?? 'GoodBed mattress'}
-              </Text>
-              <StatusPill
-                label={preview ? `${preview.warranty_months} months` : 'Not checked'}
-                tone={preview ? 'info' : 'warning'}
-              />
-            </View>
-            <Text style={styles.unitSerial}>{shortSerial(serial)}</Text>
-          </View>
+          <ProductPicker
+            products={catalogue}
+            value={productId}
+            onChange={setProductId}
+            loading={products.isLoading}
+            loadError={loadError}
+            onRetry={() => void products.refetch()}
+            error={showErrors ? errors.product : null}
+          />
 
           <TextField
             label="Customer name"
@@ -161,6 +182,7 @@ export function CustomerDetailsScreen({
             inputRef={invoiceRefField}
             returnKeyType="next"
             error={showErrors ? errors.invoiceRef : null}
+            hint="One sale per bill — this is how GoodBed tells two sales apart."
           />
 
           <TextField
@@ -190,12 +212,7 @@ export function CustomerDetailsScreen({
             multiline
           />
 
-          <Button
-            title="Register sale"
-            size="lg"
-            onPress={onSubmit}
-            style={styles.submit}
-          />
+          <Button title="Register warranty" size="lg" onPress={onSubmit} style={styles.submit} />
           <Text style={styles.footnote}>
             Saved on this phone the moment you tap. If the connection drops, it is sent
             automatically — the sale is never lost.
@@ -209,21 +226,6 @@ export function CustomerDetailsScreen({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
-  unitCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-  },
-  unitHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  unitModel: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.text },
-  unitSerial: { fontSize: 12, color: colors.muted, marginTop: spacing.xs, letterSpacing: 0.6 },
   notice: {
     marginTop: spacing.sm,
     padding: spacing.sm,

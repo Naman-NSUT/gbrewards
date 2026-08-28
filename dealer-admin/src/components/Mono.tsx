@@ -8,6 +8,11 @@ import { brand } from '../theme';
  * Serials are UUIDs read off a QR sticker and quoted down the phone. They are
  * shown in the mono face so a 0 is never an O, truncated so they don't eat a
  * table, and copied on click because nobody should retype one.
+ *
+ * `value` is nullable on purpose: a warranty registered since dealers stopped
+ * scanning has no serial at all. Every one of those renders a dash here, so a
+ * missing serial can never reach a support agent's screen as "undefined" while
+ * they are reading it out to a customer.
  */
 export function Mono({
   value,
@@ -15,7 +20,7 @@ export function Mono({
   size = 12.5,
   onClick,
 }: {
-  value: string;
+  value: string | null | undefined;
   chars?: number;
   size?: number;
   /** Overrides copy — used where the serial should open a record instead. */
@@ -23,6 +28,11 @@ export function Mono({
 }) {
   const { message } = App.useApp();
   const [copied, setCopied] = useState(false);
+
+  if (!value) {
+    return <span style={{ fontSize: size, color: brand.textFaint }}>—</span>;
+  }
+
   const short = value.length > chars ? `${value.slice(0, chars)}…` : value;
 
   const copy = async (e: React.MouseEvent) => {

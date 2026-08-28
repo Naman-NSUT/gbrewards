@@ -1,13 +1,5 @@
 import { api } from './client';
-import type { RegisterBody, RegisterOut, UnitPreviewOut, WarrantyOut } from './types';
-
-/** "Can I sell this?" — answered between the scan and typing customer details. */
-export async function previewUnit(serial: string): Promise<UnitPreviewOut> {
-  const resp = await api.get<UnitPreviewOut>(
-    `/dealer/units/${encodeURIComponent(serial)}/preview`
-  );
-  return resp.data;
-}
+import type { RegisterBody, RegisterOut, WarrantyOut } from './types';
 
 /**
  * Create the sale record.

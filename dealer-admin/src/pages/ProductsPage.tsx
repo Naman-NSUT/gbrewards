@@ -1,24 +1,11 @@
-import { PlusOutlined, PrinterOutlined, QrcodeOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Switch,
-  Table,
-  Tag,
-  message,
-} from 'antd';
+import { Button, Form, Input, InputNumber, Modal, Switch, Table, Tag, message } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { useState } from 'react';
 
 import {
   createProduct,
-  downloadLabels,
-  generateBatch,
   listProducts,
   updateProduct,
   type DealerProduct,
@@ -47,9 +34,7 @@ export function ProductsPage() {
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<DealerProduct | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [batchFor, setBatchFor] = useState<DealerProduct | null>(null);
   const [form] = Form.useForm<ProductFormValues>();
-  const [batchForm] = Form.useForm<{ quantity: number; label?: string }>();
 
   const products = useQuery({
     queryKey: ['dealer-products', page],
@@ -109,26 +94,6 @@ export function ProductsPage() {
     onError: (e) => message.error(apiErrorMessage(e, 'Could not save that product')),
   });
 
-  const mint = useMutation({
-    mutationFn: (body: { quantity: number; label?: string }) =>
-      generateBatch(batchFor!.id, body),
-    onSuccess: async (batch) => {
-      void qc.invalidateQueries({ queryKey: ['dealer-products'] });
-      setBatchFor(null);
-      message.success(`${batch.quantity} labels generated — downloading the sheet`);
-      // Straight to the printable sheet: the only reason to mint labels is to
-      // print them, and a second click to find the download helps nobody.
-      const blob = await downloadLabels(batch.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dealer-labels-${batch.id}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    },
-    onError: (e) => message.error(apiErrorMessage(e, 'Could not generate labels')),
-  });
-
   const columns: TableColumnsType<DealerProduct> = [
     {
       title: 'Product',
@@ -167,35 +132,15 @@ export function ProductsPage() {
       },
     },
     {
-      title: 'Labels minted',
-      dataIndex: 'units_generated',
-      width: 140,
-      render: (n: number) => (
-        <span className="tnum" style={{ color: n === 0 ? brand.textFaint : brand.text }}>
-          {n === 0 ? 'none yet' : n.toLocaleString()}
-        </span>
-      ),
-    },
-    {
       title: '',
       width: 90,
       render: (_: unknown, r) => (r.is_active ? null : <Tag>inactive</Tag>),
     },
     {
       title: '',
-      width: 230,
+      width: 110,
       render: (_: unknown, r) => (
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button
-            size="small"
-            icon={<QrcodeOutlined />}
-            onClick={() => {
-              setBatchFor(r);
-              batchForm.resetFields();
-            }}
-          >
-            Generate labels
-          </Button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button
             size="small"
             onClick={() => {
@@ -214,8 +159,8 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader
-        title="Products & QR"
-        subtitle="The dealer programme's own catalogue and serials"
+        title="Products"
+        subtitle="What a shop picks from the dropdown when it registers a sale"
         extra={
           <Button
             type="primary"
@@ -230,14 +175,6 @@ export function ProductsPage() {
             Add product
           </Button>
         }
-      />
-
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="These labels are separate from the factory's"
-        description="The dealer app scans a dealer label, so each mattress carries two QR codes: the factory's, scanned by a worker during assembly, and this one, scanned at point of sale. The two serials are unrelated."
       />
 
       <Table
@@ -290,8 +227,8 @@ export function ProductsPage() {
           </Form.Item>
           <Form.Item
             name="terms"
-            label="Label terms"
-            extra="Printed in small type under the QR. One line each."
+            label="Warranty terms"
+            extra="The small print for this model. It used to be printed under the QR; nothing prints it now, so it is back-office copy — and saving writes exactly what is in this box, so emptying it erases the wording."
           >
             <Input.TextArea rows={3} maxLength={600} showCount />
           </Form.Item>
@@ -299,39 +236,6 @@ export function ProductsPage() {
             <Switch />
           </Form.Item>
         </Form>
-      </Modal>
-
-      <Modal
-        open={batchFor !== null}
-        title={`Generate labels — ${batchFor?.name ?? ''}`}
-        okText="Generate & download"
-        confirmLoading={mint.isPending}
-        onOk={async () => mint.mutate(await batchForm.validateFields())}
-        onCancel={() => setBatchFor(null)}
-        destroyOnHidden
-      >
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="There is no undo"
-          description="Serials are permanent once minted. If a print run is scrapped, void those labels rather than regenerating — a voided label cannot be registered, which is what stops a lost sheet turning into payable registrations."
-        />
-        <Form form={batchForm} layout="vertical">
-          <Form.Item
-            name="quantity"
-            label="How many labels"
-            rules={[{ required: true, message: 'How many?' }]}
-          >
-            <InputNumber min={1} max={10000} style={{ width: '100%' }} size="large" />
-          </Form.Item>
-          <Form.Item name="label" label="Batch note" extra="e.g. 'March despatch, Nagpur'">
-            <Input maxLength={200} />
-          </Form.Item>
-        </Form>
-        <div style={{ color: brand.textDim, fontSize: 12.5 }}>
-          <PrinterOutlined /> The printable sheet downloads automatically — one label per page.
-        </div>
       </Modal>
     </>
   );

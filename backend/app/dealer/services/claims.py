@@ -23,7 +23,7 @@ import uuid
 from dataclasses import dataclass
 from typing import NoReturn
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -88,11 +88,28 @@ def normalise_reference(raw: str) -> str:
     return "".join(ch for ch in (raw or "").upper() if ch in _ALPHABET)
 
 
-def _warranty_for(session: Session, serial: str) -> Warranty | None:
-    """The warranty that matters for this serial: the live one, else the newest."""
+def _warranty_for(session: Session, reference: str) -> Warranty | None:
+    """The warranty a customer means: the live one, else the newest.
+
+    Matches a SERIAL or an INVOICE NUMBER. Warranties registered since the move
+    to product + invoice have no serial at all, and a claim is the whole reason
+    a five-year warranty exists — keying this on serial alone would leave every
+    one of those customers unable to raise one.
+
+    The invoice comparison is case-insensitive, matching
+    uq_warranties_live_dealer_invoice, so a customer who types their bill number
+    in lower case is not told their warranty does not exist.
+    """
     rows = list(
         session.execute(
-            select(Warranty).where(Warranty.serial == serial).order_by(Warranty.created_at.desc())
+            select(Warranty)
+            .where(
+                or_(
+                    Warranty.serial == reference,
+                    func.lower(Warranty.invoice_ref) == reference.lower(),
+                )
+            )
+            .order_by(Warranty.created_at.desc())
         ).scalars()
     )
     if not rows:

@@ -96,22 +96,21 @@ def test_a_pending_shop_can_register_sales_immediately(client, db):
     """Capturing the sale record is the product. It must not wait on an admin."""
     import uuid as _uuid
 
-    from tests.dealer.factories import make_priced_unit, new_serial
+    from tests.dealer.factories import make_priced_product
 
     _signup(client)
     token = client.post(
         f"{AUTH}/otp/verify", json={"phone": "9812300001", "code": _latest_otp(db)}
     ).json()["access_token"]
 
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     db.commit()
 
     resp = client.post(
         "/api/v1/dealer/registrations",
         headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(_uuid.uuid4())},
         json={
-            "serial": serial,
+            "product_id": str(product.id),
             "customer_phone": "9876500001",
             "customer_name": "Meera",
             "invoice_ref": "INV-1",

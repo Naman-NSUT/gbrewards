@@ -164,7 +164,10 @@ class DealerDetailOut(Base):
 
 class WarrantyListItem(Base):
     id: uuid.UUID
-    serial: str
+    # Null on everything registered since the dropdown replaced the scanner.
+    # Historic warranties keep the code printed under their QR — support
+    # still looks those up by it, so it is shown wherever it exists.
+    serial: str | None
     model_name: str | None
     model_code: str | None
     status: str
@@ -276,7 +279,8 @@ class ApprovalItem(Base):
     """A warranty waiting on a human, with the evidence to decide it."""
 
     id: uuid.UUID
-    serial: str
+    # Null since the scanner was retired; see WarrantyListItem.serial.
+    serial: str | None
     model_name: str | None
     status: str
     source: str
@@ -383,7 +387,9 @@ class PointRateOut(Base):
 class DealerProductIn(Base):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
-    # Printed on the physical label under the QR.
+    # Warranty small print for this model. It was the copy printed on the
+    # physical label under the QR; nothing prints labels any more, so today
+    # this is back-office copy against the product.
     terms: str | None = Field(default=None, max_length=2000)
     model_code: str | None = Field(default=None, max_length=64)
     warranty_months: int = Field(default=60, gt=0, le=600)
@@ -398,16 +404,16 @@ class DealerProductOut(Base):
     model_code: str | None
     warranty_months: int
     is_active: bool
-    # How many serials have been minted for this product so far.
-    units_generated: int
-
-
-class GenerateBatchIn(Base):
-    quantity: int = Field(gt=0, le=10_000)
-    label: str | None = Field(default=None, max_length=200)
 
 
 class QrBatchOut(Base):
+    """A batch of labels that was printed before the scanner was retired.
+
+    Read-only history: the minting endpoint is gone with the scanner, so no
+    new batch is ever created and this list only shrinks if someone deletes
+    rows — which nothing does.
+    """
+
     id: uuid.UUID
     product_id: uuid.UUID
     quantity: int
@@ -563,7 +569,8 @@ class ClaimListItem(Base):
     issue_type: str | None
     description: str
     warranty_id: uuid.UUID
-    serial: str
+    # Null since the scanner was retired; see WarrantyListItem.serial.
+    serial: str | None
     model_name: str | None
     customer: CustomerBrief
     dealer: DealerBrief | None

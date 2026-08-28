@@ -13,9 +13,9 @@ from app.dealer.models.warranty import Warranty
 from app.main import create_app
 from tests.dealer.factories import (
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
-    new_serial,
+    new_invoice,
 )
 
 
@@ -45,21 +45,20 @@ def client(db, session_factory):  # type: ignore[no-untyped-def]
 def _setup(db, code="D001", phone="+919000000001"):
     dealer = make_dealer(db, code=code)
     staff = make_staff(db, dealer, phone=phone)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     db.commit()
-    return dealer, staff, serial
+    return dealer, staff, product
 
 
-def _register(client, staff, serial, phone="9812345678"):
+def _register(client, staff, product, phone="9812345678"):
     token = create_access_token(str(staff.id), "dealer")
     resp = client.post(
         "/api/v1/dealer/registrations",
         json={
-            "serial": serial,
+            "product_id": str(product.id),
             "customer_phone": phone,
             "customer_name": "Asha Kumar",
-            "invoice_ref": "INV-1",
+            "invoice_ref": new_invoice(),
         },
         headers={
             "Authorization": f"Bearer {token}",
@@ -71,8 +70,8 @@ def _register(client, staff, serial, phone="9812345678"):
 
 
 def test_dealer_can_fix_a_mistyped_number_inside_the_window(client, db):
-    _, staff, serial = _setup(db)
-    warranty_id, headers = _register(client, staff, serial, phone="9812345678")
+    _, staff, product = _setup(db)
+    warranty_id, headers = _register(client, staff, product, phone="9812345678")
 
     resp = client.patch(
         f"/api/v1/dealer/registrations/{warranty_id}/customer",
@@ -85,8 +84,8 @@ def test_dealer_can_fix_a_mistyped_number_inside_the_window(client, db):
 
 
 def test_correction_is_audited_with_before_and_after(client, db):
-    _, staff, serial = _setup(db)
-    warranty_id, headers = _register(client, staff, serial)
+    _, staff, product = _setup(db)
+    warranty_id, headers = _register(client, staff, product)
 
     client.patch(
         f"/api/v1/dealer/registrations/{warranty_id}/customer",
@@ -100,8 +99,8 @@ def test_correction_is_audited_with_before_and_after(client, db):
 
 
 def test_window_closes_after_the_configured_hours(client, db):
-    _, staff, serial = _setup(db)
-    warranty_id, headers = _register(client, staff, serial)
+    _, staff, product = _setup(db)
+    warranty_id, headers = _register(client, staff, product)
 
     # Age the registration past the window.
     warranty = db.get(Warranty, uuid.UUID(warranty_id))
@@ -118,12 +117,12 @@ def test_window_closes_after_the_configured_hours(client, db):
 
 
 def test_a_dealer_cannot_edit_another_dealers_registration(client, db):
-    _, staff_a, serial = _setup(db, code="D001", phone="+919000000001")
+    _, staff_a, product = _setup(db, code="D001", phone="+919000000001")
     dealer_b = make_dealer(db, code="D002", name="Shop Two")
     staff_b = make_staff(db, dealer_b, phone="+919000000002")
     db.commit()
 
-    warranty_id, _ = _register(client, staff_a, serial)
+    warranty_id, _ = _register(client, staff_a, product)
     token_b = create_access_token(str(staff_b.id), "dealer")
 
     resp = client.patch(
@@ -140,8 +139,8 @@ def test_moving_to_a_new_number_does_not_corrupt_the_original_customer(client, d
     """The mistyped number may belong to a real customer with other mattresses."""
     from app.dealer.models.customer import Customer
 
-    _, staff, serial = _setup(db)
-    warranty_id, headers = _register(client, staff, serial, phone="9812345678")
+    _, staff, product = _setup(db)
+    warranty_id, headers = _register(client, staff, product, phone="9812345678")
 
     client.patch(
         f"/api/v1/dealer/registrations/{warranty_id}/customer",

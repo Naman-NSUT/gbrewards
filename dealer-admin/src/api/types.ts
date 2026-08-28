@@ -97,7 +97,13 @@ export type WarrantySource = 'dealer' | 'customer_self' | 'admin' | 'migration';
 /** WarrantyListItem. `status` is display status; `stored_status` is the column. */
 export interface WarrantyListItem {
   id: string;
-  serial: string;
+  /**
+   * NULL on everything registered since dealers stopped scanning: a shop now
+   * picks the product from a dropdown and types its invoice number, so there
+   * is no serial to record. Warranties sold off a printed label keep theirs,
+   * so every screen that shows a serial has to render both.
+   */
+  serial: string | null;
   model_name: string | null;
   model_code: string | null;
   status: WarrantyDisplayStatus;
@@ -243,7 +249,8 @@ export interface CompliancePage extends Page<ComplianceRow> {
 
 export interface SelfRegistration {
   warranty_id: string;
-  serial: string;
+  /** Null on anything registered since the serial went away. */
+  serial: string | null;
   status: string;
   registered_at: string;
   invoice_date: string | null;
@@ -276,7 +283,8 @@ export type ApprovalStatus = 'pending_backdate' | 'pending_review';
 /** ApprovalItem — `id` IS the warranty id. */
 export interface ApprovalItem {
   id: string;
-  serial: string;
+  /** Null on anything registered since the serial went away. */
+  serial: string | null;
   model_name: string | null;
   status: ApprovalStatus;
   source: WarrantySource;
@@ -347,7 +355,8 @@ export interface ClaimListItem {
   issue_type: string | null;
   description: string;
   warranty_id: string;
-  serial: string;
+  /** Null when the claimed warranty was registered without one. */
+  serial: string | null;
   model_name: string | null;
   customer: CustomerBrief;
   dealer: DealerBrief | null;

@@ -26,9 +26,9 @@ from app.dealer.services import registration
 from app.main import create_app
 from tests.dealer.factories import (
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
-    new_serial,
+    new_invoice,
 )
 
 DEALER = "/api/v1/dealer"
@@ -66,15 +66,14 @@ def _register(db, *, dealer_code="D001", staff_phone="+919000000001", phone=CUST
     """A real dealer registration, committed so the client's session sees it."""
     dealer = make_dealer(db, code=dealer_code)
     staff = make_staff(db, dealer, phone=staff_phone)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone=phone,
         customer_name="Asha Kumar",
-        invoice_ref="INV-1",
+        invoice_ref=new_invoice(),
     )
     db.commit()
     return dealer, staff, result.warranty
@@ -197,14 +196,15 @@ def test_a_second_mattress_for_the_same_customer_gets_its_own_acknowledgement(cl
     that has none."""
     dealer = make_dealer(db, code="D001")
     staff = make_staff(db, dealer)
+    product = make_priced_product(db, 50)
     warranties = []
+    # Two bills, because two mattresses to one buyer is two sales — and one
+    # invoice number could not carry both even if the shop wanted it to.
     for ref in ("INV-1", "INV-2"):
-        serial = new_serial()
-        make_priced_unit(db, serial, 50)
         result = registration.register(
             db,
             staff=staff,
-            raw_serial=serial,
+            product_id=product.id,
             customer_phone=CUSTOMER_PHONE,
             customer_name="Asha Kumar",
             invoice_ref=ref,

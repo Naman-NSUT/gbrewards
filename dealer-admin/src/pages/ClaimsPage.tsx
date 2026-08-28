@@ -104,7 +104,7 @@ export function ClaimsPage() {
       title: 'Unit',
       dataIndex: 'serial',
       width: 200,
-      render: (serial: string, c) => (
+      render: (serial: string | null, c) => (
         <div>
           <Mono value={serial} chars={14} />
           <div style={{ fontSize: 11.5, color: brand.textFaint }}>

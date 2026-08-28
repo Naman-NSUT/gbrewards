@@ -1,4 +1,10 @@
-"""Dashboard aggregates and the allocation dry run."""
+"""Dashboard aggregates, and the admin actions that move money.
+
+The name of this file used to end in "and_preview": it also covered the scanner
+dry-run endpoint that answered "may I sell this label?". A dropdown cannot be
+pointed at a mattress that does not exist, so that question no longer has a
+subject and the endpoint is gone.
+"""
 
 import uuid
 
@@ -12,7 +18,7 @@ from app.main import create_app
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
     new_serial,
 )
@@ -58,12 +64,11 @@ def test_dashboard_separates_dealer_and_customer_registrations(client, db, admin
 
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha",
         invoice_ref="INV-1",

@@ -305,7 +305,7 @@ def void_warranty(
             template_key="warranty_voided",
             variables={
                 "name": warranty.customer.name,
-                "serial": warranty.serial[:12],
+                "reference": warranty_svc.customer_reference(warranty),
                 "link": f"{settings.public_base_url}/w/{warranty.id}",
             },
             warranty_id=warranty.id,

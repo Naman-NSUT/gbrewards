@@ -81,7 +81,16 @@ export function WarrantyDrawer({
       title={
         w ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <Mono value={w.serial} chars={20} size={13} />
+            {/* Nothing registered since the serial went away carries one, and
+                the invoice number is what identifies that sale instead — a bare
+                dash would leave support nothing to read back down the phone. */}
+            {w.serial ? (
+              <Mono value={w.serial} chars={20} size={13} />
+            ) : (
+              <span style={{ fontSize: 13, color: brand.text }}>
+                {w.invoice_ref ? `Invoice ${w.invoice_ref}` : '—'}
+              </span>
+            )}
             <StatusTag status={w.status} />
           </div>
         ) : (
@@ -256,7 +265,7 @@ export function WarrantyDrawer({
         confirmText="Void warranty"
         danger
         loading={voidWarranty.isPending}
-        description="The customer loses cover from this record and the serial is freed so the unit can be sold again. Nothing is deleted — the void is recorded as its own event."
+        description="The customer loses cover from this record, and the invoice number is freed so that sale can be registered again — as is the serial, on a warranty old enough to have one. Nothing is deleted; the void is recorded as its own event."
         extra={
           <div
             style={{

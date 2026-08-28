@@ -177,7 +177,19 @@ export function ApprovalsPage() {
         description={
           decision?.item ? (
             <>
-              This activates the warranty on <strong>{decision.item.serial.slice(0, 12)}…</strong>
+              {/* A registration made since the serial went away has none to
+                  name, and .slice on it would blow up this dialog — so say
+                  whose warranty it is instead. */}
+              This activates the warranty{' '}
+              {decision.item.serial ? (
+                <>
+                  on <strong>{decision.item.serial.slice(0, 12)}…</strong>
+                </>
+              ) : (
+                <>
+                  for <strong>{decision.item.customer.name}</strong>
+                </>
+              )}
               {decision.item.dealer && (
                 <>
                   {' '}

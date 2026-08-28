@@ -1,9 +1,14 @@
 """Unit lookup against the shared database, and serial normalisation.
 
-Before the merge this file tested a mirror, a live read-through and a sync job.
-All three are gone: one database means `product_units` IS the source. What is
-still worth pinning is that the dealer side reads the real table correctly, and
-that a QR payload format change upstream cannot silently break scanning.
+Registration no longer comes anywhere near this module: a dealer picks a product
+and nothing is scanned. What still does is every path a HISTORIC label leads
+down — the admin serial screen support lives on, the public lookup a customer
+types a label into, and the claim they raise from it. Those all begin by
+normalising a serial and asking `dealer_units` what it was.
+
+So this file pins two things: that the dealer side reads the real table
+correctly, and that a QR payload format change upstream cannot silently break
+the one lookup a customer holding an old mattress still has.
 """
 
 import pytest
@@ -46,35 +51,6 @@ def test_reads_model_and_warranty_terms_from_the_real_product(db):
 
 def test_unknown_serial_returns_none(db):
     assert get_unit_source(db).get(new_serial()) is None
-
-
-def test_a_voided_label_cannot_be_registered(db):
-    """Labels get voided when a print run is scrapped or a sheet goes missing.
-    If a voided label were still registrable, "we lost 200 labels" would become
-    200 payable registrations."""
-    import pytest as _pytest
-
-    from app.core.errors import AppError
-    from app.dealer.services import registration
-    from tests.dealer.factories import make_dealer, make_priced_unit, make_staff
-
-    dealer = make_dealer(db)
-    staff = make_staff(db, dealer)
-    serial = new_serial()
-    unit, _ = make_priced_unit(db, serial, 50)
-    unit.status = "void"
-    db.commit()
-
-    with _pytest.raises(AppError) as exc:
-        registration.register(
-            db,
-            staff=staff,
-            raw_serial=serial,
-            customer_phone="+919812345678",
-            customer_name="Asha",
-            invoice_ref="INV-1",
-        )
-    assert exc.value.code == "unit_void"
 
 
 def test_the_dealer_registry_knows_nothing_about_the_factory(db):

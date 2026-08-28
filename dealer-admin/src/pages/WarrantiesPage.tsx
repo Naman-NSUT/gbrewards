@@ -76,10 +76,12 @@ export function WarrantiesPage() {
 
   const columns: TableColumnsType<WarrantyListItem> = [
     {
+      // Blank on everything registered since the serial went away, which is why
+      // the row itself opens the drawer: the dash is not a click target.
       title: 'Serial',
       dataIndex: 'serial',
       width: 190,
-      render: (serial: string, r) => (
+      render: (serial: string | null, r) => (
         <div>
           <Mono value={serial} chars={16} onClick={() => setOpenWarranty(r.id)} />
           <div style={{ fontSize: 11.5, color: brand.textFaint }}>{r.model_name ?? '—'}</div>

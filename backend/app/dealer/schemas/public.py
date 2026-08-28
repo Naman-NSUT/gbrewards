@@ -75,7 +75,16 @@ class SellingDealerOut(Base):
 
 class RedactedWarrantyOut(Base):
     id: uuid.UUID
-    serial: str
+    # Null on anything registered after the move to product + invoice: those
+    # warranties never had a serial. The public site must render the absence
+    # rather than the word "undefined" at a customer checking their cover.
+    serial: str | None
+    # What to quote when raising a claim: the serial on older warranties, the
+    # invoice number on everything since. The claim endpoint accepts either, and
+    # without this the site cannot build a claim link for a warranty that has no
+    # serial. No new exposure — the serial was already returned here, and a claim
+    # still needs the phone on the record as well.
+    reference: str
     model_name: str | None
     # Derived via warranty_svc.display_status, so an out-of-date row still reads
     # 'expired' to the customer rather than 'active'.
@@ -101,6 +110,7 @@ def redact(warranty: "Warranty", *, dealer: "Dealer | None" = None) -> RedactedW
     return RedactedWarrantyOut(
         id=warranty.id,
         serial=warranty.serial,
+        reference=warranty_svc.customer_reference(warranty),
         model_name=warranty.model_name,
         status=warranty_svc.display_status(warranty),
         warranty_months=warranty.warranty_months,

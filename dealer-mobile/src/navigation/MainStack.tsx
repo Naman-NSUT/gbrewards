@@ -2,7 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 import { ConfirmationScreen } from '../screens/ConfirmationScreen';
-import { CustomerDetailsScreen } from '../screens/CustomerDetailsScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
 import { colors } from '../theme';
 import { AppTabs } from './AppTabs';
 import type { MainStackParamList } from './types';
@@ -22,9 +22,9 @@ export function MainStack() {
     >
       <Stack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} />
       <Stack.Screen
-        name="CustomerDetails"
-        component={CustomerDetailsScreen}
-        options={{ title: 'Customer details' }}
+        name="Register"
+        component={RegisterScreen}
+        options={{ title: 'Register a warranty' }}
       />
       {/* No back arrow: the sale is already recorded by the time this shows, and
           walking back into a submitted form invites a second submission. */}

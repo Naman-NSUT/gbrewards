@@ -1,13 +1,21 @@
-"""Dealer product catalogue and QR label generation.
+"""Dealer product catalogue.
 
-The dealer programme owns its serials, so this is where they are created. The
-labels printed here are a SECOND QR on the mattress, alongside the factory's —
-scanned by the dealer app at point of sale.
+A product is what a shop picks from the dropdown when it registers a sale, so
+this list decides two things that cost money: the warranty length frozen onto
+each warranty, and — through the product's point rate — what registering it
+pays. Deactivating a product is how the client takes a discontinued model off
+that dropdown.
+
+Nothing here mints serials any more. The dealer app no longer scans, so the
+batch-minting and label-sheet endpoints that fed the scanner are gone. The
+`dealer_qr_batches` and `dealer_units` rows stay and GET /batches still reads
+them: they are the record of what was physically printed, and warranties
+registered before the change still carry those serials.
 """
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -16,36 +24,11 @@ from app.core.errors import AppError
 from app.dealer.api.admin._common import Pagination, pagination
 from app.dealer.models.admin import DealerAdmin
 from app.dealer.models.product import DealerProduct
-from app.dealer.models.unit import DealerQrBatch, DealerUnit
-from app.dealer.schemas.admin import (
-    DealerProductIn,
-    DealerProductOut,
-    GenerateBatchIn,
-    Paginated,
-    QrBatchOut,
-)
-from app.dealer.services import qr
+from app.dealer.models.unit import DealerQrBatch
+from app.dealer.schemas.admin import DealerProductIn, DealerProductOut, Paginated, QrBatchOut
 from app.dealer.services.audit import record_audit
 
 router = APIRouter(tags=["dealer-admin-products"])
-
-
-def _product_out(db: Session, product: DealerProduct) -> DealerProductOut:
-    units = int(
-        db.execute(
-            select(func.count()).select_from(DealerUnit).where(DealerUnit.product_id == product.id)
-        ).scalar_one()
-    )
-    return DealerProductOut(
-        id=product.id,
-        name=product.name,
-        description=product.description,
-        terms=product.terms,
-        model_code=product.model_code,
-        warranty_months=product.warranty_months,
-        is_active=product.is_active,
-        units_generated=units,
-    )
 
 
 @router.get("/products", response_model=Paginated[DealerProductOut])
@@ -66,7 +49,7 @@ def list_products(
         stmt.order_by(DealerProduct.name).limit(page.limit).offset(page.offset)
     ).scalars()
     return Paginated[DealerProductOut](
-        items=[_product_out(db, p) for p in rows],
+        items=[DealerProductOut.model_validate(p) for p in rows],
         total=total,
         limit=page.limit,
         offset=page.offset,
@@ -93,7 +76,7 @@ def create_product(
         ip=client_ip(request),
     )
     db.commit()
-    return _product_out(db, product)
+    return DealerProductOut.model_validate(product)
 
 
 @router.patch("/products/{product_id}", response_model=DealerProductOut)
@@ -127,37 +110,7 @@ def update_product(
         ip=client_ip(request),
     )
     db.commit()
-    return _product_out(db, product)
-
-
-@router.post("/products/{product_id}/batches", response_model=QrBatchOut, status_code=201)
-def generate_batch(
-    product_id: uuid.UUID,
-    body: GenerateBatchIn,
-    request: Request,
-    admin: DealerAdmin = Depends(require_admin_write),
-    db: Session = Depends(get_db),
-) -> QrBatchOut:
-    """Mint `quantity` new dealer serials and their printable labels."""
-    batch = qr.generate_batch(
-        db,
-        product_id=product_id,
-        quantity=body.quantity,
-        label=body.label,
-        admin_id=admin.id,
-    )
-    record_audit(
-        db,
-        action="generate_qr_batch",
-        entity_type="dealer_qr_batch",
-        entity_id=batch.id,
-        actor_id=admin.id,
-        metadata={"product_id": str(product_id), "quantity": body.quantity},
-        ip=client_ip(request),
-    )
-    db.commit()
-    db.refresh(batch)
-    return QrBatchOut.model_validate(batch)
+    return DealerProductOut.model_validate(product)
 
 
 @router.get("/batches", response_model=Paginated[QrBatchOut])
@@ -167,6 +120,12 @@ def list_batches(
     _: DealerAdmin = Depends(get_current_dealer_admin),
     db: Session = Depends(get_db),
 ) -> Paginated[QrBatchOut]:
+    """Batches that were printed before the scanner was retired. Read only.
+
+    Nothing can mint a new one, so this never grows. It stays because support
+    still gets calls about a label somebody is holding, and the batch is how you
+    find out when it was printed and for which product.
+    """
     stmt = select(DealerQrBatch)
     if product_id is not None:
         stmt = stmt.where(DealerQrBatch.product_id == product_id)
@@ -179,19 +138,4 @@ def list_batches(
         total=total,
         limit=page.limit,
         offset=page.offset,
-    )
-
-
-@router.get("/batches/{batch_id}/labels.pdf")
-def export_labels(
-    batch_id: uuid.UUID,
-    _: DealerAdmin = Depends(get_current_dealer_admin),
-    db: Session = Depends(get_db),
-) -> Response:
-    """The printable sheet — one label per unit, one per page."""
-    pdf = qr.render_batch_pdf(db, batch_id)
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="dealer-labels-{batch_id}.pdf"'},
     )

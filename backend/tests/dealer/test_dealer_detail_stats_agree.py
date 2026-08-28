@@ -29,8 +29,9 @@ from app.main import create_app
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
+    new_invoice,
     new_serial,
 )
 
@@ -64,15 +65,16 @@ def h(db):  # type: ignore[no-untyped-def]
 
 
 def _register(db, staff, *, when: datetime) -> Warranty:
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     warranty = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha Kumar",
-        invoice_ref=f"INV-{serial[:6]}",
+        # A fresh bill each time: one live warranty per (dealer, invoice), so
+        # reusing one here would fail as a duplicate rather than as this test.
+        invoice_ref=new_invoice(),
     ).warranty
     # Registration stamps 'now'. The dates are the whole point of this test, so
     # they are set explicitly rather than left to the order rows happened to be

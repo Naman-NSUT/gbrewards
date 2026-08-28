@@ -18,9 +18,11 @@ from app.main import create_app
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_legacy_warranty,
+    make_priced_product,
     make_product,
     make_staff,
+    new_invoice,
     new_serial,
 )
 
@@ -67,19 +69,18 @@ def h(owner):  # type: ignore[no-untyped-def]
     return _headers(owner)
 
 
-def _sell(db, *, dealer=None, staff=None, points=50, serial=None):
+def _sell(db, *, dealer=None, staff=None, points=50, invoice=None):
     """A real registration through the real service — the only way points exist."""
     dealer = dealer or make_dealer(db)
     staff = staff or make_staff(db, dealer)
-    serial = serial or new_serial()
-    make_priced_unit(db, serial, points)
+    product = make_priced_product(db, points)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha Kumar",
-        invoice_ref="INV-1",
+        invoice_ref=invoice or new_invoice(),
     )
     db.commit()
     return dealer, staff, result
@@ -172,10 +173,16 @@ def test_manual_adjustment_requires_a_reason_and_is_audited(client, db, h, owner
     assert db.query(DealerAuditLog).filter_by(action="adjust_points").count() == 1
 
 
-# --- products & QR ---------------------------------------------------------
+# --- products --------------------------------------------------------------
 
 
-def test_products_mint_serials_and_render_a_label_sheet(client, db, h):
+def test_a_product_is_created_listed_and_retired(client, db, h):
+    """The catalogue is now the whole of what a dealer may sell.
+
+    Retiring a product is the only way the client takes a discontinued model off
+    the counter dropdown, so is_active surviving a PATCH is a commercial control
+    and not a flag.
+    """
     created = client.post(
         f"{PREFIX}/products",
         headers=h,
@@ -183,20 +190,9 @@ def test_products_mint_serials_and_render_a_label_sheet(client, db, h):
     )
     assert created.status_code == 201, created.text
     pid = created.json()["id"]
-    assert created.json()["units_generated"] == 0
 
-    batch = client.post(
-        f"{PREFIX}/products/{pid}/batches", headers=h, json={"quantity": 3, "label": "run A"}
-    )
-    assert batch.status_code == 201, batch.text
-    bid = batch.json()["id"]
-
-    again = client.get(f"{PREFIX}/products", headers=h).json()
-    assert next(p for p in again["items"] if p["id"] == pid)["units_generated"] == 3
-
-    pdf = client.get(f"{PREFIX}/batches/{bid}/labels.pdf", headers=h)
-    assert pdf.status_code == 200
-    assert pdf.content[:5] == b"%PDF-", "must be a real PDF, not an error page"
+    listed = client.get(f"{PREFIX}/products", headers=h).json()
+    assert next(p for p in listed["items"] if p["id"] == pid)["warranty_months"] == 84
 
     patched = client.patch(
         f"{PREFIX}/products/{pid}",
@@ -207,17 +203,29 @@ def test_products_mint_serials_and_render_a_label_sheet(client, db, h):
     assert patched.json()["is_active"] is False
 
 
+def test_printed_label_batches_are_still_readable_history(client, db, h):
+    """Nothing mints a batch any more, so this list can only ever shrink.
+
+    It stays because support still gets calls about a label somebody is holding,
+    and the batch is how they find out when it was printed and for what.
+    """
+    assert client.get(f"{PREFIX}/batches", headers=h).status_code == 200
+
+
 def test_warranty_search_detail_void_and_customer_edit(client, db, h):
-    dealer, _, result = _sell(db)
+    dealer, _, result = _sell(db, invoice="INV-SEARCH-1")
     wid = str(result.warranty.id)
 
-    by_serial = client.get(f"{PREFIX}/warranties?q={result.warranty.serial}", headers=h).json()
-    assert by_serial["total"] == 1
+    # The invoice number is what an operator has to search by now: it is the only
+    # thing printed on both the shop's bill and the customer's copy.
+    by_invoice = client.get(f"{PREFIX}/warranties?q=INV-SEARCH-1", headers=h).json()
+    assert by_invoice["total"] == 1
     by_mobile = client.get(f"{PREFIX}/warranties?q=9812345678", headers=h).json()
     assert by_mobile["total"] == 1
 
     detail = client.get(f"{PREFIX}/warranties/{wid}", headers=h).json()
-    assert detail["warranty"]["serial"] == result.warranty.serial
+    assert detail["warranty"]["serial"] is None, "nothing was scanned"
+    assert detail["warranty"]["invoice_ref"] == "INV-SEARCH-1"
     assert len(detail["events"]) >= 1
 
     edited = client.patch(
@@ -252,12 +260,11 @@ def test_backdate_lands_in_approvals_and_pays_only_once_approved(client, db, h):
 
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha",
         invoice_ref="INV-1",
@@ -286,12 +293,11 @@ def test_rejecting_an_approval_voids_it_and_pays_nobody(client, db, h):
 
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha",
         invoice_ref="INV-1",
@@ -328,13 +334,12 @@ def test_compliance_ranks_the_shop_customers_had_to_register_for(client, db, h):
     good_staff = make_staff(db, good, phone="+919000000011")
     make_staff(db, bad, phone="+919000000012")
 
+    product = make_priced_product(db, 50)
     for i in range(2):
-        serial = new_serial()
-        make_priced_unit(db, serial, 50)
         registration.register(
             db,
             staff=good_staff,
-            raw_serial=serial,
+            product_id=product.id,
             customer_phone=f"+91981234{i:04d}",
             customer_name="C",
             invoice_ref=f"I{i}",
@@ -376,8 +381,23 @@ def test_compliance_ranks_the_shop_customers_had_to_register_for(client, db, h):
 
 
 def test_serial_lookup_answers_everything_in_one_response(client, db, h):
-    dealer, _, result = _sell(db)
-    body = client.get(f"{PREFIX}/lookup/{result.warranty.serial}", headers=h).json()
+    """The screen support lives on, now serving only the mattresses that have a
+    serial: everything sold before the dropdown replaced the scanner.
+
+    Those warranties run for years, so a customer reading a label off one is a
+    call the desk still takes daily — and this response is what they answer it
+    from. A sale registered today has no serial and is reached by invoice number
+    through /warranties instead.
+    """
+    from tests.dealer.factories import make_unit
+
+    dealer = make_dealer(db)
+    serial = new_serial()
+    make_unit(db, serial)
+    make_legacy_warranty(db, dealer=dealer, serial=serial, invoice_ref="INV-OLD-1")
+    db.commit()
+
+    body = client.get(f"{PREFIX}/lookup/{serial}", headers=h).json()
     assert body["unit"]["known"] is True
     assert body["current_warranty"] is not None
     assert body["events"], "support works from the event timeline"

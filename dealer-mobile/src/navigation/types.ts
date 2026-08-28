@@ -2,7 +2,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import type { RegisterBody, UnitPreviewOut } from '../api/types';
+import type { RegisterBody } from '../api/types';
 
 export type AuthStackParamList = {
   Phone: undefined;
@@ -17,7 +17,6 @@ export type AuthStackScreenProps<T extends keyof AuthStackParamList> = NativeSta
 
 export type AppTabParamList = {
   Home: undefined;
-  Scan: undefined;
   Registrations: undefined;
   Points: undefined;
   Rewards: undefined;
@@ -26,16 +25,18 @@ export type AppTabParamList = {
 
 export type MainStackParamList = {
   Tabs: NavigatorScreenParams<AppTabParamList> | undefined;
-  CustomerDetails: {
-    /** Raw scanned value. The backend owns parsing it. */
-    serial: string;
-    /** Null when the preview could not run (offline). */
-    preview: UnitPreviewOut | null;
-    /** Prefill when correcting a submission the server rejected. */
-    draft?: RegisterBody;
-    /** Queue id being corrected — replaced (new key) on submit, never reused. */
-    retryOf?: string;
-  };
+  /**
+   * The registration form. Takes no parameters for a new sale — there is no
+   * scanned unit to hand it any more, the dealer picks the product on the form.
+   */
+  Register:
+    | {
+        /** Prefill when correcting a submission the server rejected. */
+        draft?: RegisterBody;
+        /** Queue id being corrected — replaced (new key) on submit, never reused. */
+        retryOf?: string;
+      }
+    | undefined;
   Confirmation: { queueId: string };
 };
 

@@ -29,6 +29,7 @@ from app.dealer.api.admin import (
     warranties,
 )
 from app.dealer.api.dealer import auth, banners, corrections, profile, registrations
+from app.dealer.api.dealer import products as dealer_products
 from app.dealer.api.dealer import rewards as dealer_rewards
 from app.dealer.api.public import claims as public_claims
 from app.dealer.api.public import confirm as public_confirm
@@ -37,7 +38,7 @@ from app.dealer.api.public import self_registration as public_self_registration
 
 dealer_api_router = APIRouter()
 
-for _r in (auth, registrations, corrections, dealer_rewards, profile, banners):
+for _r in (auth, registrations, corrections, dealer_rewards, profile, banners, dealer_products):
     dealer_api_router.include_router(_r.router, prefix="/dealer")
 
 # NOTE: admin/_common.py is a helper module, not a router — do not mount it.

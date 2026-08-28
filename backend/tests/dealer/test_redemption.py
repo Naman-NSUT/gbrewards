@@ -35,11 +35,9 @@ from app.dealer.services import warranty as warranty_svc
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_product,
-    make_rate,
+    make_priced_product,
     make_staff,
-    make_unit,
-    new_serial,
+    new_invoice,
 )
 
 
@@ -65,20 +63,19 @@ def _reward(
 
 def _earn(db: Session, staff: DealerStaff, dealer: Dealer, count: int, points: int = 50) -> int:
     """Earn points the only way a dealer can: by registering real sales."""
-    # One product priced at `points`, reused for every sale below, so the rate
-    # and the units actually belong together now that points are per-product.
-    product = make_product(db)
-    make_rate(db, points, product=product)
+    # One product priced at `points`, sold `count` times. Each sale needs its own
+    # invoice number — one live warranty per (dealer, invoice) is what stops a
+    # shop earning a redeemable balance by typing the same bill repeatedly, and
+    # it is exactly the balance these tests then spend.
+    product = make_priced_product(db, points)
     for i in range(count):
-        serial = new_serial()
-        make_unit(db, serial, product=product)
         registration.register(
             db,
             staff=staff,
-            raw_serial=serial,
+            product_id=product.id,
             customer_phone=f"+91981{i:07d}",
             customer_name=f"Customer {i}",
-            invoice_ref=f"INV-{i}",
+            invoice_ref=new_invoice(),
         )
     db.flush()
     return count * points

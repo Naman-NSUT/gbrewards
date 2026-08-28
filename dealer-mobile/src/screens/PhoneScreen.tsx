@@ -54,8 +54,8 @@ export function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
           <AppLogo height={30} />
           <Text style={styles.title}>Register a sale in seconds</Text>
           <Text style={styles.subtitle}>
-            Scan the mattress QR at the counter, add the customer, and the warranty starts on
-            the right day — and you earn points for it.
+            Pick the mattress, add the customer and the bill number, and the warranty starts
+            on the right day — and you earn points for it.
           </Text>
 
           <TextField

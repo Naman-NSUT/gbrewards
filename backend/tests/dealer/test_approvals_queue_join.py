@@ -34,7 +34,7 @@ from app.main import create_app
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
     new_serial,
 )
@@ -83,12 +83,11 @@ def queue(db):  # type: ignore[no-untyped-def]
 
     # 1. D001 recorded the sale but claimed a date well outside the grace window
     staff = make_staff(db, dealers[0], phone="+919000000101")
-    backdated_serial = new_serial()
-    make_priced_unit(db, backdated_serial, 50)
+    product = make_priced_product(db, 50)
     backdated = registration.register(
         db,
         staff=staff,
-        raw_serial=backdated_serial,
+        product_id=product.id,
         customer_phone="+919812345001",
         customer_name="Asha Kumar",
         invoice_ref="INV-1",

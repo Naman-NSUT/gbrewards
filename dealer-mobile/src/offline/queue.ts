@@ -19,10 +19,16 @@
  *   no response / 5xx / 429   → transient. Retry with backoff, forever.
  *   401                       → transient. The session expired; the item waits
  *                               for the dealer to sign in rather than dying.
- *   409 already_registered    → resolved, not failed. The unit IS registered.
+ *   409 duplicate_invoice     → permanent. This dealer already has a live
+ *                               warranty on that bill; sending it again would
+ *                               only be refused again. The dealer fixes the
+ *                               invoice number, which is a NEW sale and so a new
+ *                               key (see `replace`).
  *   409 request_in_progress   → the first attempt is still running. Back off.
  *   409 idempotency_key_reused→ permanent. Only reachable via a client bug; a
  *                               changed body must get a NEW key (see `replace`).
+ *   404 invalid_product       → permanent. The product was withdrawn between the
+ *                               dropdown loading and the sale being sent.
  *   other 4xx                 → permanent. The dealer must fix something, so the
  *                               server's message is kept and shown verbatim.
  *
@@ -47,8 +53,16 @@ const BACKOFF_MS = [2_000, 5_000, 15_000, 45_000, 120_000, 300_000];
 
 export type QueueItemStatus = 'pending' | 'sending' | 'failed' | 'done';
 
-/** How a `done` item ended, because "done" alone would hide a real outcome. */
-export type QueueResolution = 'registered' | 'already_registered';
+/**
+ * How a `done` item ended.
+ *
+ * One value now that a duplicate is a failure rather than an outcome. The old
+ * `already_registered` resolution belonged to serials, where another dealer
+ * could legitimately own the unit you scanned; a repeated invoice number is your
+ * own bill, and the dealer has to fix it. Kept as a named type because the field
+ * is on disk in every queue this app has written.
+ */
+export type QueueResolution = 'registered';
 
 export interface QueuedRegistration {
   /** The idempotency key. Minted once, reused on every retry forever. */
@@ -175,6 +189,33 @@ function prune(list: QueuedRegistration[]): QueuedRegistration[] {
   return kept;
 }
 
+/**
+ * Bring a sale written by an older version of this app up to the current
+ * contract.
+ *
+ * A sale queued while the app still scanned labels carries a `serial` and no
+ * `product_id`. The server cannot accept that body — it is a validation error
+ * forever — so it is failed here, with an instruction the dealer can act on,
+ * rather than burning one request per backoff to be told the same thing in the
+ * server's words. "Fix details" reopens the form with everything the dealer
+ * already typed and asks only for the product.
+ *
+ * Items already `done` are left exactly as they are: they landed under the old
+ * contract and there is nothing left to send.
+ */
+function migrate(item: QueuedRegistration): QueuedRegistration {
+  // Optional access on a required field on purpose: this object came off disk as
+  // untrusted JSON, and the type is an assertion about it, not a guarantee.
+  if (item.status === 'done' || item.body?.product_id) return item;
+  return {
+    ...item,
+    status: 'failed',
+    lastError:
+      'This sale was saved before the app changed. Tap Fix details and choose the product that was sold.',
+    lastErrorCode: 'missing_product',
+  };
+}
+
 let loading: Promise<void> | null = null;
 
 export function loadQueue(): Promise<void> {
@@ -198,14 +239,16 @@ async function readFromDisk(): Promise<void> {
   const inMemory = new Set(items.map((item) => item.id));
   const restored = stored
     .filter((item) => !inMemory.has(item.id))
-    .map((item) => ({
-      ...item,
-      dealerId: item.dealerId ?? null,
-      // An item stuck in `sending` means the app died mid-request. Retrying is
-      // safe precisely because the key is stable: a landed request replays its
-      // original response instead of creating a second warranty.
-      status: item.status === 'sending' ? ('pending' as const) : item.status,
-    }));
+    .map((item) =>
+      migrate({
+        ...item,
+        dealerId: item.dealerId ?? null,
+        // An item stuck in `sending` means the app died mid-request. Retrying is
+        // safe precisely because the key is stable: a landed request replays its
+        // original response instead of creating a second warranty.
+        status: item.status === 'sending' ? ('pending' as const) : item.status,
+      })
+    );
 
   loaded = true;
   items = prune([...items, ...restored]);
@@ -407,14 +450,18 @@ function classify(item: QueuedRegistration, error: unknown): Partial<QueuedRegis
   }
 
   if (status === 409) {
-    if (error.code === 'already_registered') {
-      // The sale exists in the system — just not under this submission. That is
-      // an answer, not a failure, and the dealer needs to see it as such.
+    if (error.code === 'duplicate_invoice') {
+      // The server refuses a second live warranty on one bill, and cannot name
+      // the number in its own message. Naming it here is the whole answer: at a
+      // counter this is almost always a bill entered twice, and the dealer needs
+      // to know WHICH one before they can tell it apart from the sale in front
+      // of them.
       return {
-        status: 'done',
+        status: 'failed',
         attempts,
-        resolution: 'already_registered',
-        lastError: error.message,
+        lastError:
+          `Invoice ${item.body.invoice_ref} is already registered for another sale. ` +
+          'Check the bill number — each sale needs its own.',
         lastErrorCode: error.code,
       };
     }
@@ -436,8 +483,8 @@ function classify(item: QueuedRegistration, error: unknown): Partial<QueuedRegis
     return retryLater('GoodBed server error. Will retry.', error.code);
   }
 
-  // Everything else is the dealer's to fix: a bad phone number, an unallocated
-  // unit, a missing invoice. Keep the server's own words.
+  // Everything else is the dealer's to fix: a bad phone number, a product that
+  // has been withdrawn, a missing invoice. Keep the server's own words.
   return { status: 'failed', attempts, lastError: error.message, lastErrorCode: error.code };
 }
 

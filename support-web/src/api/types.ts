@@ -78,7 +78,14 @@ export interface MaskedCustomer {
  *  every endpoint on this site. */
 export interface RedactedWarranty {
   id: string;
-  serial: string;
+  /** Null on anything registered after warranties moved to product + invoice. */
+  serial: string | null;
+  /**
+   * What to quote when raising a claim — the serial on older warranties, the
+   * invoice number on newer ones. Always present, which is why the claim link
+   * is built from this and never from `serial`.
+   */
+  reference: string;
   model_name: string | null;
   status: WarrantyStatus;
   warranty_months: number;

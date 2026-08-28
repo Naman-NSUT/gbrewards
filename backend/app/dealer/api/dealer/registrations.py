@@ -10,6 +10,13 @@ Shape of the request, and why:
     composable (admin tools reuse `register()` inside their own transactions).
   * The SMS is sent AFTER commit. A slow provider must not hold a transaction
     open while a customer waits, and a failed SMS must not undo a real sale.
+
+Nothing is scanned any more, so there is no longer a preview step. The scanner
+asked "can I sell this?" about a specific physical label and this module
+answered from `dealer_units`; a dropdown cannot be pointed at a mattress that
+does not exist, so the question no longer has a subject. What may be sold is
+GET /dealer/products, and what stops the same sale being registered twice is
+the invoice number, checked inside register().
 """
 
 import redis as redis_lib
@@ -21,113 +28,11 @@ from app.core.config import settings
 from app.core.deps import client_ip, get_current_staff, get_db, get_redis, idempotency_key
 from app.core.errors import AppError
 from app.dealer.models.dealer import DealerStaff
-from app.dealer.models.product import DealerProduct as Product
-from app.dealer.models.unit import DealerUnit as Unit
 from app.dealer.models.warranty import Warranty
-from app.dealer.schemas.registration import (
-    CustomerBrief,
-    RegisterIn,
-    RegisterOut,
-    UnitPreviewOut,
-    WarrantyOut,
-)
+from app.dealer.schemas.registration import CustomerBrief, RegisterIn, RegisterOut, WarrantyOut
 from app.dealer.services import idempotency, ledger, ratelimit, registration, sms
-from app.dealer.services.unitsource import normalise_serial
-
-
-def _unit_warranty_months(db: Session, unit: Unit | None) -> int:
-    """Warranty length for a unit, from its product.
-
-    Falls back to the configured default so a product nobody has set a length
-    on still previews as sellable — refusing here would block a real sale over
-    a missing admin setting.
-    """
-    if unit is None:
-        return settings.default_warranty_months
-    product = db.get(Product, unit.product_id)
-    return (product.warranty_months if product else None) or settings.default_warranty_months
-
-
-def _unit_model_name(db: Session, unit: Unit | None) -> str | None:
-    """Product name for a unit. Lives on products, not on the unit row."""
-    if unit is None:
-        return None
-    product = db.get(Product, unit.product_id)
-    return product.name if product else None
-
 
 router = APIRouter(tags=["dealer-registrations"])
-
-
-@router.get("/units/{raw_serial}/preview", response_model=UnitPreviewOut)
-def preview_unit(
-    raw_serial: str,
-    staff: DealerStaff = Depends(get_current_staff),
-    db: Session = Depends(get_db),
-    redis: redis_lib.Redis = Depends(get_redis),
-) -> UnitPreviewOut:
-    """Answer 'can I sell this?' immediately after the scan.
-
-    Open scanning: any registered dealer may register any manufactured label, so
-    the only reasons a unit is not registerable are that it does not exist, its
-    label was voided, or somebody already registered it.
-    """
-    ratelimit.enforce(redis, f"preview:{staff.id}", limit=120, window_s=60, fail_open=True)
-    serial = normalise_serial(raw_serial)
-
-    existing = db.execute(
-        select(Warranty).where(
-            Warranty.serial == serial,
-            Warranty.status.in_(
-                ("pending_confirmation", "pending_review", "pending_backdate", "active", "claimed")
-            ),
-        )
-    ).scalar_one_or_none()
-
-    unit = db.execute(select(Unit).where(Unit.token == serial)).scalar_one_or_none()
-
-    if existing is not None:
-        mine = existing.dealer_id == staff.dealer_id
-        return UnitPreviewOut(
-            serial=serial,
-            model_name=existing.model_name,
-            warranty_months=existing.warranty_months,
-            registerable=False,
-            already_registered=True,
-            reason=(
-                "You already registered this unit"
-                # Deliberately does NOT name the other shop. With open scanning a
-                # dealer will hit this whenever someone else got there first, and
-                # naming them turns a queue into a dispute at the counter.
-                if mine
-                else "This unit has already been registered"
-            ),
-        )
-
-    if unit is None:
-        return UnitPreviewOut(
-            serial=serial,
-            model_name=None,
-            warranty_months=settings.default_warranty_months,
-            registerable=False,
-            reason="No mattress found for this code. Check the number under the QR.",
-        )
-
-    if unit.status == "void":
-        return UnitPreviewOut(
-            serial=serial,
-            model_name=_unit_model_name(db, unit),
-            warranty_months=_unit_warranty_months(db, unit),
-            registerable=False,
-            reason="This label has been cancelled. Contact GoodBed before selling this unit.",
-        )
-
-    return UnitPreviewOut(
-        serial=serial,
-        model_name=_unit_model_name(db, unit),
-        warranty_months=_unit_warranty_months(db, unit),
-        registerable=True,
-    )
 
 
 @router.post("/registrations", response_model=RegisterOut, status_code=201)
@@ -178,7 +83,7 @@ def create_registration(
         result = registration.register(
             db,
             staff=staff,
-            raw_serial=body.serial,
+            product_id=body.product_id,
             customer_phone=body.customer_phone,
             customer_name=body.customer_name,
             invoice_ref=body.invoice_ref,
@@ -200,7 +105,16 @@ def create_registration(
                     "name": warranty.customer.name,
                     "model": warranty.model_name or "your GoodBed mattress",
                     "end_date": warranty.warranty_end_date.strftime("%d-%m-%Y"),
-                    "serial": warranty.serial[:12],
+                    # {serial} is the reference the customer quotes when they
+                    # ring about this warranty, and the template's wording is
+                    # fixed by DLT approval. There is no serial any more, so
+                    # that reference is the invoice number on the bill in their
+                    # hand. Only the old 36-character serials were truncated —
+                    # half an invoice number is not a reference anyone can look
+                    # up.
+                    "serial": (
+                        warranty.serial[:12] if warranty.serial else (warranty.invoice_ref or "")
+                    ),
                     "link": f"{settings.public_base_url}/w/{warranty.id}",
                 },
                 warranty_id=warranty.id,

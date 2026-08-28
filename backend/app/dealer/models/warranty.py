@@ -57,9 +57,10 @@ from app.db.base import Base
 from app.dealer.models.customer import Customer
 from app.dealer.models.mixins import CreatedAtMixin, TimestampMixin, UUIDPkMixin
 
-# States in which a warranty occupies its serial. A serial may carry exactly one
-# warranty in any of these states at a time — enforced by a partial unique index
-# in the migration, not by application logic.
+# States in which a warranty occupies a serial and an invoice number. Both
+# uniqueness guarantees — one live warranty per historic serial, one live
+# warranty per (dealer, invoice number) — are partial unique indexes over exactly
+# this list, so voiding a warranty is what gives the number back.
 LIVE_STATUSES = (
     "pending_confirmation",
     "pending_review",
@@ -84,6 +85,21 @@ class Warranty(UUIDPkMixin, TimestampMixin, Base):
         CheckConstraint("warranty_end_date >= warranty_start_date", name="dates_ordered"),
         CheckConstraint("warranty_months > 0", name="warranty_months_positive"),
         CheckConstraint("backdate_days >= 0", name="backdate_days_non_negative"),
+        # The cap on farming, now that nothing is scanned. Declared here as well
+        # as in migration 0011 so the model does not quietly disagree with the
+        # database about the one index that decides whether a dealer can be paid
+        # twice for typing the same thing twice. lower() is part of it: without
+        # it "INV-1" and "inv-1" are two rows.
+        Index(
+            "uq_warranties_live_dealer_invoice",
+            "dealer_id",
+            text("lower(invoice_ref)"),
+            unique=True,
+            postgresql_where=text(
+                "status IN ('pending_confirmation','pending_review','pending_backdate',"
+                "'active','claimed') AND dealer_id IS NOT NULL AND invoice_ref IS NOT NULL"
+            ),
+        ),
         Index("ix_warranties_serial", "serial"),
         Index("ix_warranties_dealer_id_created_at", "dealer_id", text("created_at DESC")),
         Index("ix_warranties_customer_id", "customer_id"),
@@ -91,7 +107,12 @@ class Warranty(UUIDPkMixin, TimestampMixin, Base):
         Index("ix_warranties_warranty_end_date", "warranty_end_date"),
     )
 
-    serial: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Null for everything registered since 0011: dealers pick a product and type
+    # an invoice number, so there is no code to record. Historic rows keep the
+    # serial that was printed under their QR — it is what a customer reads off
+    # the label when they look their warranty up, and deleting it would make
+    # those warranties unfindable.
+    serial: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # --- Product identity, FROZEN at registration ---------------------------
     # Copied from the unit at the moment of sale rather than joined at read time.
@@ -153,9 +174,10 @@ class Warranty(UUIDPkMixin, TimestampMixin, Base):
     # Proof of purchase for customer self-registrations (object key, not bytes).
     proof_file_key: Mapped[str | None] = mapped_column(String(400), nullable=True)
 
-    # Set when the registration was accepted without the unit being verifiable
-    # against GB Rewards (allocation-only, source unreachable). Surfaces on an
-    # admin reconciliation queue instead of silently pretending we verified it.
+    # Dead flag, kept for the history it holds. It meant "this serial could not
+    # be confirmed against the factory's list", a question that stopped existing
+    # when serials did. Always False on new rows; dropping the column would
+    # rewrite what old rows said about themselves.
     unit_unverified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )

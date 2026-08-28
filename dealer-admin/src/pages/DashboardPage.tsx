@@ -147,7 +147,7 @@ export function DashboardPage() {
               {series.length === 0 ? (
                 <EmptyState
                   title="No registrations in this window"
-                  hint="Widen the window, or check that dealers are scanning at the point of sale."
+                  hint="Widen the window, or check that dealers are registering sales at the point of sale."
                   height={280}
                 />
               ) : (

@@ -66,10 +66,13 @@ export function HomeScreen({ navigation }: AppTabScreenProps<'Home'>) {
         ) : null}
       </View>
 
+      {/* The one thing this app exists for, and now the only way in: there is no
+          scanner tab any more, so this button IS the registration flow. */}
       <Button
-        title="Scan a mattress"
-        onPress={() => navigation.navigate('Scan')}
-        style={styles.scanButton}
+        title="Register a warranty"
+        size="lg"
+        onPress={() => navigation.navigate('Register')}
+        style={styles.registerButton}
       />
 
       <Text style={styles.sectionTitle}>Recent sales</Text>
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
   balanceValue: { color: colors.onPrimary, fontSize: 40, fontWeight: '800', marginTop: spacing.xs },
   available: { color: 'rgba(255,255,255,0.9)', fontSize: 14, marginTop: spacing.xs },
-  scanButton: { marginHorizontal: spacing.md },
+  registerButton: { marginHorizontal: spacing.md },
   sectionTitle: {
     color: colors.muted,
     fontSize: 13,

@@ -11,7 +11,7 @@ export function EmptyState({
   height = 200,
 }: {
   title?: string;
-  hint?: string;
+  hint?: ReactNode;
   icon?: ReactNode;
   action?: ReactNode;
   height?: number | string;

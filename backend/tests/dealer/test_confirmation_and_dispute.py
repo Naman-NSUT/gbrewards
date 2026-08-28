@@ -14,9 +14,10 @@ from app.dealer.services import warranty as warranty_svc
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_rate,
     make_staff,
+    new_invoice,
     new_serial,
 )
 
@@ -24,15 +25,14 @@ from tests.dealer.factories import (
 def _register(db, *, dealer=None, staff=None):
     dealer = dealer or make_dealer(db)
     staff = staff or make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Asha Kumar",
-        invoice_ref="INV-1",
+        invoice_ref=new_invoice(),
     )
     db.commit()
     return result

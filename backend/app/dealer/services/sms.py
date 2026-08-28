@@ -21,7 +21,7 @@ be delivered, and approval takes days. Where that leaves each message:
                        SMS_PROVIDER=twofactor and it works with no new approval.
 
   warranty_registered  NEEDS ITS OWN TEMPLATE. Five variables (name, model, end
-                       date, serial, link) cannot go through 2Factor's
+                       date, reference, link) cannot go through 2Factor's
                        single-value endpoint. Approve a multi-variable template
                        and switch to SMS_PROVIDER=msg91.
   warranty_voided
@@ -61,18 +61,18 @@ TEMPLATES: dict[str, Template] = {
         key="warranty_registered",
         body=(
             "Dear {name}, your GoodBed warranty is registered. "
-            "Model {model}, valid till {end_date}. Ref {serial}. "
+            "Model {model}, valid till {end_date}. Ref {reference}. "
             "View or raise a claim: {link}"
         ),
-        variables=("name", "model", "end_date", "serial", "link"),
+        variables=("name", "model", "end_date", "reference", "link"),
     ),
     "warranty_voided": Template(
         key="warranty_voided",
         body=(
-            "Dear {name}, the GoodBed warranty on {serial} has been cancelled. "
+            "Dear {name}, the GoodBed warranty on {reference} has been cancelled. "
             "Contact your dealer or visit {link} if this is unexpected."
         ),
-        variables=("name", "serial", "link"),
+        variables=("name", "reference", "link"),
     ),
     "claim_received": Template(
         key="claim_received",

@@ -6,14 +6,13 @@ import { EmptyState } from '../components/EmptyState';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { ScreenBackground } from '../components/ScreenBackground';
 import { queueTone, StatusPill, warrantyTone } from '../components/StatusPill';
-import { useRegistrations } from '../hooks/useDealerData';
+import { useProducts, useRegistrations } from '../hooks/useDealerData';
 import { dismiss, isForeignItem, retry, type QueuedRegistration } from '../offline/queue';
 import { useQueue } from '../offline/useQueue';
 import type { AppTabScreenProps } from '../navigation/types';
 import { colors, radius, spacing } from '../theme';
 import { displayStatus, formatDate, formatDateTime, STATUS_LABEL } from '../utils/format';
 import { maskPhone } from '../utils/phone';
-import { normaliseSerial, shortSerial } from '../utils/serial';
 
 type Row =
   | { kind: 'queued'; item: QueuedRegistration }
@@ -29,6 +28,18 @@ function queueLabel(item: QueuedRegistration): string {
   return 'Waiting to send';
 }
 
+/**
+ * The value that identifies one sale on both sides of the wire.
+ *
+ * This used to be the serial. With nothing scanned, the invoice number is what
+ * is left — and it is exactly as good a key, because the server allows one live
+ * warranty per (dealer, invoice_ref) and compares it case-insensitively. Matched
+ * the same way here so a sale cannot appear twice for want of a capital letter.
+ */
+function invoiceKey(ref: string | null | undefined): string {
+  return (ref ?? '').trim().toLowerCase();
+}
+
 function matches(haystack: (string | null | undefined)[], needle: string): boolean {
   if (!needle) return true;
   const query = needle.trim().toLowerCase();
@@ -38,21 +49,40 @@ function matches(haystack: (string | null | undefined)[], needle: string): boole
 export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrations'>) {
   const [query, setQuery] = useState('');
   const registrations = useRegistrations();
+  const products = useProducts();
   const { items } = useQueue();
+
+  // The queued body carries a product id, not a name. Naming it costs nothing —
+  // the catalogue is already cached for the form — and a row that says only
+  // "INV-2043" makes the dealer open it to remember what they sold.
+  const productNames = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const product of products.data ?? []) byId.set(product.id, product.name);
+    return byId;
+  }, [products.data]);
 
   const sections = useMemo(() => {
     // A landed sale stays visible here until the server's own list is carrying
     // it. Otherwise a failed refetch would make a sale the dealer just made
     // vanish from both places — precisely the doubt this screen exists to remove.
     const confirmed = new Set(
-      (registrations.data ?? []).map((warranty) => normaliseSerial(warranty.serial))
+      (registrations.data ?? [])
+        .map((warranty) => invoiceKey(warranty.invoice_ref))
+        .filter(Boolean)
     );
     const unsent = items
       .filter(
-        (item) => item.status !== 'done' || !confirmed.has(normaliseSerial(item.body.serial))
+        (item) => item.status !== 'done' || !confirmed.has(invoiceKey(item.body.invoice_ref))
       )
       .filter((item) =>
-        matches([item.body.serial, item.body.customer_name, item.body.invoice_ref], query)
+        matches(
+          [
+            item.body.customer_name,
+            item.body.invoice_ref,
+            productNames.get(item.body.product_id),
+          ],
+          query
+        )
       )
       .map((item): Row => ({ kind: 'queued', item }));
 
@@ -60,7 +90,6 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
       .filter((warranty) =>
         matches(
           [
-            warranty.serial,
             warranty.invoice_ref,
             warranty.model_name,
             warranty.customer?.name,
@@ -75,7 +104,7 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
       { key: 'unsent', title: 'On this phone', data: unsent },
       { key: 'sent', title: 'Registered', data: sent },
     ].filter((section) => section.data.length > 0);
-  }, [items, registrations.data, query]);
+  }, [items, registrations.data, productNames, query]);
 
   const nothingAtAll =
     sections.length === 0 && !registrations.isLoading && !registrations.isError;
@@ -88,7 +117,7 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
           style={styles.search}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search serial, invoice or customer"
+          placeholder="Search invoice, product or customer"
           placeholderTextColor={colors.faint}
           autoCapitalize="none"
           autoCorrect={false}
@@ -110,10 +139,9 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
           row.kind === 'queued' ? (
             <QueuedRow
               item={row.item}
+              productName={productNames.get(row.item.body.product_id) ?? null}
               onFix={() =>
-                navigation.navigate('CustomerDetails', {
-                  serial: row.item.body.serial,
-                  preview: null,
+                navigation.navigate('Register', {
                   draft: row.item.body,
                   retryOf: row.item.id,
                 })
@@ -130,11 +158,11 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
               title={query ? 'Nothing matches that' : 'No sales registered yet'}
               body={
                 query
-                  ? 'Try the serial, the invoice number, or the customer name.'
-                  : 'Scan the QR on a mattress label at the counter and the sale is recorded here.'
+                  ? 'Try the invoice number, the product, or the customer name.'
+                  : 'Register a sale at the counter and it is recorded here.'
               }
-              actionLabel={query ? undefined : 'Scan a mattress'}
-              onAction={query ? undefined : () => navigation.navigate('Tabs', { screen: 'Scan' })}
+              actionLabel={query ? undefined : 'Register a warranty'}
+              onAction={query ? undefined : () => navigation.navigate('Register')}
             />
           ) : null
         }
@@ -150,7 +178,15 @@ export function RegistrationsScreen({ navigation }: AppTabScreenProps<'Registrat
   );
 }
 
-function QueuedRow({ item, onFix }: { item: QueuedRegistration; onFix: () => void }) {
+function QueuedRow({
+  item,
+  productName,
+  onFix,
+}: {
+  item: QueuedRegistration;
+  productName: string | null;
+  onFix: () => void;
+}) {
   const failed = item.status === 'failed';
   return (
     <View style={[styles.card, failed && styles.cardFailed]}>
@@ -161,7 +197,8 @@ function QueuedRow({ item, onFix }: { item: QueuedRegistration; onFix: () => voi
         <StatusPill label={queueLabel(item)} tone={queueTone(item)} />
       </View>
       <Text style={styles.cardMeta}>
-        {shortSerial(item.body.serial)} · {item.body.invoice_ref}
+        {productName ? `${productName} · ` : ''}
+        Invoice {item.body.invoice_ref}
       </Text>
       <Text style={styles.cardMeta}>{maskPhone(item.body.customer_phone)}</Text>
       {isForeignItem(item) ? (
@@ -199,8 +236,8 @@ function WarrantyRow({ warranty }: { warranty: WarrantyOut }) {
         <StatusPill label={STATUS_LABEL[status]} tone={warrantyTone(status)} />
       </View>
       <Text style={styles.cardMeta}>
-        {shortSerial(warranty.serial)}
-        {warranty.invoice_ref ? ` · ${warranty.invoice_ref}` : ''}
+        {warranty.model_name ?? 'GoodBed mattress'}
+        {warranty.invoice_ref ? ` · Invoice ${warranty.invoice_ref}` : ''}
       </Text>
       <Text style={styles.cardMeta}>
         Covers until {formatDate(warranty.warranty_end_date)}

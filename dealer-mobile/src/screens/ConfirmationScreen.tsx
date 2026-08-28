@@ -12,7 +12,6 @@ import type { MainStackScreenProps } from '../navigation/types';
 import { colors, radius, spacing } from '../theme';
 import { formatDate, formatPoints, STATUS_LABEL } from '../utils/format';
 import { maskPhone } from '../utils/phone';
-import { shortSerial } from '../utils/serial';
 
 /** Why a sale that landed paid nothing. Silence here reads as a bug. */
 function pointsNote(result: RegisterOut): string | null {
@@ -34,7 +33,7 @@ export function ConfirmationScreen({ route, navigation }: MainStackScreenProps<'
   const item = useQueueItem(queueId);
   const online = useIsOnline();
 
-  const scanNext = () => navigation.popToTop();
+  const registerNext = () => navigation.popToTop();
 
   if (!item) {
     return (
@@ -42,7 +41,12 @@ export function ConfirmationScreen({ route, navigation }: MainStackScreenProps<'
         <View style={styles.centre}>
           <Text style={styles.title}>This sale is no longer queued</Text>
           <Text style={styles.body}>Check the Sales tab to see where it ended up.</Text>
-          <Button title="Scan next" size="lg" onPress={scanNext} style={styles.action} />
+          <Button
+            title="Register another"
+            size="lg"
+            onPress={registerNext}
+            style={styles.action}
+          />
         </View>
       </ScreenBackground>
     );
@@ -63,20 +67,13 @@ export function ConfirmationScreen({ route, navigation }: MainStackScreenProps<'
           <Registered result={item.result} />
         ) : null}
 
-        {item.status === 'done' && !item.result ? (
-          <AlreadyRegistered item={item} />
-        ) : null}
+        {item.status === 'done' && !item.result ? <Recorded /> : null}
 
         {item.status === 'failed' ? (
           <Failed
             item={item}
             onFix={() =>
-              navigation.replace('CustomerDetails', {
-                serial: item.body.serial,
-                preview: null,
-                draft: item.body,
-                retryOf: item.id,
-              })
+              navigation.replace('Register', { draft: item.body, retryOf: item.id })
             }
             onRetry={() => retry(item.id)}
             onDiscard={() => {
@@ -87,7 +84,12 @@ export function ConfirmationScreen({ route, navigation }: MainStackScreenProps<'
         ) : null}
 
         {item.status !== 'failed' ? (
-          <Button title="Scan next" size="lg" onPress={scanNext} style={styles.action} />
+          <Button
+            title="Register another"
+            size="lg"
+            onPress={registerNext}
+            style={styles.action}
+          />
         ) : null}
       </ScrollView>
     </ScreenBackground>
@@ -100,7 +102,7 @@ function Sending({ item }: { item: QueuedRegistration }) {
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.title}>Registering the sale…</Text>
       <Text style={styles.body}>
-        {item.body.customer_name} · {shortSerial(item.body.serial)}
+        {item.body.customer_name} · invoice {item.body.invoice_ref}
       </Text>
     </View>
   );
@@ -120,8 +122,7 @@ function Queued({ item, online }: { item: QueuedRegistration; online: boolean })
       <View style={styles.summary}>
         <Row label="Customer" value={item.body.customer_name} />
         <Row label="Mobile" value={maskPhone(item.body.customer_phone)} />
-        <Row label="Invoice" value={item.body.invoice_ref} />
-        <Row label="Serial" value={shortSerial(item.body.serial)} last />
+        <Row label="Invoice" value={item.body.invoice_ref} last />
       </View>
     </View>
   );
@@ -161,32 +162,26 @@ function Registered({ result }: { result: RegisterOut }) {
       <View style={styles.summary}>
         <Row label="Customer" value={result.customer.name} />
         <Row label="Mobile" value={maskPhone(result.customer.phone)} />
-        <Row label="Serial" value={shortSerial(result.warranty.serial)} />
         <Row label="Invoice" value={result.warranty.invoice_ref ?? '—'} last />
       </View>
-
-      {result.unit_unverified ? (
-        <Text style={styles.note}>
-          GoodBed will confirm this unit&apos;s details shortly. The sale is recorded either way.
-        </Text>
-      ) : null}
     </View>
   );
 }
 
-function AlreadyRegistered({ item }: { item: QueuedRegistration }) {
+/**
+ * A sale that landed but whose response this phone no longer holds.
+ *
+ * Only reachable for a sale registered by an older version of the app that is
+ * still inside the queue's retention window. Blank is the one thing this screen
+ * must never be: its entire job is to say whether the sale is safe.
+ */
+function Recorded() {
   return (
     <View style={styles.centre}>
-      <Text style={styles.icon}>ℹ️</Text>
-      <StatusPill label="Already registered" tone="warning" />
-      <Text style={styles.title}>This unit is already registered</Text>
-      <Text style={styles.body}>
-        {item.lastError ??
-          'Another dealer has already registered this serial, so no new warranty was created.'}
-      </Text>
-      <Text style={styles.note}>
-        If you believe this unit is yours, tell GoodBed the serial {shortSerial(item.body.serial)}.
-      </Text>
+      <Text style={styles.icon}>✅</Text>
+      <StatusPill label="Registered" tone="success" />
+      <Text style={styles.title}>This sale is registered</Text>
+      <Text style={styles.body}>Open the Sales tab to see it with the rest.</Text>
     </View>
   );
 }
@@ -202,11 +197,15 @@ function Failed({
   onRetry: () => void;
   onDiscard: () => void;
 }) {
-  // A wrong phone number or a mistyped invoice is fixable; an unallocated unit
-  // is not, and offering "fix details" for it would waste the dealer's time.
+  // Everything the dealer can actually change on the form. A duplicate invoice
+  // and a withdrawn product both belong here: one is a bill number they retype,
+  // the other a product they re-pick. Anything else — a suspended dealership,
+  // say — is not theirs to fix, and offering "fix details" would waste their time.
   const fixable =
     item.lastErrorCode === 'validation_error' ||
-    item.lastErrorCode === 'invalid_serial' ||
+    item.lastErrorCode === 'duplicate_invoice' ||
+    item.lastErrorCode === 'invalid_product' ||
+    item.lastErrorCode === 'missing_product' ||
     item.lastErrorCode === 'idempotency_key_reused';
 
   return (
@@ -219,7 +218,7 @@ function Failed({
       <View style={styles.summary}>
         <Row label="Customer" value={item.body.customer_name} />
         <Row label="Mobile" value={maskPhone(item.body.customer_phone)} />
-        <Row label="Serial" value={shortSerial(item.body.serial)} last />
+        <Row label="Invoice" value={item.body.invoice_ref} last />
       </View>
 
       {fixable ? (

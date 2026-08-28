@@ -36,8 +36,10 @@ from app.main import create_app
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
+    make_unit,
+    new_invoice,
     new_serial,
 )
 
@@ -148,7 +150,7 @@ def pending(db, uploads):  # type: ignore[no-untyped-def]
     """A customer self-registration with its invoice really on disk."""
     make_dealer(db, code="D001", name="Sunrise Beds")
     serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    make_unit(db, serial)
     stored = storage.save_upload(_upload(JPEG, content_type="image/jpeg", filename="bill.jpg"))
     result = self_registration.submit(
         db,
@@ -184,7 +186,7 @@ def test_the_customer_is_asked_to_retry_rather_than_shown_internal_server_error(
     """The whole point of Fix 1, at the layer the customer meets it."""
     make_dealer(db, code="D009", name="Silent Beds")
     serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    make_unit(db, serial)
     db.commit()
 
     resp = lenient_client.post(
@@ -336,15 +338,14 @@ def test_a_warranty_with_no_invoice_says_none_was_attached(client, h, db, upload
     """A dealer-registered sale never had a proof, and that is not a fault."""
     dealer = make_dealer(db, code="D050", name="Honest Beds")
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345600",
         customer_name="Asha Kumar",
-        invoice_ref="INV-1",
+        invoice_ref=new_invoice(),
     )
     db.commit()
 

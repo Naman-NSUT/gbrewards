@@ -218,7 +218,7 @@ def approve(
             "name": warranty.customer.name,
             "model": warranty.model_name or "your GoodBed mattress",
             "end_date": warranty.warranty_end_date.strftime("%d-%m-%Y"),
-            "serial": warranty.serial[:12],
+            "reference": warranty_svc.customer_reference(warranty),
             "link": f"{settings.public_base_url}/w/{warranty.id}",
         },
         warranty_id=warranty.id,

@@ -42,11 +42,9 @@ from app.dealer.services import redemption as redemption_svc
 from tests.dealer.factories import (
     make_admin,
     make_dealer,
-    make_product,
-    make_rate,
+    make_priced_product,
     make_staff,
-    make_unit,
-    new_serial,
+    new_invoice,
 )
 
 PREFIX = "/api/v1/dealer-admin"
@@ -110,18 +108,15 @@ def _shop(
     """A dealership holding real points — earned the only way points exist."""
     dealer = make_dealer(db, code=f"D{index:03d}", name=f"Shop {index}")
     staff = make_staff(db, dealer, phone=f"+9190000{index:05d}")
-    product = make_product(db, name=f"Model {index}")
-    make_rate(db, points, product=product)
+    product = make_priced_product(db, points, name=f"Model {index}")
     for sale in range(sales):
-        serial = new_serial()
-        make_unit(db, serial, product=product)
         registration.register(
             db,
             staff=staff,
-            raw_serial=serial,
+            product_id=product.id,
             customer_phone=f"+9198{index:02d}{sale:05d}",
             customer_name=f"Customer {index}-{sale}",
-            invoice_ref=f"INV-{index}-{sale}",
+            invoice_ref=new_invoice(),
         )
     db.flush()
     return dealer, staff

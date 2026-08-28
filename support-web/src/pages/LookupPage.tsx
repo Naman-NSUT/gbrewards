@@ -119,7 +119,7 @@ export function LookupPage() {
                       warranty.status === 'active' ? (
                         <Link
                           className="btn btn--secondary"
-                          to={`/claim?serial=${encodeURIComponent(warranty.serial)}`}
+                          to={`/claim?serial=${encodeURIComponent(warranty.reference)}`}
                         >
                           Raise a claim
                         </Link>

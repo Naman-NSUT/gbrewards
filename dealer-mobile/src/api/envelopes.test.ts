@@ -72,8 +72,8 @@ describe('responses that arrive wrapped in an envelope', () => {
 
     // Balance covers the cost, but every point is held by a pending request.
     // A client comparing balance to cost would offer a button the server refuses.
-    expect(items[0].affordable).toBe(false);
-    expect(items[0].short_by).toBe(120);
+    expect(items[0]?.affordable).toBe(false);
+    expect(items[0]?.short_by).toBe(120);
   });
 
   it('unwraps the redemptions page into an array', async () => {
@@ -84,7 +84,7 @@ describe('responses that arrive wrapped in an envelope', () => {
     const rows = await listRedemptions();
 
     expect(Array.isArray(rows)).toBe(true);
-    expect(rows[0].id).toBe('x1');
+    expect(rows[0]?.id).toBe('x1');
   });
 
   it('unwraps the ledger page into an array', async () => {
@@ -95,7 +95,7 @@ describe('responses that arrive wrapped in an envelope', () => {
     const rows = await listLedger();
 
     expect(Array.isArray(rows)).toBe(true);
-    expect(rows[0].amount).toBe(120);
+    expect(rows[0]?.amount).toBe(120);
   });
 
   it('never hands a bare envelope to a list', async () => {

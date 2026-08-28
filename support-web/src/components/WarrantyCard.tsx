@@ -46,8 +46,10 @@ export function WarrantyCard({ warranty, actions }: WarrantyCardProps) {
             <span className="text-muted">{formatPhone(warranty.customer.phone)}</span>
           </dd>
 
-          <dt>Serial</dt>
-          <dd className="mono">{warranty.serial}</dd>
+          {/* Newer warranties have no serial — they are identified by the
+              invoice number, which is what the customer has on their bill. */}
+          <dt>{warranty.serial ? 'Serial' : 'Invoice'}</dt>
+          <dd className="mono">{warranty.serial ?? warranty.reference}</dd>
         </dl>
       </div>
 

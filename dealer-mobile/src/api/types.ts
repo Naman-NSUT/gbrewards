@@ -44,7 +44,9 @@ export interface CustomerBrief {
 
 export interface WarrantyOut {
   id: string;
-  serial: string;
+  // Null on everything registered since the dropdown replaced the scanner.
+  // Historic warranties keep the code that was printed under their QR.
+  serial: string | null;
   model_name: string | null;
   warranty_months: number;
   warranty_start_date: string; // ISO yyyy-mm-dd
@@ -60,20 +62,35 @@ export interface WarrantyOut {
   customer?: CustomerBrief | null;
 }
 
-export interface UnitPreviewOut {
-  serial: string;
-  model_name: string | null;
+/**
+ * One row of GET /dealer/products — the dropdown the dealer sells from.
+ *
+ * Deliberately lean: the model code is what is printed on the box, and the
+ * warranty length is how a shop assistant tells two similar models apart. The
+ * endpoint omits inactive products entirely, so anything in this list is
+ * sellable at the moment it was fetched.
+ */
+export interface DealerProduct {
+  id: string;
+  name: string;
+  model_code: string | null;
   warranty_months: number;
-  registerable: boolean;
-  reason: string | null;
-  already_registered: boolean;
 }
 
 /** Exactly the JSON body POSTed to /dealer/registrations. */
 export interface RegisterBody {
-  serial: string;
+  /**
+   * What was sold. Nothing is scanned any more, so this is the only thing that
+   * says which mattress this is.
+   */
+  product_id: string;
   customer_phone: string;
   customer_name: string;
+  /**
+   * The dealer's own bill number, and now the only thing stopping one sale being
+   * registered — and paid for — twice: the server allows one live warranty per
+   * (dealer, invoice_ref), compared case-insensitively.
+   */
   invoice_ref: string;
   invoice_date?: string | null; // ISO yyyy-mm-dd
   customer_address?: string | null;
@@ -88,6 +105,7 @@ export interface RegisterOut {
   points_awarded: number;
   balance: number;
   idempotent: boolean;
+  /** Dead flag: it meant "this serial was not verified". There is no serial. */
   unit_unverified: boolean;
 }
 
@@ -113,7 +131,9 @@ export interface LedgerEntryOut {
   reason: string | null;
   warranty_id: string | null;
   redemption_id: string | null;
-  // Convenience denormalisation so the history can name the sale it paid for.
+  // Only ever set on entries from sales registered by scanning a label. Kept
+  // because the server still sends it; nothing in the app can look a serial up
+  // any more, so no screen renders it.
   serial?: string | null;
   created_at: string;
 }

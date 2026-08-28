@@ -3,6 +3,12 @@
 Unauthenticated and reachable by anyone, so these tests care most about what it
 REFUSES to say: a serial photographed in a shop must not reveal the buyer, and a
 leaked warranty link must not be enough to act on the record.
+
+Two fixtures, because this endpoint now serves two eras. `sale` is a warranty
+registered the way every warranty is registered today — a product and an invoice
+number, no serial anywhere. `legacy_sale` is one from before the dropdown
+replaced the scanner, and it is the only kind the serial-addressed half of this
+API (lookup by serial, and claims) can still find at all.
 """
 
 import pytest
@@ -13,8 +19,11 @@ from app.dealer.services import registration
 from app.main import create_app
 from tests.dealer.factories import (
     make_dealer,
-    make_priced_unit,
+    make_legacy_warranty,
+    make_priced_product,
     make_staff,
+    make_unit,
+    new_invoice,
     new_serial,
 )
 
@@ -46,24 +55,50 @@ def client(db, session_factory):  # type: ignore[no-untyped-def]
 
 @pytest.fixture
 def sale(db):  # type: ignore[no-untyped-def]
+    """A sale registered today: a product from the dropdown, and a bill."""
     dealer = make_dealer(db, code="D001", name="Sunrise Beds")
     dealer.city = "Nagpur"
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     result = registration.register(
         db,
         staff=staff,
-        raw_serial=serial,
+        product_id=product.id,
         customer_phone="+919812345678",
         customer_name="Meera Iyer",
-        invoice_ref="INV-1",
+        invoice_ref=new_invoice(),
     )
     db.commit()
-    return {"dealer": dealer, "serial": serial, "warranty": result.warranty}
+    return {"dealer": dealer, "warranty": result.warranty}
+
+
+@pytest.fixture
+def legacy_sale(db):  # type: ignore[no-untyped-def]
+    """A sale from before the scanner was retired, so it still has a serial.
+
+    Nothing writes rows like this any more, but they are what the serial half of
+    this API answers about: a five-year warranty sold last year is live for four
+    more, and the only reference its owner holds is the code under the QR.
+    """
+    dealer = make_dealer(db, code="D002", name="Moonlight Mattress")
+    dealer.city = "Nagpur"
+    serial = new_serial()
+    make_unit(db, serial)
+    warranty = make_legacy_warranty(
+        db,
+        dealer=dealer,
+        serial=serial,
+        customer_phone="+919812345678",
+        customer_name="Meera Iyer",
+        invoice_ref="INV-OLD-1",
+    )
+    db.commit()
+    return {"dealer": dealer, "serial": serial, "warranty": warranty}
 
 
 def test_lookup_by_mobile_finds_the_warranty(client, sale):
+    """The mobile number is now the ONLY handle a new buyer has on their record.
+    Nothing is printed on the mattress for them to type instead."""
     body = client.post(f"{PUB}/lookup", json={"phone": "9812345678"}).json()
     assert len(body["results"]) == 1
     row = body["results"][0]
@@ -72,9 +107,9 @@ def test_lookup_by_mobile_finds_the_warranty(client, sale):
     assert row["dealer"]["city"] == "Nagpur"
 
 
-def test_lookup_by_serial_masks_the_buyer(client, sale):
+def test_lookup_by_serial_masks_the_buyer(client, legacy_sale):
     """Anyone can photograph a label in a shop. They must not learn who bought it."""
-    body = client.post(f"{PUB}/lookup", json={"serial": sale["serial"]}).json()
+    body = client.post(f"{PUB}/lookup", json={"serial": legacy_sale["serial"]}).json()
     assert len(body["results"]) == 1
     row = body["results"][0]
     assert "Meera Iyer" not in str(row), "the buyer's real name must never appear"
@@ -103,7 +138,7 @@ def test_self_registration_queues_for_review_and_pays_nobody(client, db):
 
     dealer = make_dealer(db, code="D009", name="Silent Beds")
     serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    make_unit(db, serial)
     db.commit()
 
     resp = client.post(
@@ -135,7 +170,7 @@ def test_self_registration_queues_for_review_and_pays_nobody(client, db):
 def test_self_registration_refuses_an_oversized_or_wrong_file(client, db):
     make_dealer(db)
     serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    make_unit(db, serial)
     db.commit()
 
     resp = client.post(
@@ -186,12 +221,12 @@ def test_disputing_flags_for_a_human_rather_than_voiding(client, db, sale):
     assert ledger.balance(db, sale["dealer"].id) == 50, "points survive until a human decides"
 
 
-def test_claims_require_the_registered_mobile(client, db, sale):
+def test_claims_require_the_registered_mobile(client, db, legacy_sale):
     """Otherwise anyone can raise claims on someone else's mattress."""
     wrong = client.post(
         f"{PUB}/claims",
         json={
-            "serial": sale["serial"],
+            "serial": legacy_sale["serial"],
             "phone": "9999999999",
             "description": "Sagging badly after two months",
             "issue_type": "sagging",
@@ -202,7 +237,7 @@ def test_claims_require_the_registered_mobile(client, db, sale):
     right = client.post(
         f"{PUB}/claims",
         json={
-            "serial": sale["serial"],
+            "serial": legacy_sale["serial"],
             "phone": "9812345678",
             "description": "Sagging badly after two months",
             "issue_type": "sagging",
@@ -219,11 +254,11 @@ def test_claims_require_the_registered_mobile(client, db, sale):
     assert status.json()["reference"] == reference
 
 
-def test_claim_status_needs_the_matching_mobile(client, db, sale):
+def test_claim_status_needs_the_matching_mobile(client, db, legacy_sale):
     right = client.post(
         f"{PUB}/claims",
         json={
-            "serial": sale["serial"],
+            "serial": legacy_sale["serial"],
             "phone": "9812345678",
             "description": "Sagging badly after two months",
             "issue_type": "sagging",

@@ -14,9 +14,8 @@ from app.core.security import create_access_token
 from app.main import create_app
 from tests.dealer.factories import (
     make_dealer,
-    make_priced_unit,
+    make_priced_product,
     make_staff,
-    new_serial,
 )
 
 
@@ -47,21 +46,20 @@ def client(db, session_factory):  # type: ignore[no-untyped-def]
 def scenario(db):  # type: ignore[no-untyped-def]
     dealer = make_dealer(db)
     staff = make_staff(db, dealer)
-    serial = new_serial()
-    make_priced_unit(db, serial, 50)
+    product = make_priced_product(db, 50)
     db.commit()
     token = create_access_token(str(staff.id), "dealer")
     return {
         "dealer": dealer,
         "staff": staff,
-        "serial": serial,
+        "product": product,
         "headers": {"Authorization": f"Bearer {token}"},
     }
 
 
-def _body(serial: str, **kw):
+def _body(product, **kw):
     payload = {
-        "serial": serial,
+        "product_id": str(product.id),
         "customer_phone": "9812345678",
         "customer_name": "Asha Kumar",
         "invoice_ref": "INV-1001",
@@ -73,7 +71,7 @@ def _body(serial: str, **kw):
 def test_retry_with_same_key_replays_the_original_response(client, scenario, db):
     key = str(uuid.uuid4())
     headers = {**scenario["headers"], "Idempotency-Key": key}
-    body = _body(scenario["serial"])
+    body = _body(scenario["product"])
 
     first = client.post("/api/v1/dealer/registrations", json=body, headers=headers)
     assert first.status_code == 201, first.text
@@ -86,7 +84,7 @@ def test_retry_with_same_key_replays_the_original_response(client, scenario, db)
     from app.dealer.models.ledger_entry import LedgerEntry
     from app.dealer.models.warranty import Warranty
 
-    fresh = db.query(Warranty).filter_by(serial=scenario["serial"]).all()
+    fresh = db.query(Warranty).all()
     credits = db.query(LedgerEntry).filter_by(type="registration_credit").all()
     assert len(fresh) == 1, "a retry must not create a second warranty"
     assert len(credits) == 1, "a retry must not credit twice"
@@ -95,7 +93,7 @@ def test_retry_with_same_key_replays_the_original_response(client, scenario, db)
 def test_missing_idempotency_key_is_rejected(client, scenario):
     resp = client.post(
         "/api/v1/dealer/registrations",
-        json=_body(scenario["serial"]),
+        json=_body(scenario["product"]),
         headers=scenario["headers"],
     )
     assert resp.status_code == 400
@@ -109,13 +107,13 @@ def test_same_key_with_a_different_body_is_rejected_loudly(client, scenario):
     headers = {**scenario["headers"], "Idempotency-Key": key}
 
     first = client.post(
-        "/api/v1/dealer/registrations", json=_body(scenario["serial"]), headers=headers
+        "/api/v1/dealer/registrations", json=_body(scenario["product"]), headers=headers
     )
     assert first.status_code == 201
 
     resp = client.post(
         "/api/v1/dealer/registrations",
-        json=_body(scenario["serial"], customer_phone="9999999999", customer_name="Someone Else"),
+        json=_body(scenario["product"], customer_phone="9999999999", customer_name="Someone Else"),
         headers=headers,
     )
     assert resp.status_code == 409
@@ -127,18 +125,22 @@ def test_failed_registration_frees_the_key_so_a_real_retry_works(client, scenari
     key = str(uuid.uuid4())
     headers = {**scenario["headers"], "Idempotency-Key": key}
 
-    # A serial that was never manufactured → the registration fails.
-    bad = client.post("/api/v1/dealer/registrations", json=_body(new_serial()), headers=headers)
+    # A product id that is not in the catalogue → the registration fails.
+    bad = client.post(
+        "/api/v1/dealer/registrations",
+        json=_body(scenario["product"], product_id=str(uuid.uuid4())),
+        headers=headers,
+    )
     assert bad.status_code == 404
-    assert bad.json()["error"]["code"] == "invalid_serial"
+    assert bad.json()["error"]["code"] == "invalid_product"
 
     from app.dealer.models.idempotency import IdempotencyKey
 
     assert db.query(IdempotencyKey).filter_by(key=key).one_or_none() is None
 
-    # The dealer scans the right unit and reuses the same queued key.
+    # The dealer picks the right product and reuses the same queued key.
     good = client.post(
-        "/api/v1/dealer/registrations", json=_body(scenario["serial"]), headers=headers
+        "/api/v1/dealer/registrations", json=_body(scenario["product"]), headers=headers
     )
     assert good.status_code == 201, good.text
 
@@ -148,7 +150,7 @@ def test_phone_is_normalised_so_the_customer_can_be_found_later(client, scenario
     headers = {**scenario["headers"], "Idempotency-Key": key}
     resp = client.post(
         "/api/v1/dealer/registrations",
-        json=_body(scenario["serial"], customer_phone="0 98123 45678"),
+        json=_body(scenario["product"], customer_phone="0 98123 45678"),
         headers=headers,
     )
     assert resp.status_code == 201, resp.text
@@ -163,22 +165,3 @@ def test_a_dealer_token_cannot_reach_admin_scoped_state(client, scenario):
     resp = client.get("/api/v1/dealer/points", headers={"Authorization": f"Bearer {admin_token}"})
     assert resp.status_code == 401
     assert resp.json()["error"]["code"] == "invalid_token"
-
-
-def test_preview_allows_a_unit_allocated_to_another_dealer(client, db, scenario):
-    """Open scanning: an allocation elsewhere is not a reason to refuse."""
-    make_dealer(db, code="D999", name="Other Shop")
-    other_serial = new_serial()
-    make_priced_unit(db, other_serial, 50)
-    db.commit()
-
-    resp = client.get(f"/api/v1/dealer/units/{other_serial}/preview", headers=scenario["headers"])
-    assert resp.status_code == 200
-    assert resp.json()["registerable"] is True
-
-
-def test_preview_refuses_a_serial_that_does_not_exist(client, scenario):
-    resp = client.get(f"/api/v1/dealer/units/{new_serial()}/preview", headers=scenario["headers"])
-    assert resp.status_code == 200
-    assert resp.json()["registerable"] is False
-    assert "No mattress found" in resp.json()["reason"]
