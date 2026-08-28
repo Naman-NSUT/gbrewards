@@ -124,9 +124,51 @@ export interface RewardOut {
   description: string | null;
   points_cost: number;
   image_url: string | null;
-  stock: number | null;
-  is_active: boolean;
-  sort_order: number;
+  /**
+   * The server decides these three, and the app must not recompute them.
+   *
+   * `affordable` is measured against the balance MINUS points already held by
+   * pending requests, which is the number that actually governs whether a
+   * redemption will be accepted. A client comparing a raw balance to the cost
+   * offers a Redeem button the server then refuses.
+   *
+   * `stock`, `is_active` and `sort_order` used to be declared here and are not
+   * sent by this endpoint at all — inactive and out-of-stock rewards are simply
+   * absent from the catalogue, and the order is the order they arrive in.
+   */
+  in_stock: boolean;
+  affordable: boolean;
+  /** Points still needed. 0 when affordable. */
+  short_by: number;
+}
+
+/**
+ * GET /dealer/rewards returns the catalogue AND the balance it was priced
+ * against — one request, one consistent pair. Reading affordability from here
+ * rather than from a separate points call means the two can never disagree.
+ */
+export interface CatalogueOut {
+  balance: number;
+  pending: number;
+  available: number;
+  items: RewardOut[];
+}
+
+/** GET /dealer/ledger is a page too, and it carries the balance with it. */
+export interface LedgerPage {
+  total: number;
+  limit: number;
+  offset: number;
+  balance: number;
+  items: LedgerEntryOut[];
+}
+
+/** GET /dealer/redemptions is a page, not a bare array. */
+export interface RedemptionPage {
+  total: number;
+  limit: number;
+  offset: number;
+  items: RedemptionOut[];
 }
 
 export type RedemptionStatus =

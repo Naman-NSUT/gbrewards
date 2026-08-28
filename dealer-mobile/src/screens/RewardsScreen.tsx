@@ -33,7 +33,11 @@ export function RewardsScreen() {
   const redeem = useRedeemReward();
   const cancel = useCancelRedemption();
 
-  const available = summary.data?.available ?? 0;
+  // From the catalogue response, not the separate points call: it is the exact
+  // balance each reward's `affordable` flag was measured against, so the button
+  // and the number above it can never disagree.
+  const catalogue = rewards.data;
+  const available = catalogue?.available ?? summary.data?.available ?? 0;
 
   const onRedeem = (reward: RewardOut) => {
     Alert.alert(
@@ -72,7 +76,7 @@ export function RewardsScreen() {
     <ScreenBackground>
       <OfflineBanner />
       <FlatList
-        data={rewards.data ?? []}
+        data={catalogue?.items ?? []}
         keyExtractor={(reward) => reward.id}
         contentContainerStyle={styles.content}
         refreshing={rewards.isRefetching || redemptions.isRefetching || summary.isRefetching}
@@ -90,7 +94,6 @@ export function RewardsScreen() {
         renderItem={({ item }) => (
           <RewardCard
             reward={item}
-            available={available}
             loading={redeem.isPending && redeem.variables === item.id}
             onRedeem={() => onRedeem(item)}
           />
@@ -123,18 +126,19 @@ export function RewardsScreen() {
 
 function RewardCard({
   reward,
-  available,
   loading,
   onRedeem,
 }: {
   reward: RewardOut;
-  available: number;
   loading: boolean;
   onRedeem: () => void;
 }) {
-  const affordable = available >= reward.points_cost;
-  const outOfStock = reward.stock !== null && reward.stock <= 0;
-  const shortfall = reward.points_cost - available;
+  // All three come from the server. It measures affordability against the
+  // balance minus points already held by pending requests — recomputing from a
+  // raw balance here would offer a Redeem button the server then refuses.
+  const affordable = reward.affordable;
+  const outOfStock = !reward.in_stock;
+  const shortfall = reward.short_by;
 
   return (
     <View style={styles.card}>
