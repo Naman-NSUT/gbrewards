@@ -26,7 +26,8 @@
       },
       "env": {
         "API_BASE_URL": "https://gbrewards.onrender.com"
-      }
+      },
+      "autoIncrement": true
     }
   },
   "submit": {
