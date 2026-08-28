@@ -1,14 +1,21 @@
 {
-  "cli": { "version": ">= 5.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "API_BASE_URL": "http://localhost:8000" }
+      "env": {
+        "API_BASE_URL": "http://localhost:8000"
+      }
     },
     "local": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "API_BASE_URL": "https://design-measures-east-pro.trycloudflare.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
@@ -16,18 +23,23 @@
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "API_BASE_URL": "https://gbrewards.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
-      "android": { "buildType": "app-bundle" },
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "API_BASE_URL": "https://gbrewards.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      }
+      },
+      "autoIncrement": true
     }
   },
   "submit": {
