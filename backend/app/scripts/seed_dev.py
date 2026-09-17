@@ -5,7 +5,6 @@ Prints the created unit tokens so you can exercise /scan/claim.
 """
 
 import sys
-import uuid
 
 from app.core.config import settings
 from app.core.security import hash_secret
@@ -15,6 +14,7 @@ from app.models.banner import Banner
 from app.models.product import Product
 from app.models.product_unit import ProductUnit
 from app.models.qr_batch import QrBatch
+from app.services import qr
 
 
 def main(quantity: int = 5) -> None:
@@ -61,7 +61,7 @@ def main(quantity: int = 5) -> None:
 
         tokens = []
         for _ in range(quantity):
-            token = str(uuid.uuid4())
+            token = qr.new_token()
             db.add(
                 ProductUnit(
                     product_id=product.id,

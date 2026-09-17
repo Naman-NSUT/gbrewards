@@ -17,6 +17,8 @@ export interface Product {
   id: string;
   name: string;
   description: string | null;
+  /** Dimensions as the shop quotes them; printed on the QR tag. */
+  size: string | null;
   terms: string | null;
   points_value: number;
   is_active: boolean;

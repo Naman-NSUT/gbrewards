@@ -7,6 +7,7 @@ import type { Product } from '../api/types';
 import { DataTable } from '../components/DataTable';
 import { PageHeader } from '../components/PageHeader';
 import { StatusDot } from '../components/StatusDot';
+import { brand } from '../theme';
 import {
   useCreateBatch,
   useCreateProduct,
@@ -21,6 +22,7 @@ import { ProductDetailDrawer } from './ProductDetailDrawer';
 interface ProductForm {
   name: string;
   description?: string;
+  size?: string;
   terms?: string;
   points_value: number;
   is_active: boolean;
@@ -66,6 +68,7 @@ export function ProductsPage() {
     form.setFieldsValue({
       name: p.name,
       description: p.description ?? undefined,
+      size: p.size ?? undefined,
       terms: p.terms ?? undefined,
       points_value: p.points_value,
       is_active: p.is_active,
@@ -136,6 +139,12 @@ export function ProductsPage() {
         emptyHint="Create a product to start generating QR batches."
         columns={[
           { title: 'Name', dataIndex: 'name', render: (n: string) => <span style={{ fontWeight: 550 }}>{n}</span> },
+          {
+            title: 'Size',
+            dataIndex: 'size',
+            render: (v: string | null) =>
+              v ? <span>{v}</span> : <span style={{ color: brand.textFaint }}>—</span>,
+          },
           { title: 'Points', dataIndex: 'points_value', render: (v: number) => <span className="tnum">{v}</span> },
           {
             title: 'Status',
@@ -183,6 +192,13 @@ export function ProductsPage() {
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item
+            name="size"
+            label="Size"
+            tooltip="Printed on the QR tag under the product name. Free text — write it the way the shop quotes it."
+          >
+            <Input placeholder="72 x 36 x 6 inch" maxLength={60} />
           </Form.Item>
           <Form.Item
             name="terms"

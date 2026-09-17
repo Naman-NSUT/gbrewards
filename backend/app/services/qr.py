@@ -9,6 +9,7 @@ the points value on the sticker. One label per PDF page.
 """
 
 import io
+import secrets
 import uuid
 
 import qrcode
@@ -48,6 +49,21 @@ Y_HEADER = TOP - HEADER_H  # 103mm — header/Box A divider
 Y_A = Y_HEADER - BOX_A_H  # 73mm  — Box A/Box B divider
 Y_B = Y_A - BOX_B_H  # 32mm  — Box B/Box C divider
 
+# --- QR geometry ------------------------------------------------------------
+#
+# A QR needs FOUR modules of blank margin on every side or a decoder may not
+# find it at all. The old label printed a 29x29 symbol at 31mm inside a 41mm
+# box, which left under two modules above it — with one of the stock's own
+# pre-printed dividers running along that edge.
+#
+# A 16-character token is 21x21, so at 27mm each module is 1.29mm (up from
+# 1.07mm) AND there is room for the full 5.1mm quiet zone above and below, with
+# the printed token clear of it. Both numbers move the right way; printing the
+# symbol wider would have made the margin worse, not better.
+QR_MODULES = 21  # version 1 — see new_token()
+QR_SIZE = 27 * mm
+QR_QUIET = 4 * (QR_SIZE / QR_MODULES)  # 4 modules, per the spec
+
 # Ink colour for the T&C heading we overprint (Pantone 7694 C match). The GOODBED
 # header/tagline itself is pre-printed on the stock, so we no longer draw it.
 BRAND_COLOR = HexColor("#2C5D78")
@@ -59,6 +75,31 @@ DEFAULT_TERMS = [
     "Valid only on a genuine, unopened product.",
     "Tampered or copied codes are void.",
 ]
+
+
+# Crockford base32, minus I L O U.
+#
+# The alphabet is what makes the QR small. A lowercase UUID forces the encoder
+# into BYTE mode at 8 bits per character; an uppercase alphanumeric string uses
+# ALPHANUMERIC mode at 5.5, so the payload shrinks twice over — fewer characters,
+# and fewer bits each. 36-char uuid4 needs a 29x29 version-3 symbol; 16 of these
+# fit a 21x21 version 1, which is 38% more ink per module at the same 31mm and
+# the whole reason these labels were not scanning off the press.
+#
+# 16 is exactly the most that still fits version 1 at EC=Q (17 jumps to 25x25),
+# so this is the largest token that costs nothing. 32^16 is 2^80 — unguessable
+# against a rate-limited scan endpoint.
+#
+# I, L, O and U are dropped so that nobody reading a scuffed label has to decide
+# between 0 and O, or 1 and I and L. The token is printed under the QR precisely
+# for the tag that will not scan, so it has to survive being read by a human.
+_TOKEN_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+TOKEN_LENGTH = 16
+
+
+def new_token() -> str:
+    """A fresh unit token. Uppercase, unambiguous, and version-1 sized."""
+    return "".join(secrets.choice(_TOKEN_ALPHABET) for _ in range(TOKEN_LENGTH))
 
 
 def generate_batch(
@@ -84,9 +125,7 @@ def generate_batch(
     session.flush()
 
     units = [
-        ProductUnit(
-            product_id=product_id, token=str(uuid.uuid4()), status="active", batch_id=batch.id
-        )
+        ProductUnit(product_id=product_id, token=new_token(), status="active", batch_id=batch.id)
         for _ in range(quantity)
     ]
     session.add_all(units)
@@ -104,7 +143,24 @@ def generate_batch(
 
 
 def _qr_image(data: str) -> io.BytesIO:
-    img = qrcode.make(data)
+    """Render one QR at the highest error correction that still fits version 1.
+
+    EC=Q recovers 25% of a damaged symbol against M's 15%. With a 16-character
+    token both are a 21x21 version 1, so the extra robustness is free — and on a
+    label that gets handled, scuffed and printed on adhesive stock, free
+    robustness is worth taking.
+    """
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_Q,
+        box_size=10,
+        # No quiet zone in the image: the label already leaves white around the
+        # box, and a border baked into the bitmap would shrink the modules.
+        border=0,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
@@ -144,21 +200,40 @@ def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None
     has to land inside the empty boxes. The points value is intentionally omitted
     from the sticker. Zone geometry is retained purely to position the fill.
     """
-    # --- Box A: product name + description (no branding, no points) --------
+    # Everything on this label is BOLD and solid black.
+    #
+    # It prints onto adhesive stock and is then read in a warehouse, so the old
+    # mix of 6pt regular weight at 15-30% grey was the thing that did not
+    # survive the press — grey at that size dithers into something a phone
+    # camera and a human both struggle with. Weight and contrast cost nothing
+    # here; there is no design reason for any of this type to be light.
+
+    # --- Box A: product name + size + description --------------------------
     y = Y_HEADER - 6 * mm
     pdf.setFillGray(0)
     name_lines = simpleSplit(product.name, "Helvetica-Bold", 12, CONTENT_W)[:2]
     pdf.setFont("Helvetica-Bold", 12)
     y = _draw_lines(pdf, name_lines, x=CX, y=y, leading=5 * mm, centered=True)
+    if product.size and product.size.strip():
+        # The size is the first thing anyone checks on a mattress tag, so it is
+        # set larger than the description and sits directly under the model name.
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawCentredString(CX, y, product.size.strip())
+        y -= 4.6 * mm
     if product.description and product.description.strip():
-        desc_lines = simpleSplit(product.description.strip(), "Helvetica", 7.5, CONTENT_W)[:3]
-        pdf.setFont("Helvetica", 7.5)
-        pdf.setFillGray(0.3)
+        desc_lines = simpleSplit(product.description.strip(), "Helvetica-Bold", 7.5, CONTENT_W)[:3]
+        pdf.setFont("Helvetica-Bold", 7.5)
         y = _draw_lines(pdf, desc_lines, x=CX, y=y - 1 * mm, leading=3.6 * mm, centered=True)
 
     # --- Box B: QR code + human-readable token below it -------------------
-    qr_size = 31 * mm
-    qr_y = Y_A - 2.5 * mm - qr_size
+    #
+    # QR_SIZE is smaller than the 31mm this used to print at, and that is the
+    # point. See the constant: the old label gave the code under two modules of
+    # quiet zone where the spec wants four, and a pre-printed divider sits right
+    # on that edge. Fewer modules AND a real quiet zone beats a marginally wider
+    # symbol crowded by a printed line.
+    qr_size = QR_SIZE
+    qr_y = Y_A - QR_QUIET - qr_size
     pdf.drawImage(
         ImageReader(_qr_image(unit.token)),
         CX - qr_size / 2,
@@ -166,20 +241,23 @@ def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None
         width=qr_size,
         height=qr_size,
     )
-    # the token printed below the QR so a non-scanning tag is still reconcilable
+    # The token printed below the QR so a tag that will not scan is still
+    # reconcilable by hand. It is 16 characters now rather than 36, which buys
+    # the room to set it half again as large as before.
     pdf.setFillGray(0)
-    pdf.setFont("Courier-Bold", 7)
-    pdf.drawCentredString(CX, qr_y - 4 * mm, unit.token)
+    pdf.setFont("Courier-Bold", 9)
+    # Clear of the quiet zone: text sitting inside it is as bad as a line there.
+    pdf.drawCentredString(CX, qr_y - QR_QUIET - 1 * mm, unit.token)
 
     # --- Box C: terms & conditions ----------------------------------------
     pdf.setFillColor(BRAND_COLOR)
-    pdf.setFont("Helvetica-Bold", 6.5)
+    pdf.setFont("Helvetica-Bold", 7)
     pdf.drawString(CONTENT_LEFT, Y_B - 4 * mm, "TERMS & CONDITIONS")
-    pdf.setFillGray(0.15)
-    pdf.setFont("Helvetica", 6)
+    pdf.setFillGray(0)
+    pdf.setFont("Helvetica-Bold", 6.5)
     y = Y_B - 7.5 * mm
     for i, term in enumerate(_product_terms(product), start=1):
-        lines = simpleSplit(f"{i}. {term}", "Helvetica", 6, CONTENT_W)
+        lines = simpleSplit(f"{i}. {term}", "Helvetica-Bold", 6.5, CONTENT_W)
         # stop before drawing anything that would spill past the bottom keyline
         if y - len(lines) * 2.9 * mm < EDGE + 1.5 * mm:
             break
