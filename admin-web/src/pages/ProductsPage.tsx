@@ -1,4 +1,17 @@
-import { App, Button, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Space, Switch } from 'antd';
+import {
+  App,
+  Button,
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Space,
+  Switch,
+  Tag,
+  Tooltip,
+} from 'antd';
 import { useState } from 'react';
 
 import { apiErrorMessage } from '../api/client';
@@ -142,8 +155,19 @@ export function ProductsPage() {
           {
             title: 'Size',
             dataIndex: 'size',
-            render: (v: string | null) =>
-              v ? <span>{v}</span> : <span style={{ color: brand.textFaint }}>—</span>,
+            render: (v: string | null, p: Product) =>
+              v ? (
+                <span style={{ fontWeight: 550 }}>{v}</span>
+              ) : p.is_active ? (
+                // Flagged rather than dashed: without a size, two variants of one
+                // model are the same row in the QR order dropdown, and a batch
+                // printed against the wrong one cannot be un-printed.
+                <Tooltip title="Add a size so this product can be told apart from another size of the same model when generating QR codes.">
+                  <Tag color="warning">not set</Tag>
+                </Tooltip>
+              ) : (
+                <span style={{ color: brand.textFaint }}>—</span>
+              ),
           },
           { title: 'Points', dataIndex: 'points_value', render: (v: number) => <span className="tnum">{v}</span> },
           {

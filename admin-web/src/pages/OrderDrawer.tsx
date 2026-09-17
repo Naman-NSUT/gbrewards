@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Drawer, Input, InputNumber, Select, Space } from 'antd';
+import { App, Button, Drawer, Input, InputNumber, Select, Space, Tag, Tooltip } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -111,7 +111,39 @@ export function OrderDrawer({
               style={{ flex: 1 }}
               value={l.productId}
               onChange={(v) => update(l.key, { productId: v })}
-              options={products.map((p) => ({ label: productOptionLabel(p), value: p.id }))}
+              // `label` stays the flat string so type-to-search still matches on
+              // the size; optionRender is what the eye actually uses.
+              options={products.map((p) => ({
+                label: productOptionLabel(p),
+                value: p.id,
+                product: p,
+              }))}
+              optionRender={(option) => {
+                const p = (option.data as { product: Product }).product;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
+                    <span style={{ fontWeight: 600, flex: 1 }}>{p.name}</span>
+                    {p.size ? (
+                      <Tag color="blue" style={{ marginInlineEnd: 0, fontWeight: 600 }}>
+                        {p.size}
+                      </Tag>
+                    ) : (
+                      // Not decoration. A batch is printed against whichever line
+                      // is picked, and two sizes of one model are indistinguishable
+                      // until somebody fills this in — so say so here, where the
+                      // choice is actually being made.
+                      <Tooltip title="No size recorded — add it on the product so this run can be told apart from another size of the same model.">
+                        <Tag color="warning" style={{ marginInlineEnd: 0 }}>
+                          no size
+                        </Tag>
+                      </Tooltip>
+                    )}
+                    <span className="tnum" style={{ color: brand.textDim, minWidth: 54, textAlign: 'right' }}>
+                      {p.points_value} pts
+                    </span>
+                  </div>
+                );
+              }}
             />
             <InputNumber
               min={1}
