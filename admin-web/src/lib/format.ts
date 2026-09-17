@@ -85,3 +85,19 @@ export function printBlob(blob: Blob): void {
   };
   document.body.appendChild(iframe);
 }
+
+/**
+ * How a product reads wherever one is chosen for a QR run.
+ *
+ * The size sits straight after the name because it is what tells two choices
+ * apart: a model is ordered in several sizes, and without it two rows of the
+ * order dropdown are identical text and a batch gets printed against the wrong
+ * one. Products with no size recorded simply omit the segment.
+ */
+export function productOptionLabel(p: {
+  name: string;
+  size?: string | null;
+  points_value: number;
+}): string {
+  return [p.name, p.size, `${p.points_value} pts`].filter(Boolean).join(' · ');
+}

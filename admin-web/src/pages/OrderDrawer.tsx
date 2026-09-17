@@ -7,7 +7,7 @@ import { apiErrorMessage } from '../api/client';
 import { createOrder, downloadOrderPdf } from '../api/products';
 import type { Product } from '../api/types';
 import { EmptyState } from '../components/EmptyState';
-import { downloadBlob, printBlob } from '../lib/format';
+import { downloadBlob, printBlob, productOptionLabel } from '../lib/format';
 import { brand } from '../theme';
 
 interface Line {
@@ -111,7 +111,7 @@ export function OrderDrawer({
               style={{ flex: 1 }}
               value={l.productId}
               onChange={(v) => update(l.key, { productId: v })}
-              options={products.map((p) => ({ label: `${p.name} · ${p.points_value} pts`, value: p.id }))}
+              options={products.map((p) => ({ label: productOptionLabel(p), value: p.id }))}
             />
             <InputNumber
               min={1}

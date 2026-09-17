@@ -220,7 +220,7 @@ export function ProductsPage() {
       </Drawer>
 
       <Modal
-        title={`Generate batch — ${batchFor?.name ?? ''}`}
+        title={`Generate batch — ${[batchFor?.name, batchFor?.size].filter(Boolean).join(' · ')}`}
         open={batchFor !== null}
         onCancel={() => setBatchFor(null)}
         footer={[
