@@ -66,3 +66,56 @@ def test_modules_are_wider_than_the_old_label_printed_them():
     new_module = qr_svc.QR_SIZE / qr_svc.QR_MODULES
 
     assert new_module > old_module
+
+
+def _viewer_preferences(raw: bytes) -> bytes:
+    """Follow the catalog's /ViewerPreferences to its dictionary.
+
+    Reportlab writes it as an indirect reference ("/ViewerPreferences 11 0 R"),
+    not inline, so a plain search for an inline dictionary finds nothing even
+    when the flag is present. Resolving the reference is the honest check.
+    """
+    import re
+
+    ref = re.search(rb"/ViewerPreferences\s+(\d+)\s+0\s+R", raw)
+    assert ref, "the catalog has no /ViewerPreferences at all"
+    obj = re.search(rb"\n" + ref.group(1) + rb" 0 obj\s*(<<.*?>>)", raw, re.S)
+    assert obj, "the /ViewerPreferences reference points at nothing"
+    return obj.group(1)
+
+
+def test_every_label_pdf_asks_to_be_printed_at_actual_size():
+    """The printed tags came out enlarged: text in the GOODBED header, terms
+    clipped off both edges, a pre-printed divider through the QR. The layout
+    matches the dieline exactly, so the scaling happens in the print dialog;
+    this is the PDF's standard instruction not to scale it."""
+    import io
+
+    class _Product:
+        name = "KEYSTONE 50D"
+        size = "72X32X25"
+        description = None
+        terms = None
+
+    class _Unit:
+        token = qr_svc.new_token()
+
+    buf = io.BytesIO()
+    pdf = qr_svc._label_canvas(buf)
+    qr_svc._draw_label(pdf, _Product(), _Unit())
+    pdf.showPage()
+    pdf.save()
+
+    assert b"/PrintScaling /None" in _viewer_preferences(buf.getvalue())
+
+
+def test_both_label_exports_build_their_canvas_the_same_way():
+    """The single batch and the order export must not drift apart: whichever
+    one a person clicks, the tag has to come out the same size."""
+    import inspect
+
+    src = inspect.getsource(qr_svc)
+    assert src.count("_label_canvas(buf)") == 2
+    assert "canvas.Canvas(buf, pagesize=PAGE_SIZE)" not in src.replace(
+        inspect.getsource(qr_svc._label_canvas), ""
+    )

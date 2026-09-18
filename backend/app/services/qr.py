@@ -267,6 +267,31 @@ def _draw_label(pdf: canvas.Canvas, product: Product, unit: ProductUnit) -> None
     pdf.setFillGray(0)
 
 
+def _label_canvas(buf: io.BytesIO) -> canvas.Canvas:
+    """A canvas for label output that asks to be printed at ACTUAL SIZE.
+
+    The geometry here matches the official 75x125mm dieline exactly, but the
+    back office prints through the browser's print dialog, and that dialog
+    scales to whatever page the printer driver defaults to. When the driver's
+    default is larger than the label and the dialog is on "Fit to page", the
+    75x125 page is enlarged to fill it and only part of it lands on the real
+    sticker: text runs into the pre-printed GOODBED header, the terms are
+    clipped off both edges, and — worst — a pre-printed divider runs straight
+    through the QR's finder patterns, which is enough to stop it scanning.
+
+    /PrintScaling /None is the standard PDF instruction that the document must
+    not be scaled. Acrobat honours it and opens its print dialog on "Actual
+    size". Browser PDF viewers are inconsistent about it, and this panel prints
+    through the browser, so treat it as a default that helps where it is
+    respected — NOT as the fix. The fix is the print setup: the driver's paper
+    set to a 75x125mm label and the dialog's scale at 100%. Nothing in a PDF can
+    override a driver that has been told the page is bigger than it is.
+    """
+    pdf = canvas.Canvas(buf, pagesize=PAGE_SIZE)
+    pdf.setViewerPreference("PrintScaling", "None")
+    return pdf
+
+
 def render_batch_pdf(session: Session, batch_id: uuid.UUID) -> bytes:
     """One 75x125mm label per unit in the batch."""
     batch = session.get(QrBatch, batch_id)
@@ -284,7 +309,7 @@ def render_batch_pdf(session: Session, batch_id: uuid.UUID) -> bytes:
     )
 
     buf = io.BytesIO()
-    pdf = canvas.Canvas(buf, pagesize=PAGE_SIZE)
+    pdf = _label_canvas(buf)
     for unit in units:
         _draw_label(pdf, product, unit)
         pdf.showPage()
@@ -321,7 +346,7 @@ def render_order_pdf(session: Session, batch_ids: list[uuid.UUID]) -> bytes:
     """Combined label sheet for a QR order — one 75x125mm label per unit across
     all batches, each label carrying its own product's name/terms."""
     buf = io.BytesIO()
-    pdf = canvas.Canvas(buf, pagesize=PAGE_SIZE)
+    pdf = _label_canvas(buf)
     drew = False
     for batch_id in batch_ids:
         batch = session.get(QrBatch, batch_id)
