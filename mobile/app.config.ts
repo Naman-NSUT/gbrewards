@@ -8,9 +8,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'scanrewards',
   scheme: 'scanrewards',
   owner: 'naman04',
+  // Stated explicitly rather than inherited from app.json. Google Play removed
+  // this app under the Misleading Claims policy for an "app store listing
+  // mismatch": the installed icon was still the stock Expo chevron while the
+  // listing showed the GoodBed mark. The icon is the thing that got the app
+  // pulled, so it is declared where it cannot be lost in a config merge.
+  icon: './assets/icon.png',
   android: {
     ...config.android,
     package: 'in.gbrewards.gbrewards',
+    adaptiveIcon: {
+      foregroundImage: './assets/android-icon-foreground.png',
+      backgroundImage: './assets/android-icon-background.png',
+      monochromeImage: './assets/android-icon-monochrome.png',
+      backgroundColor: '#03132B',
+    },
   },
   extra: {
     apiBaseUrl: process.env.API_BASE_URL ?? 'http://10.0.2.2:8088',

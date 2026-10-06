@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.deps import get_db, get_redis
 from app.core.errors import AppError
+from app.core.logging import get_logger
 from app.core.security import create_access_token, create_refresh_token, decode_token
 from app.models.user import User
 from app.schemas.auth import (
@@ -16,8 +17,10 @@ from app.schemas.auth import (
     TokenPair,
     UserOut,
 )
-from app.services.otp import issue_otp, verify_otp
+from app.services.otp import is_review_login, is_review_phone, issue_otp, verify_otp
 from app.services.otp_provider import OtpProvider, get_otp_provider
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -68,6 +71,13 @@ def otp_request(
             setattr(user, field, value)
     db.commit()
 
+    if is_review_phone(body.phone):
+        # No SMS, no rate-limit counters: there is no handset at the other end
+        # and the code is fixed. The profile above was still written, so the
+        # reviewer lands in a real account.
+        logger.info("review_login_otp_requested phone=%s", body.phone)
+        return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
+
     ip = request.client.host if request.client else "unknown"
     issue_otp(redis, body.phone, ip, provider)
     return OtpRequestOut(resend_in=settings.otp_resend_cooldown_seconds)
@@ -81,12 +91,29 @@ def otp_verify(
 ) -> TokenPair:
     """Step 2: verify the SMS code, mark the broker verified, and issue tokens."""
     user = db.execute(select(User).where(User.phone == body.phone)).scalar_one_or_none()
+
+    review = is_review_login(body.phone, body.code)
+    if review and user is None:
+        # Reviewers may verify without a prior request — a reinstall, or the
+        # account cleaned out between submissions. The point of this login is
+        # that it always works, so the row is created rather than refused.
+        user = User(phone=body.phone, name="Play Review", address="Google Play review account")
+        db.add(user)
+        db.flush()
+        logger.info("review_login_account_created phone=%s", body.phone)
+
     if user is None:
         raise AppError("otp_expired", 400, "Code expired or not requested")
     if not user.is_active:
+        # Still honoured for the review account: disabling it has to disable it.
         raise AppError("account_disabled", 403, "This account has been disabled")
 
-    verify_otp(redis, body.phone, body.code)
+    if review:
+        # The fixed code was already checked by is_review_login; there is no
+        # Redis entry to consume because no OTP was ever issued.
+        logger.info("review_login_verified phone=%s", body.phone)
+    else:
+        verify_otp(redis, body.phone, body.code)
 
     user.is_verified = True
     db.commit()

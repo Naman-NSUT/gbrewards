@@ -10,6 +10,35 @@ from app.core.security import hash_secret, verify_secret
 from app.services.otp_provider import OtpProvider
 
 
+def _digits(phone: str) -> str:
+    return "".join(ch for ch in phone if ch.isdigit())
+
+
+def is_review_phone(phone: str) -> bool:
+    """The Play reviewers' sign-in number, if one is configured.
+
+    Matched on the trailing national digits: the app sends E.164
+    ("+919999999999") while the credential is handed to Google as the plain
+    number, and both have to land on the same account.
+    """
+    wanted = _digits(settings.review_login_phone)
+    return bool(wanted) and _digits(phone).endswith(wanted)
+
+
+def is_review_login(phone: str, code: str) -> bool:
+    """True only for the review number AND its fixed code.
+
+    The code is still checked. A right number with a wrong code is refused
+    exactly like any other sign-in, so this is one credential, not an open door
+    on one number.
+    """
+    return (
+        is_review_phone(phone)
+        and bool(settings.review_login_otp)
+        and (code == settings.review_login_otp)
+    )
+
+
 def _otp_key(phone: str) -> str:
     return f"otp:{phone}"
 

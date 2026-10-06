@@ -17,6 +17,22 @@ class Settings(BaseSettings):
     # OTP / SMS auth. `fake` logs the code (dev/test); `twofactor` sends real SMS.
     otp_provider: Literal["fake", "twofactor"] = "fake"
     otp_ttl_seconds: int = 300
+
+    # --- Play review account -------------------------------------------------
+    # Google's reviewers cannot receive an Indian SMS, so sign-in has to work for
+    # them without one. This phone always accepts this code; nothing else is
+    # weakened, and every other number still needs a real OTP.
+    #
+    # It IS a credential that anyone can guess, so treat it as public: the
+    # account can scan codes and claim points like any other worker. Set
+    # REVIEW_LOGIN_PHONE to an empty string to turn it off the moment review is
+    # finished, which needs no deploy.
+    #
+    # Stored as national digits and matched against the END of the submitted
+    # number, so "+919999999999" from the app and "9999999999" as a reviewer
+    # types it are the same account.
+    review_login_phone: str = "9999999999"
+    review_login_otp: str = "999999"
     otp_max_attempts: int = 5
     otp_resend_cooldown_seconds: int = 30
     otp_daily_cap_per_phone: int = 5
