@@ -39,6 +39,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-secure-store',
+    // Hands a downloaded catalogue PDF to whatever PDF viewer the phone has.
+    'expo-sharing',
     '@sentry/react-native',
     [
       'expo-build-properties',

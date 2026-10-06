@@ -25,6 +25,16 @@ export function setOnTokensChanged(cb: (tokens: StoredTokens | null) => void): v
   onTokensChanged = cb;
 }
 
+/**
+ * The current bearer token, for requests that cannot go through axios.
+ *
+ * The catalogue PDFs are downloaded by the native file-system module straight to
+ * disk, so they need the header value rather than an interceptor.
+ */
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 export const api = axios.create({
   baseURL: `${API_BASE_URL}${API_PREFIX}`,
   // Generous timeout so a cold-started backend (free-tier hosts spin down and

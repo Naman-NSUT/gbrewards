@@ -7,6 +7,7 @@ from app.schemas.admin import BannerOut, ContentDocOut, RewardOut
 
 __all__ = [
     "BannerOut",
+    "CatalogDocOut",
     "ContentDocOut",
     "FaqPublicOut",
     "ProductPointsOut",
@@ -29,3 +30,11 @@ class ProductPointsOut(BaseModel):
     id: uuid.UUID
     name: str
     points_value: int
+
+
+class CatalogDocOut(BaseModel):
+    """One of the catalogue PDFs the app lists on its Info tab."""
+
+    slug: str
+    title: str
+    subtitle: str

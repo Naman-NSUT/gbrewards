@@ -14,13 +14,14 @@ from app.models.reward import Reward
 from app.models.user import User
 from app.schemas.catalog import (
     BannerOut,
+    CatalogDocOut,
     ContentDocOut,
     FaqPublicOut,
     ProductPointsOut,
     RewardOut,
 )
 from app.services import banners as banners_service
-from app.services import content
+from app.services import catalog_pdf, content
 
 router = APIRouter(tags=["catalog"])
 
@@ -101,3 +102,38 @@ def get_content(
     db: Session = Depends(get_db),
 ) -> ContentDoc:
     return content.get_content(db, key)
+
+
+@router.get("/catalog/docs", response_model=list[CatalogDocOut])
+def list_catalog_docs(
+    user: User = Depends(get_current_user),
+) -> list[CatalogDocOut]:
+    """The catalogue documents the app offers, all rendered on demand."""
+    return [
+        CatalogDocOut(slug=d.slug, title=d.title, subtitle=d.subtitle) for d in catalog_pdf.DOCS
+    ]
+
+
+@router.get("/catalog/docs/{slug}.pdf", response_class=Response)
+def get_catalog_doc(
+    slug: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Render one catalogue document from the rows the back office holds now.
+
+    Built per request rather than cached: these are a few kilobytes each, and the
+    whole point of moving them server-side was that an edit in the back office
+    shows up immediately.
+    """
+    pdf = catalog_pdf.render(db, slug)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{slug}.pdf"',
+            # Private: it is behind a bearer token and names this programme's
+            # commercial terms, so no shared cache should keep a copy.
+            "Cache-Control": "private, no-store",
+        },
+    )

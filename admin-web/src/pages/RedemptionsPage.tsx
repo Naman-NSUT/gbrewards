@@ -68,8 +68,18 @@ export function RedemptionsPage() {
             ),
           },
           {
+            // The quantity is what the person fulfilling this actually needs:
+            // "150 pts, Cash 500" doesn't say whether to hand over one or three.
             title: 'Reward',
-            render: (_v, r) => r.reward?.title ?? '—',
+            render: (_v, r) =>
+              r.reward ? (
+                <span>
+                  {r.quantity > 1 && <span className="tnum" style={{ fontWeight: 650 }}>{r.quantity} × </span>}
+                  {r.reward.title}
+                </span>
+              ) : (
+                '—'
+              ),
           },
           { title: 'Points', dataIndex: 'points', render: (v: number) => <span className="tnum">{v}</span> },
           {
@@ -100,7 +110,12 @@ export function RedemptionsPage() {
       />
 
       <Modal
-        title={pending ? `${pending.action} — ${pending.row.points} pts for ${pending.row.user.name}` : ''}
+        title={
+          pending
+            ? `${pending.action} — ${pending.row.quantity > 1 ? `${pending.row.quantity} × ` : ''}` +
+              `${pending.row.reward?.title ?? `${pending.row.points} pts`} for ${pending.row.user.name}`
+            : ''
+        }
         open={pending !== null}
         onCancel={() => setPending(null)}
         onOk={confirm}

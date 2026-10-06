@@ -1,5 +1,6 @@
-import React from 'react';
-import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import Slider from '@react-native-community/slider';
+import React, { useState } from 'react';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Reward } from '../api/rewards';
 import type { Redemption } from '../api/types';
@@ -12,7 +13,16 @@ import { useRedeemReward, useRewards } from '../hooks/useRewards';
 import { useI18n } from '../i18n/I18nProvider';
 import type { AppTabScreenProps } from '../navigation/types';
 import { colors, spacing } from '../theme';
+import { clampQuantity, maxRedeemableQuantity } from '../utils/redeem';
 
+/**
+ * One reward, with a slider for how many of it to take.
+ *
+ * Rewards are priced per unit — "Cash 500, 50 pts" — so a worker with 300 points
+ * wants six, not six separate requests. The slider's ceiling is what the balance
+ * can actually cover, which is also what the server will accept: the alternative
+ * is offering a quantity and then refusing it.
+ */
 function RewardCard({
   reward,
   available,
@@ -22,24 +32,73 @@ function RewardCard({
   reward: Reward;
   available: number;
   loading: boolean;
-  onRedeem: (id: string) => void;
+  onRedeem: (id: string, quantity: number) => void;
 }) {
   const { t } = useI18n();
-  const affordable = available >= reward.points_cost;
+  const maxQuantity = maxRedeemableQuantity(available, reward.points_cost);
+  const affordable = maxQuantity >= 1;
+  const [quantity, setQuantity] = useState(1);
+  const chosen = clampQuantity(quantity, maxQuantity);
+  const total = reward.points_cost * chosen;
+
   return (
     <View style={styles.card}>
       {reward.image_url ? (
         <Image source={{ uri: reward.image_url }} style={styles.image} resizeMode="cover" />
       ) : null}
       <Text style={styles.cardTitle}>{reward.title}</Text>
-      {reward.description ? (
-        <Text style={styles.cardDesc}>{reward.description}</Text>
-      ) : null}
+      {reward.description ? <Text style={styles.cardDesc}>{reward.description}</Text> : null}
       <Text style={styles.cost}>{t('rewards.cost', { n: reward.points_cost })}</Text>
+
+      {affordable && maxQuantity > 1 ? (
+        <View style={styles.quantityBlock}>
+          <View style={styles.quantityHeader}>
+            <Text style={styles.quantityLabel}>{t('rewards.quantity')}</Text>
+            <Text style={styles.quantityValue}>{chosen}</Text>
+          </View>
+          <View style={styles.sliderRow}>
+            <Pressable
+              style={styles.step}
+              onPress={() => setQuantity(Math.max(1, chosen - 1))}
+              disabled={chosen <= 1}
+              accessibilityRole="button"
+              accessibilityLabel={t('rewards.fewer')}
+            >
+              <Text style={[styles.stepText, chosen <= 1 && styles.stepDisabled]}>−</Text>
+            </Pressable>
+            <Slider
+              style={styles.slider}
+              minimumValue={1}
+              maximumValue={maxQuantity}
+              step={1}
+              value={chosen}
+              onValueChange={setQuantity}
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.border}
+              thumbTintColor={colors.primary}
+            />
+            <Pressable
+              style={styles.step}
+              onPress={() => setQuantity(Math.min(maxQuantity, chosen + 1))}
+              disabled={chosen >= maxQuantity}
+              accessibilityRole="button"
+              accessibilityLabel={t('rewards.more')}
+            >
+              <Text style={[styles.stepText, chosen >= maxQuantity && styles.stepDisabled]}>+</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.total}>
+            {t('rewards.total', { q: chosen, title: reward.title, n: total })}
+          </Text>
+        </View>
+      ) : null}
+
       {!affordable ? <Text style={styles.insufficient}>{t('rewards.insufficient')}</Text> : null}
       <Button
-        title={t('rewards.redeem')}
-        onPress={() => onRedeem(reward.id)}
+        title={
+          affordable && chosen > 1 ? t('rewards.redeemMany', { q: chosen }) : t('rewards.redeem')
+        }
+        onPress={() => onRedeem(reward.id, chosen)}
         disabled={!affordable}
         loading={loading}
         style={{ marginTop: spacing.sm }}
@@ -53,7 +112,10 @@ function RequestRow({ item, onCancel }: { item: Redemption; onCancel: (id: strin
   return (
     <View style={styles.requestRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.requestPoints}>{item.points} pts</Text>
+        <Text style={styles.requestPoints}>
+          {item.quantity > 1 ? `${item.quantity} × ` : ''}
+          {item.points} pts
+        </Text>
         <Text style={styles.requestDate}>{new Date(item.created_at).toLocaleString()}</Text>
       </View>
       <StatusPill status={item.status} label={t(`status.${item.status}`)} />
@@ -108,8 +170,8 @@ export function RewardsScreen(_props: AppTabScreenProps<'Rewards'>) {
         <RewardCard
           reward={item}
           available={available}
-          loading={redeem.isPending && redeem.variables === item.id}
-          onRedeem={(id) => redeem.mutate(id)}
+          loading={redeem.isPending && redeem.variables?.rewardId === item.id}
+          onRedeem={(rewardId, quantity) => redeem.mutate({ rewardId, quantity })}
         />
       )}
       contentContainerStyle={styles.content}
@@ -159,6 +221,30 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 14, color: colors.muted, marginTop: spacing.xs },
   cost: { fontSize: 16, fontWeight: '700', color: colors.primary, marginTop: spacing.sm },
   insufficient: { fontSize: 13, color: colors.danger, marginTop: spacing.xs },
+  quantityBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  quantityHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  quantityLabel: { fontSize: 13, color: colors.muted, fontWeight: '600' },
+  quantityValue: { fontSize: 20, fontWeight: '800', color: colors.text },
+  sliderRow: { flexDirection: 'row', alignItems: 'center' },
+  slider: { flex: 1, height: 40 },
+  step: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: { fontSize: 20, fontWeight: '700', color: colors.primary, lineHeight: 24 },
+  stepDisabled: { color: colors.faint },
+  total: { fontSize: 14, fontWeight: '700', color: colors.primary, marginTop: spacing.xs },
   heading: {
     fontSize: 18,
     fontWeight: '700',

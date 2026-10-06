@@ -24,7 +24,9 @@ def create_redemption(
     if (body.points is None) == (body.reward_id is None):
         raise AppError("validation_error", 422, "Provide either points or reward_id")
     if body.reward_id is not None:
-        req = redemption.create_for_reward(db, user=user, reward_id=body.reward_id)
+        req = redemption.create_for_reward(
+            db, user=user, reward_id=body.reward_id, quantity=body.quantity
+        )
     else:
         assert body.points is not None
         req = redemption.create(db, user=user, points=body.points)

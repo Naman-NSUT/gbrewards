@@ -7,6 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class RedemptionCreateIn(BaseModel):
     points: int | None = Field(default=None, gt=0)
     reward_id: uuid.UUID | None = None
+    # How many of the reward to take. Only meaningful with reward_id; a raw
+    # points request already names its own amount. Older app builds omit it, so
+    # the default has to stay 1.
+    quantity: int = Field(default=1, ge=1, le=999)
 
 
 class RedemptionActionIn(BaseModel):
@@ -18,6 +22,7 @@ class RedemptionOut(BaseModel):
 
     id: uuid.UUID
     points: int
+    quantity: int
     status: str
     note: str | None = None
     created_at: datetime

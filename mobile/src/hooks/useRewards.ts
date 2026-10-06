@@ -8,10 +8,15 @@ export function useRewards() {
   return useQuery<Reward[]>({ queryKey: ['rewards'], queryFn: listRewards });
 }
 
+export interface RedeemVars {
+  rewardId: string;
+  quantity: number;
+}
+
 export function useRedeemReward() {
   const qc = useQueryClient();
-  return useMutation<Redemption, unknown, string>({
-    mutationFn: (rewardId: string) => redeemReward(rewardId),
+  return useMutation<Redemption, unknown, RedeemVars>({
+    mutationFn: ({ rewardId, quantity }) => redeemReward(rewardId, quantity),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['me'] });
       void qc.invalidateQueries({ queryKey: ['redemptions'] });

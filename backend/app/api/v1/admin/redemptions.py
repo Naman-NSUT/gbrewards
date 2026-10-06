@@ -26,6 +26,7 @@ def _to_admin_out(
     return RedemptionAdminOut(
         id=req.id,
         points=req.points,
+        quantity=req.quantity,
         status=req.status,
         note=req.note,
         created_at=req.created_at,

@@ -70,6 +70,8 @@ export type RedemptionStatus =
 export interface Redemption {
   id: string;
   points: number;
+  /** How many of the reward was asked for. */
+  quantity: number;
   status: RedemptionStatus;
   note: string | null;
   reward_id: string | null;

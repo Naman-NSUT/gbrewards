@@ -40,13 +40,28 @@ def create(db: Session, *, user: User, points: int) -> RedemptionRequest:
     return req
 
 
-def create_for_reward(db: Session, *, user: User, reward_id: uuid.UUID) -> RedemptionRequest:
+# A hard ceiling on one request, so a fat-fingered or hostile quantity cannot
+# multiply a points_cost into an integer the Integer column cannot hold — which
+# would surface as a 500 rather than a refusal. Far above any real redemption.
+MAX_QUANTITY = 999
+
+
+def create_for_reward(
+    db: Session, *, user: User, reward_id: uuid.UUID, quantity: int = 1
+) -> RedemptionRequest:
     """Create a pending redemption priced from a reward's ``points_cost``.
 
     Reuses the identical availability check and pending-as-hold model as
     :func:`create`; ``points`` is frozen from the reward at create time so later
     edits to the reward don't change already-pending/approved amounts.
+
+    ``quantity`` lets a worker take several of the same reward in one request —
+    six lots of cash rather than six requests. It is recorded alongside the
+    points because the points alone don't say how many units to hand over.
     """
+    if quantity < 1 or quantity > MAX_QUANTITY:
+        raise AppError("validation_error", 422, f"Quantity must be 1..{MAX_QUANTITY}")
+
     reward = db.get(Reward, reward_id)
     if reward is None:
         raise AppError("reward_not_found", 404, "Unknown reward")
@@ -57,11 +72,21 @@ def create_for_reward(db: Session, *, user: User, reward_id: uuid.UUID) -> Redem
     # generic path so parallel reward redemptions can't over-commit available.
     db.execute(select(User.id).where(User.id == user.id).with_for_update())
 
-    points = reward.points_cost
+    points = reward.points_cost * quantity
+    if points <= 0:
+        # A zero-cost reward would otherwise violate the points_positive CHECK as
+        # a 500. Nothing to hold, so there is nothing to request.
+        raise AppError("reward_inactive", 409, "Reward has no points cost")
     if points > ledger.available(db, user.id):
         raise AppError("insufficient_balance", 400, "Requested points exceed available balance")
 
-    req = RedemptionRequest(user_id=user.id, points=points, status="pending", reward_id=reward.id)
+    req = RedemptionRequest(
+        user_id=user.id,
+        points=points,
+        quantity=quantity,
+        status="pending",
+        reward_id=reward.id,
+    )
     db.add(req)
     db.flush()
     return req
@@ -110,7 +135,7 @@ def approve(
         action="approve_redemption",
         entity_type="redemption",
         entity_id=req.id,
-        metadata={"points": req.points},
+        metadata={"points": req.points, "quantity": req.quantity},
     )
     return req
 
