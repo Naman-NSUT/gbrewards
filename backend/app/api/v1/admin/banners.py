@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_admin, get_db
@@ -61,6 +61,7 @@ async def create_banner(
 @router.patch("/banners/{banner_id}", response_model=BannerOut)
 async def update_banner(
     banner_id: uuid.UUID,
+    request: Request,
     image: UploadFile | None = File(None),
     caption: str | None = Form(None),
     link_url: str | None = Form(None),
@@ -71,10 +72,24 @@ async def update_banner(
 ) -> Banner:
     # None means "field not provided" — only apply what was actually sent.
     fields: dict[str, object] = {}
-    if caption is not None:
-        fields["caption"] = caption
-    if link_url is not None:
-        fields["link_url"] = link_url
+
+    # The two free-text fields are read from the raw form rather than from the
+    # parameters above, because FastAPI substitutes a Form field's default when
+    # the submitted value is an empty string (dependencies/utils.py: `value ==
+    # ""` is treated as absent). That makes "clear this caption" indistinguishable
+    # from "leave it alone", so a caption could never be removed once set —
+    # including from the admin panel, which sends "" for a cleared field.
+    # Starlette caches the parsed form, so this re-reads rather than re-parses.
+    form = await request.form()
+    for name in ("caption", "link_url"):
+        if name not in form:
+            continue
+        submitted = form[name]
+        if isinstance(submitted, str):
+            # Store absence as NULL rather than an empty string, so there is one
+            # representation of "no caption" for the app to test.
+            fields[name] = submitted or None
+
     if is_active is not None:
         fields["is_active"] = is_active
     if sort_order is not None:
