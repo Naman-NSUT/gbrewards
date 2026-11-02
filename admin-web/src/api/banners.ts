@@ -36,8 +36,8 @@ function toFormData(input: BannerCreateInput | BannerUpdateInput): FormData {
 }
 
 export async function createBanner(input: BannerCreateInput): Promise<Banner> {
-  // axios strips the default JSON content-type for FormData and sets the
-  // multipart boundary itself in the browser.
+  // The request interceptor clears this instance's JSON content-type for a
+  // FormData body, so the browser sets multipart with its own boundary.
   const resp = await api.post<Banner>('/admin/banners', toFormData(input));
   return resp.data;
 }

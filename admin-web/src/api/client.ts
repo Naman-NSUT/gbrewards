@@ -51,6 +51,19 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
+  // Let the browser describe a multipart body itself.
+  //
+  // This instance sets a JSON content-type for every request, and axios reads
+  // that back before it serialises: in transformRequest, FormData with a JSON
+  // content-type is run through `JSON.stringify(formDataToJSON(data))` rather
+  // than sent as multipart. An uploaded File has no JSON form, so the file
+  // silently became `{}` and the server — which wants multipart — rejected the
+  // request as missing every field. Clearing the header makes XHR set
+  // `multipart/form-data` with the boundary, which is the only way the file
+  // survives the trip.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.headers.setContentType(null);
+  }
   return config;
 });
 
