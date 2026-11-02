@@ -1,5 +1,6 @@
 import io
 import uuid
+from urllib.parse import urlparse
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -53,9 +54,11 @@ def test_admin_create_banner_from_upload_writes_audit(client: TestClient, db: Se
     )
     assert r.status_code == 201, r.text
     body = r.json()
-    # uploaded image is stored in the DB and served via the catalog endpoint
+    # uploaded image is stored in the DB and served via the catalog endpoint.
+    # The URL carries a ?v= digest so replacing the artwork defeats the client
+    # cache, so match the path rather than the whole string.
     assert body["image_url"].startswith("/api/v1/catalog/banners/")
-    assert body["image_url"].endswith("/image")
+    assert urlparse(body["image_url"]).path.endswith("/image")
     assert body["caption"] == "Promo"
     assert body["is_active"] is True
     assert body["sort_order"] == 3

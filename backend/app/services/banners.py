@@ -6,6 +6,7 @@ ephemeral hosting. `image_url` then points at the serve endpoint. External/stati
 URLs are still supported for the seeded default poster.
 """
 
+import hashlib
 import io
 import uuid
 
@@ -69,11 +70,24 @@ def _get_or_404(db: Session, banner_id: uuid.UUID) -> Banner:
 
 def _apply_image(banner: Banner, raw_image: bytes) -> None:
     """Store a processed image on the banner and point image_url at the serve
-    endpoint. Requires the banner to already have an id (call after flush)."""
+    endpoint. Requires the banner to already have an id (call after flush).
+
+    The URL carries a digest of the bytes it serves. Without it, replacing a
+    banner's artwork left the URL identical, and the serve endpoint sends
+    `Cache-Control: public, max-age=86400` with no validator — so a phone that
+    had already loaded that banner kept showing the old picture for a day, and
+    the admin who replaced it had no way to tell the upload had worked. Changing
+    the URL whenever the bytes change makes the replacement a different resource,
+    which is the one thing every cache in the path already understands.
+
+    A digest rather than a timestamp, so re-saving a banner without touching its
+    image does not force every phone to download it again.
+    """
     data, mime = process_banner_image(raw_image)
     banner.image_data = data
     banner.image_mime = mime
-    banner.image_url = f"/api/v1/catalog/banners/{banner.id}/image"
+    version = hashlib.sha256(data).hexdigest()[:12]
+    banner.image_url = f"/api/v1/catalog/banners/{banner.id}/image?v={version}"
 
 
 def create_banner_from_upload(
