@@ -165,8 +165,39 @@ const INVALID_RESPONSE_MESSAGE =
   'The deployment is missing VITE_API_BASE_URL — send this to whoever deployed it. ' +
   'The browser console has the details.';
 
+/**
+ * Name the fields a 422 actually objected to.
+ *
+ * FastAPI's envelope message for any validation failure is the same sentence —
+ * "Request validation failed" — and the part that says which field is wrong sits
+ * in `details.errors`. Showing only the message turns a precise complaint into a
+ * mystery: an upload that fails because sort_order is unreadable looks identical
+ * to one that fails because the image is missing.
+ */
+function validationDetail(envelope: ApiError): string | null {
+  const errors = (envelope.details as { errors?: unknown }).errors;
+  if (!Array.isArray(errors) || errors.length === 0) return null;
+
+  const parts = errors
+    .map((e) => {
+      const { loc, msg } = e as { loc?: unknown[]; msg?: string };
+      if (!msg) return null;
+      // loc is like ["body", "sort_order"]; the field name is the useful tail.
+      const field = Array.isArray(loc) ? loc[loc.length - 1] : undefined;
+      return typeof field === 'string' && field !== 'body' ? `${field}: ${msg}` : msg;
+    })
+    .filter((x): x is string => Boolean(x));
+
+  return parts.length > 0 ? parts.join('; ') : null;
+}
+
 export function apiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
   const envelope = extractApiError(error);
-  if (envelope?.code === 'invalid_response') return INVALID_RESPONSE_MESSAGE;
-  return envelope?.message ?? fallback;
+  if (!envelope) return fallback;
+  if (envelope.code === 'invalid_response') return INVALID_RESPONSE_MESSAGE;
+  if (envelope.code === 'validation_error') {
+    const detail = validationDetail(envelope);
+    if (detail) return detail;
+  }
+  return envelope.message ?? fallback;
 }
