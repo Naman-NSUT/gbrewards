@@ -15,7 +15,20 @@ import { resolveBannerUrl, type Banner } from '../api/banners';
 import { useBanners } from '../hooks/useBanners';
 import { colors, spacing } from '../theme';
 
-const HEIGHT = 170;
+/**
+ * Banners are promo artwork, so the frame matches the artwork rather than the
+ * other way round.
+ *
+ * This used to be a fixed 170dp box. A 16:9 upload scaled to the slide width is
+ * ~185dp tall, so `cover` quietly trimmed ~7dp off the top and bottom — enough
+ * to behead the logo on a banner whose design runs to the edges. Sizing by ratio
+ * keeps the whole image, and keeps every slide the same height on every screen
+ * width, which is what the paging and the dots assume.
+ */
+const ASPECT_RATIO = 16 / 9;
+
+/** Reserve the right space before the width is measured, so nothing jumps. */
+const PLACEHOLDER_HEIGHT = 170;
 const AUTO_ADVANCE_MS = 4000;
 
 function Slide({ banner, width }: { banner: Banner; width: number }) {
@@ -95,7 +108,7 @@ export function BannerCarousel() {
           getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         />
       ) : (
-        <View style={{ height: HEIGHT }} />
+        <View style={{ height: PLACEHOLDER_HEIGHT }} />
       )}
 
       {count > 1 ? (
@@ -120,7 +133,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   imageWrap: {
-    height: HEIGHT,
+    width: '100%',
+    aspectRatio: ASPECT_RATIO,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.surface,
